@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0f1f3d;--navy2:#1a2d4f;--blue:#2563eb;--blue-lt:#dbeafe;
+  --teal:#0d9488;--teal-lt:#ccfbf1;--green:#16a34a;--green-lt:#dcfce7;
+  --amber:#d97706;--amber-lt:#fef3c7;--red:#dc2626;--red-lt:#fee2e2;
+  --gray:#6b7280;--gray-lt:#f3f4f6;--border:#e5e7eb;
+  --text:#111827;--text2:#374151;--text3:#6b7280;
+  --bg:#ffffff;--bg2:#f9fafb;--shadow:0 1px 3px rgba(0,0,0,.08);
+  --r:8px;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;}
+.app{max-width:1100px;margin:0 auto;}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f2f5;}
+.auth-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:36px;width:360px;box-shadow:var(--shadow);}
+.auth-logo{font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px;}
+.auth-logo span{font-family:var(--mono);font-size:13px;color:var(--blue);margin-left:6px;}
+.auth-sub{font-size:13px;color:var(--text3);margin-bottom:28px;}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:var(--bg2);color:var(--text3);border:none;font-family:var(--font);transition:all .15s;}
+.auth-tab.active{background:var(--navy);color:#fff;}
+.auth-group{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;}
+.auth-group label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.auth-input{padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-family:var(--font);color:var(--text);transition:border-color .15s;}
+.auth-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.auth-btn{width:100%;padding:10px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;margin-top:6px;transition:background .15s;}
+.auth-btn:hover{background:var(--navy2);}
+.auth-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px;}
+.auth-msg{font-size:12px;color:var(--green);margin-top:8px;}
+
+/* HEADER */
+.header{background:var(--navy);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header-logo{color:#fff;font-size:15px;font-weight:600;letter-spacing:.5px;}
+.header-logo span{color:#60a5fa;font-family:var(--mono);font-size:12px;font-weight:400;margin-left:8px;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.header-user{font-size:12px;color:#93c5fd;}
+.header-tabs{display:flex;gap:4px;}
+.htab{background:transparent;border:none;color:#93c5fd;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--font);transition:background .15s,color .15s;}
+.htab.active{background:#2563eb;color:#fff;}
+.htab:hover:not(.active){background:rgba(255,255,255,.08);color:#fff;}
+.logout-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 52px);}
+.sidebar{background:var(--bg);border-right:1px solid var(--border);overflow-y:auto;}
+.content{background:var(--bg2);overflow-y:auto;padding:20px;}
+
+/* STRATEGY */
+.strategy-bar{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.strategy-bar label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);display:block;margin-bottom:6px;}
+.strategy-select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);cursor:pointer;}
+
+/* PHASE */
+.phase{border-bottom:1px solid var(--border);}
+.phase-header{padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;background:var(--bg);transition:background .1s;}
+.phase-header:hover{background:var(--gray-lt);}
+.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.phase-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);flex:1;}
+.phase-count{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.phase-chevron{font-size:11px;color:var(--text3);transition:transform .2s;}
+.phase.open .phase-chevron{transform:rotate(180deg);}
+.checklist-body{display:none;padding:4px 0 8px;}
+.phase.open .checklist-body{display:block;}
+.check-item{padding:7px 16px 7px 12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .1s;border-left:3px solid transparent;}
+.check-item:hover{background:var(--gray-lt);}
+.check-item.checked{background:#f0fdf4;border-left-color:var(--green);}
+.check-box{width:18px;height:18px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--bg);}
+.check-item.checked .check-box{background:var(--green);border-color:var(--green);}
+.check-tick{color:#fff;font-size:11px;display:none;}
+.check-item.checked .check-tick{display:block;}
+.check-label{font-size:13px;color:var(--text2);line-height:1.4;flex:1;}
+.check-label strong{color:var(--text);font-weight:500;}
+.check-label .sub{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.check-stop{font-size:10px;background:var(--red-lt);color:var(--red);padding:1px 6px;border-radius:4px;margin-top:3px;display:inline-block;font-weight:500;}
+
+/* PROGRESS */
+.progress-wrap{padding:12px 16px;border-bottom:1px solid var(--border);}
+.progress-top{display:flex;justify-content:space-between;margin-bottom:6px;}
+.progress-label{font-size:12px;color:var(--text3);}
+.progress-pct{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text2);}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s;}
+.status-banner{margin:0 16px 12px;padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.status-banner.go{background:var(--green-lt);color:var(--green);}
+.status-banner.warn{background:var(--amber-lt);color:var(--amber);}
+.status-banner.stop{background:var(--red-lt);color:var(--red);}
+.status-banner.neutral{background:var(--gray-lt);color:var(--gray);}
+
+/* ACTIONS */
+.sidebar-actions{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .15s;font-weight:500;}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-primary:hover{background:#1d4ed8;}
+.btn-ghost{background:transparent;color:var(--text2);}
+.btn-ghost:hover{background:var(--gray-lt);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* FORM */
+.trade-form{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);}
+.form-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group.wide{grid-column:1/-1;}
+.form-group label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.form-control{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);color:var(--text);background:var(--bg);transition:border-color .15s;}
+.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.form-control.textarea{resize:vertical;min-height:72px;font-family:var(--font);}
+.grade-btns{display:flex;gap:6px;}
+.grade-btn{padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text3);}
+.grade-btn.sel{background:var(--green-lt);border-color:var(--green);color:var(--green);}
+
+/* JOURNAL */
+.journal-section{background:var(--bg);border-radius:10px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);}
+.journal-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.journal-title{font-size:14px;font-weight:600;}
+.journal-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.filter-select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);color:var(--text2);background:var(--bg);}
+.jtable{width:100%;border-collapse:collapse;font-size:13px;}
+.jtable th{padding:9px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);cursor:pointer;white-space:nowrap;}
+.jtable td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+.jtable tr:last-child td{border-bottom:none;}
+.jtable tr:hover td{background:var(--gray-lt);}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;}
+.badge-W{background:var(--green-lt);color:var(--green);}
+.badge-L{background:var(--red-lt);color:var(--red);}
+.badge-BE{background:var(--amber-lt);color:var(--amber);}
+.badge-Long{background:var(--blue-lt);color:var(--blue);}
+.badge-Short{background:#fce7f3;color:#be185d;}
+.r-pos{color:var(--green);font-family:var(--mono);font-weight:500;}
+.r-neg{color:var(--red);font-family:var(--mono);font-weight:500;}
+.r-neu{color:var(--amber);font-family:var(--mono);font-weight:500;}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;transition:all .15s;}
+.del-btn:hover{background:var(--red-lt);color:var(--red);}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:12px 14px;box-shadow:var(--shadow);}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.stat-value{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text);}
+.stat-value.green{color:var(--green);}
+.stat-value.red{color:var(--red);}
+.stat-value.blue{color:var(--blue);}
+
+.empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:13px;}
+.page{display:none;}
+.page.active{display:block;}
+.saving{font-size:11px;color:var(--text3);font-family:var(--mono);}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authWrap" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">TradeLog <span>v1.0</span></div>
+    <div class="auth-sub">Logga in för att komma åt ditt journal</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
+    </div>
+    <div class="auth-group">
+      <label>E-post</label>
+      <input type="email" class="auth-input" id="authEmail" placeholder="din@email.com">
+    </div>
+    <div class="auth-group">
+      <label>Lösenord</label>
+      <input type="password" class="auth-input" id="authPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+    </div>
+    <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appWrap" style="display:none">
+<div class="app">
+
+<div class="header">
+  <div class="header-logo">TradeLog <span>v1.0</span></div>
+  <div class="header-right">
+    <div class="header-tabs">
+      <button class="htab active" onclick="showPage('checklist',this)">Checklista</button>
+      <button class="htab" onclick="showPage('journal',this)">Journal</button>
+    </div>
+    <span class="header-user" id="headerUser"></span>
+    <button class="logout-btn" onclick="doLogout()">Logga ut</button>
+  </div>
+</div>
+
+<!-- CHECKLIST PAGE -->
+<div id="page-checklist" class="page active">
+<div class="main">
+  <div class="sidebar">
+    <div class="strategy-bar">
+      <label>Strategi</label>
+      <select class="strategy-select" id="strategyPicker" onchange="loadStrategy()">
+        <option value="unicorn">ICT Unicorn Model</option>
+        <option value="globex">Bernd's Globex Strategy</option>
+        <option value="venom">ICT Venom Model</option>
+        <option value="turtle">ICT Turtle Soup</option>
+        <option value="custom">— Egen strategi —</option>
+      </select>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span class="progress-label" id="progressLabel">0 / 0 steg klara</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div id="statusBanner" class="status-banner neutral" style="display:none"></div>
+    <div id="checklistContainer"></div>
+    <div class="sidebar-actions">
+      <button class="btn btn-primary" onclick="logToJournal()" id="logBtn">💾 Logga trade</button>
+      <button class="btn btn-ghost" onclick="resetChecklist()">↺ Nollställ</button>
+      <span class="saving" id="savingIndicator"></span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="trade-form">
+      <div class="form-title">📋 Trade-detaljer</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
+        <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
+        <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="ES, NQ, XAU…"></div>
+        <div class="form-group"><label>Riktning</label>
+          <select class="form-control" id="f-direction">
+            <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" placeholder="0.00"></div>
+        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" placeholder="0.00"></div>
+        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" placeholder="0.00"></div>
+        <div class="form-group"><label>Utfall</label>
+          <select class="form-control" id="f-outcome">
+            <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Resultat (R)</label><input type="number" step="0.01" class="form-control" id="f-result" placeholder="+2.33"></div>
+        <div class="form-group wide"><label>Setup-kvalitet</label>
+          <div class="grade-btns" id="gradeGroup">
+            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+')">A+</button>
+            <button class="grade-btn" data-grade="A" onclick="setGrade('A')">A</button>
+            <button class="grade-btn" data-grade="B" onclick="setGrade('B')">B</button>
+            <button class="grade-btn" data-grade="C" onclick="setGrade('C')">C</button>
+          </div>
+        </div>
+        <div class="form-group wide"><label>Noteringar</label>
+          <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre?"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- JOURNAL PAGE -->
+<div id="page-journal" class="page" style="padding:20px">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Trades</div><div class="stat-value blue" id="s-total">0</div></div>
+    <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" id="s-wr">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg R</div><div class="stat-value" id="s-avgr">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total R</div><div class="stat-value" id="s-totalr">—</div></div>
+    <div class="stat-card"><div class="stat-label">Profit Factor</div><div class="stat-value" id="s-pf">—</div></div>
+  </div>
+  <div class="journal-section">
+    <div class="journal-header">
+      <div class="journal-title">Trade Journal</div>
+      <div class="journal-filters">
+        <select class="filter-select" id="filterStrategy" onchange="renderJournal()">
+          <option value="">Alla strategier</option>
+          <option value="ICT Unicorn Model">Unicorn</option>
+          <option value="Bernd's Globex Strategy">Globex</option>
+          <option value="ICT Venom Model">Venom</option>
+          <option value="ICT Turtle Soup">Turtle Soup</option>
+        </select>
+        <select class="filter-select" id="filterOutcome" onchange="renderJournal()">
+          <option value="">Alla utfall</option>
+          <option value="W">Win</option><option value="L">Loss</option><option value="BE">BE</option>
+        </select>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="exportCSV()">↓ CSV</button>
+      </div>
+    </div>
+    <div id="journalBody" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://zmtpgnnqtkkdsrswhrzk.supabase.co';
+const SUPA_KEY = 'sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+let currentUser = null;
+let journal = [];
+let checked = {};
+let selectedGrade = '';
+let activeStrategy = 'unicorn';
+let sortCol = 'date';
+let sortDir = -1;
+let authMode = 'login';
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&mode==='login')||(i===1&&mode==='signup')));
+  document.getElementById('authBtn').textContent = mode==='login' ? 'Logga in' : 'Skapa konto';
+  document.getElementById('authErr').textContent = '';
+  document.getElementById('authMsg').textContent = '';
+}
+
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authErr');
+  const msgEl = document.getElementById('authMsg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  if(!email||!password){errEl.textContent='Fyll i e-post och lösenord.';return;}
+  document.getElementById('authBtn').textContent = '…';
+  if(authMode==='signup') {
+    const {error} = await sb.auth.signUp({email,password});
+    if(error){errEl.textContent=error.message;}
+    else{msgEl.textContent='Konto skapat! Kolla din e-post för bekräftelse, logga sedan in.';}
+  } else {
+    const {data,error} = await sb.auth.signInWithPassword({email,password});
+    if(error){errEl.textContent='Fel e-post eller lösenord.';}
+    else{onLogin(data.user);}
+  }
+  document.getElementById('authBtn').textContent = authMode==='login'?'Logga in':'Skapa konto';
+}
+
+async function onLogin(user) {
+  currentUser = user;
+  document.getElementById('authWrap').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+  document.getElementById('headerUser').textContent = user.email;
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  await fetchJournal();
+  renderChecklist();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  journal = [];
+  document.getElementById('appWrap').style.display = 'none';
+  document.getElementById('authWrap').style.display = 'flex';
+}
+
+// Check session on load
+sb.auth.getSession().then(({data:{session}}) => {
+  if(session) onLogin(session.user);
+});
+
+// ── JOURNAL DB ───────────────────────────────────────────────────────────────
+async function fetchJournal() {
+  const {data,error} = await sb.from('trades').select('*').order('date',{ascending:false});
+  if(!error) journal = data || [];
+}
+
+async function saveTrade(trade) {
+  const ind = document.getElementById('savingIndicator');
+  ind.textContent = '💾 sparar…';
+  const {data,error} = await sb.from('trades').insert([{...trade, user_id: currentUser.id}]).select();
+  if(!error && data) {
+    journal.unshift(data[0]);
+    ind.textContent = '✓ sparat';
+    setTimeout(()=>ind.textContent='', 2000);
+  } else {
+    ind.textContent = '⚠ fel vid sparning';
+  }
+}
+
+async function deleteTrade(id) {
+  await sb.from('trades').delete().eq('id', id);
+  journal = journal.filter(t => t.id !== id);
+  updateStats(); renderJournal();
+}
+
+// ── STRATEGIES ───────────────────────────────────────────────────────────────
+const STRATEGIES = {
+  unicorn:{name:"ICT Unicorn Model",phases:[
+    {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
+      {id:"p1",label:"Economic calendar kollad",sub:"Ingen red folder news inom 2h?",blocker:true,stop:"Red folder news → NO TRADE"},
+      {id:"p2",label:"Dag i veckan",sub:"Fredag? → Halvrisken eller skippa"},
+      {id:"p3",label:"Klockan 9:30–13:00 ET",sub:"Handelsfönstret är öppet",blocker:true,stop:"Utanför window → NO TRADE"},
+    ]},
+    {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
+      {id:"s1",label:"Draw on Liquidity (DOL) identifierad",sub:"Tydliga relativa equal highs (EQH) eller equal lows (EQL)?",blocker:true,stop:"Inga EQH/EQL → hoppa"},
+      {id:"s2",label:"Handelsriktning bestämd",sub:"DOL ovan pris = Long. DOL under pris = Short."},
+      {id:"s3",label:"Manipulation Leg sedd",sub:"Impulsiv rörelse bort från DOL (1–3 candles)",blocker:true,stop:"Utdragen/choppy = lägre sannolikhet"},
+      {id:"s4",label:"Breaker identifierad",sub:"Bullish: sista gröna candle BEFORE lower low. Bearish: sista röda BEFORE higher high.",blocker:true,stop:"Ej tydlig Breaker → inget setup"},
+      {id:"s5",label:"Fair Value Gap (FVG) identifierad",sub:"3-candle-formation, icke-överlappande wicks under manipulation-legen",blocker:true,stop:"Ingen FVG → inget setup"},
+      {id:"s6",label:"⚑ OVERLAP: Breaker + FVG överlappar",sub:"Det överlappande området är entry-zonen. KRITISK.",blocker:true,stop:"INGET overlap = INGET Unicorn → STOP"},
+      {id:"s7",label:"TP beräknad ≥ 2R",sub:"Fib på manipulation leg. 2 STDV = primär TP.",blocker:true,stop:"RR < 2R → NO TRADE"},
+    ]},
+    {id:"entry",title:"Entry & Execution",color:"#059669",items:[
+      {id:"e1",label:"TP ej redan träffad",sub:"Om priset kört till TP-nivån utan retest → cancel limit",blocker:true,stop:"TP träffad = cancel order"},
+      {id:"e2",label:"Limit order satt",sub:"Entry vid topp av overlap-zon (long) / botten (short)"},
+      {id:"e3",label:"Stop Loss satt",sub:"Body high/low av manipulation leg (ej wick-extremen)"},
+      {id:"e4",label:"Take Profit satt",sub:"2 STDV (primär) eller DOL (sekundär)"},
+    ]},
+    {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
+      {id:"m1",label:"Låt traden spela ut",sub:"Inga manuella justeringar"},
+      {id:"m2",label:"Invaliderings-check",sub:"Stänger priset IGENOM hela zonen utan rekyl → cancel"},
+      {id:"m3",label:"Journalföring klar",sub:"Datum, riktning, entry/SL/TP, utfall, R, grade, noteringar"},
+    ]}
+  ]},
+  globex:{name:"Bernd's Globex Strategy",phases:[
+    {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
+      {id:"p1",label:"Economic calendar kollad",sub:"Ingen red folder news?",blocker:true,stop:"Red folder → NO TRADE"},
+      {id:"p2",label:"NY session öppen (9:30+)",sub:"Handlar under NY session",blocker:true,stop:"Ej NY session → vänta"},
+    ]},
+    {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
+      {id:"s1",label:"Globex High & Low markerade",sub:"H/L från ETH 18:00–09:30 ET ritat på chart",blocker:true,stop:"Ej markerade = ej valid"},
+      {id:"s2",label:"Globex H eller L sweepat",sub:"Pris gick över Globex High eller under Globex Low",blocker:true,stop:"Inget sweep = inget setup"},
+      {id:"s3",label:"Untapped Supply/Demand-zon finns",sub:"Skapad 8:00–11:00 ET, <6 candles, explosiv avgång",blocker:true,stop:"Ingen fresh S/D → hoppa"},
+      {id:"s4",label:"S/D-zon kvalificerad",sub:"≥2 impulsiva candles ut. Fresh. Välj bäst RR."},
+      {id:"s5",label:"Fib satt (SL + TP)",sub:"Fib -0.33/0/2.33/3.66/6.32",blocker:true,stop:"RR < 2R → hoppa"},
+    ]},
+    {id:"entry",title:"Entry",color:"#059669",items:[
+      {id:"e1",label:"Limit order vid zon",sub:"Buy limit efter Globex Low sweep. Sell limit efter High sweep."},
+      {id:"e2",label:"SL = -0.33 bortom zon",sub:"33% buffer förbi S/D-zon"},
+      {id:"e3",label:"TP satt (2R eller 4R)",sub:"HTF-trend → 4R + B/E vid 2R. Counter → 2R + B/E vid 1R."},
+    ]},
+    {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
+      {id:"m1",label:"B/E satt vid halvvägs",sub:"HTF: B/E vid 2R. Övrigt: B/E vid 1R."},
+      {id:"m2",label:"Journalföring klar",sub:"Datum, sweep-riktning, S/D-zon, RR, utfall"},
+    ]}
+  ]},
+  venom:{name:"ICT Venom Model",phases:[
+    {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
+      {id:"p1",label:"Economic calendar kollad",sub:"Ingen red folder news?",blocker:true,stop:"News = NO TRADE"},
+      {id:"p2",label:"8:00–11:00 ET-window öppet",sub:"Handlar 9:30–11:00 ET",blocker:true,stop:"Klockan >11:00 ET → STOP"},
+      {id:"p3",label:"8–9:30 range markerat",sub:"High och low från pre-market ritat",blocker:true,stop:"Ej markerat = ej valid"},
+    ]},
+    {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
+      {id:"s1",label:"Sweep av 8–9:30 H eller L",sub:"Priset tar ut range-extremen",blocker:true,stop:"Inget sweep = inget setup"},
+      {id:"s2",label:"Initial FVG skapad",sub:"3-candle FVG under/efter sweep-rörelsen",blocker:true,stop:"Ingen FVG → inget setup"},
+      {id:"s3",label:"Trigger 1: BPR overlap (bullish+bearish FVG)",sub:"Limit order på retest av overlap-zonen"},
+      {id:"s4",label:"Trigger 2: Venom Breakout (engulfing inverterar FVG)",sub:"Market order vid engulfing close"},
+      {id:"s5",label:"2R möjligt",sub:"",blocker:true,stop:"RR < 2R → hoppa"},
+    ]},
+    {id:"entry",title:"Entry",color:"#059669",items:[
+      {id:"e1",label:"Order satt (limit eller market)",sub:"T1: limit på BPR. T2: market vid breakout-close."},
+      {id:"e2",label:"TP ej träffad pre-retest",sub:"",blocker:true,stop:"TP träffad = cancel"},
+    ]},
+    {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
+      {id:"m1",label:"Max 2 försök per dag",sub:"Ny trigger måste synas för 2nd attempt"},
+      {id:"m2",label:"Journalföring",sub:"Trigger-typ, utfall, R, second attempt?"},
+    ]}
+  ]},
+  turtle:{name:"ICT Turtle Soup",phases:[
+    {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
+      {id:"p1",label:"Economic calendar kollad",sub:"",blocker:true,stop:"Red folder → NO TRADE"},
+      {id:"p2",label:"NY AM session (efter 9:30)",sub:"",blocker:true,stop:"Utanför session → vänta"},
+      {id:"p3",label:"Bias identifierad",sub:"Vilken TBL-nivå är nästa mål?"},
+    ]},
+    {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
+      {id:"s1",label:"TBL-sweep sedd",sub:"Session H/L, PDH/PDL, NWOG sweepat",blocker:true,stop:"Inget TBL-sweep → vänta"},
+      {id:"s2",label:"Trigger 1 (reversal): CISD",sub:"CISD efter TBL-sweep. Tydlig stor-body candle."},
+      {id:"s3",label:"Trigger 2 (continuation): FVG",sub:"Tydlig DOL identifierad. FVG i rörelseriktningen."},
+      {id:"s4",label:"Inte för nära nästa TBL",sub:"Continuation nära TBL = lägre sannolikhet"},
+    ]},
+    {id:"entry",title:"Entry",color:"#059669",items:[
+      {id:"e1",label:"T1: Limit på CISD-retest",sub:"SL = recent H/L. TP = ~1.5R."},
+      {id:"e2",label:"T2: Limit på FVG-retest",sub:"SL = H/L av FVG-candeln. TP = 2R fixed."},
+      {id:"e3",label:"Cancel limit om TP nås pre-fill",sub:"",blocker:true,stop:"TP träffad = cancel"},
+    ]},
+    {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
+      {id:"m1",label:"Max 2 försök / en vinst = klar",sub:""},
+      {id:"m2",label:"Journalföring",sub:"Trigger-typ, TBL-nivå, utfall, R"},
+    ]}
+  ]},
+  custom:{name:"Egen strategi",phases:[
+    {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
+      {id:"p1",label:"Filterkontroll 1",sub:"Anpassa till din strategi"},
+      {id:"p2",label:"Filterkontroll 2",sub:""},
+    ]},
+    {id:"setup",title:"Setup-check",color:"#0891b2",items:[
+      {id:"s1",label:"Bias / riktning klar",sub:""},
+      {id:"s2",label:"Setup identifierat",sub:""},
+      {id:"s3",label:"RR beräknat ≥ 2",sub:"",blocker:true,stop:"RR < 2 → hoppa"},
+    ]},
+    {id:"entry",title:"Entry",color:"#059669",items:[
+      {id:"e1",label:"Entry order satt",sub:""},
+      {id:"e2",label:"SL satt",sub:""},
+      {id:"e3",label:"TP satt",sub:""},
+    ]}
+  ]}
+};
+
+// ── CHECKLIST ─────────────────────────────────────────────────────────────────
+function loadStrategy() {
+  activeStrategy = document.getElementById('strategyPicker').value;
+  checked = {};
+  renderChecklist();
+}
+
+function renderChecklist() {
+  const strat = STRATEGIES[activeStrategy];
+  const container = document.getElementById('checklistContainer');
+  container.innerHTML = '';
+  strat.phases.forEach(phase => {
+    const total = phase.items.length;
+    const done = phase.items.filter(it => checked[it.id]).length;
+    const div = document.createElement('div');
+    div.className = 'phase open';
+    div.id = 'phase-'+phase.id;
+    div.innerHTML = `
+      <div class="phase-header" onclick="togglePhase('${phase.id}')">
+        <div class="phase-dot" style="background:${phase.color}"></div>
+        <span class="phase-title">${phase.title}</span>
+        <span class="phase-count" id="pc-${phase.id}">${done}/${total}</span>
+        <span class="phase-chevron">▾</span>
+      </div>
+      <div class="checklist-body">
+        ${phase.items.map(item => `
+          <div class="check-item ${checked[item.id]?'checked':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}','${phase.id}')">
+            <div class="check-box"><span class="check-tick">✓</span></div>
+            <div class="check-label">
+              <strong>${item.label}</strong>
+              ${item.sub?`<div class="sub">${item.sub}</div>`:''}
+              ${item.stop&&!checked[item.id]?`<div class="check-stop">⛔ ${item.stop}</div>`:''}
+            </div>
+          </div>`).join('')}
+      </div>`;
+    container.appendChild(div);
+  });
+  updateProgress();
+}
+
+function togglePhase(id) {
+  document.getElementById('phase-'+id).classList.toggle('open');
+}
+
+function toggleCheck(id, phaseId) {
+  checked[id] = !checked[id];
+  const el = document.getElementById('ci-'+id);
+  el.classList.toggle('checked', checked[id]);
+  const stopEl = el.querySelector('.check-stop');
+  const strat = STRATEGIES[activeStrategy];
+  const item = strat.phases.flatMap(p=>p.items).find(i=>i.id===id);
+  if(item && item.stop) {
+    if(checked[id] && stopEl) stopEl.remove();
+    else if(!checked[id] && !stopEl) {
+      const lbl = el.querySelector('.check-label');
+      const s = document.createElement('div');
+      s.className='check-stop'; s.textContent='⛔ '+item.stop;
+      lbl.appendChild(s);
+    }
+  }
+  const phase = strat.phases.find(p=>p.id===phaseId);
+  if(phase) {
+    const done = phase.items.filter(it=>checked[it.id]).length;
+    document.getElementById('pc-'+phaseId).textContent = `${done}/${phase.items.length}`;
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  const strat = STRATEGIES[activeStrategy];
+  const allItems = strat.phases.flatMap(p=>p.items);
+  const total = allItems.length;
+  const done = allItems.filter(it=>checked[it.id]).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressLabel').textContent = `${done} / ${total} steg klara`;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('progressFill').style.width = pct+'%';
+  const banner = document.getElementById('statusBanner');
+  const blockers = allItems.filter(it=>it.blocker&&!checked[it.id]);
+  if(pct===100){banner.style.display='flex';banner.className='status-banner go';banner.textContent='✅ Alla steg klara – A+ setup!';}
+  else if(blockers.length>0&&done>0){banner.style.display='flex';banner.className='status-banner warn';banner.textContent=`⚠ Blockerande steg: "${blockers[0].label}"`;}
+  else if(done===0){banner.style.display='none';}
+  else{banner.style.display='flex';banner.className='status-banner neutral';banner.textContent=`🔵 ${pct}% klar`;}
+}
+
+function resetChecklist() {
+  checked = {}; selectedGrade = '';
+  document.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('sel'));
+  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-result','f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-direction').value='';
+  document.getElementById('f-outcome').value='';
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  renderChecklist();
+}
+
+function setGrade(g) {
+  selectedGrade = g;
+  document.querySelectorAll('.grade-btn').forEach(b=>{b.classList.toggle('sel',b.dataset.grade===g);});
+}
+
+async function logToJournal() {
+  const strat = STRATEGIES[activeStrategy];
+  const allItems = strat.phases.flatMap(p=>p.items);
+  const pct = allItems.length ? Math.round(allItems.filter(it=>checked[it.id]).length/allItems.length*100) : 0;
+  const trade = {
+    date: document.getElementById('f-date').value || new Date().toISOString().split('T')[0],
+    time: document.getElementById('f-time').value || null,
+    strategy: strat.name,
+    symbol: document.getElementById('f-symbol').value || null,
+    direction: document.getElementById('f-direction').value || null,
+    entry: parseFloat(document.getElementById('f-entry').value)||null,
+    sl: parseFloat(document.getElementById('f-sl').value)||null,
+    tp: parseFloat(document.getElementById('f-tp').value)||null,
+    outcome: document.getElementById('f-outcome').value || null,
+    result: parseFloat(document.getElementById('f-result').value)||null,
+    grade: selectedGrade || null,
+    checklist_pct: pct,
+    notes: document.getElementById('f-notes').value || null,
+  };
+  await saveTrade(trade);
+  resetChecklist();
+  showPage('journal', document.querySelectorAll('.htab')[1]);
+}
+
+// ── JOURNAL ───────────────────────────────────────────────────────────────────
+function showPage(p, btn) {
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.htab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(p==='journal'){updateStats();renderJournal();}
+}
+
+function updateStats() {
+  const fs = document.getElementById('filterStrategy').value;
+  const fo = document.getElementById('filterOutcome').value;
+  const trades = journal.filter(t=>(!fs||t.strategy===fs)&&(!fo||t.outcome===fo));
+  const withR = trades.filter(t=>t.result!=null);
+  const wins = withR.filter(t=>t.outcome==='W').length;
+  const wr = withR.length?(wins/withR.length*100).toFixed(0)+'%':'—';
+  const totalR = withR.reduce((a,t)=>a+(t.result||0),0);
+  const avgR = withR.length?(totalR/withR.length).toFixed(2):'—';
+  const winR = withR.filter(t=>t.result>0).reduce((a,t)=>a+t.result,0);
+  const lossR = Math.abs(withR.filter(t=>t.result<0).reduce((a,t)=>a+t.result,0));
+  const pf = lossR>0?(winR/lossR).toFixed(2):'—';
+  document.getElementById('s-total').textContent = trades.length;
+  const wrEl=document.getElementById('s-wr'); wrEl.textContent=wr; wrEl.className='stat-value'+(wins>withR.length-wins?' green':wins<withR.length-wins?' red':'');
+  const arEl=document.getElementById('s-avgr'); arEl.textContent=avgR==='—'?'—':(avgR>0?'+':'')+avgR+'R'; arEl.className='stat-value'+(avgR>0?' green':avgR<0?' red':'');
+  const trEl=document.getElementById('s-totalr'); trEl.textContent=withR.length===0?'—':(totalR>=0?'+':'')+totalR.toFixed(2)+'R'; trEl.className='stat-value'+(totalR>0?' green':totalR<0?' red':'');
+  document.getElementById('s-pf').textContent=pf;
+}
+
+function renderJournal() {
+  updateStats();
+  const fs = document.getElementById('filterStrategy').value;
+  const fo = document.getElementById('filterOutcome').value;
+  let trades = journal.filter(t=>(!fs||t.strategy===fs)&&(!fo||t.outcome===fo));
+  trades.sort((a,b)=>{
+    let av=a[sortCol]||'',bv=b[sortCol]||'';
+    return typeof av==='string'?av.localeCompare(bv)*sortDir:(av-bv)*sortDir;
+  });
+  const body = document.getElementById('journalBody');
+  if(!trades.length){body.innerHTML='<div class="empty">Inga trades loggade ännu. Fyll i checklistan och klicka "Logga trade".</div>';return;}
+  const th = ['Datum','Strategi','Symbol','Dir','Entry','SL','TP','Utfall','R','Grade','%Check',''].map((h,i)=>{
+    const cols=['date','strategy','symbol','direction','entry','sl','tp','outcome','result','grade','checklist_pct',''];
+    return h?`<th onclick="sortBy('${cols[i]}')">${h}${sortCol===cols[i]?(sortDir>0?' ▴':' ▾'):''}</th>`:'<th></th>';
+  }).join('');
+  const rows = trades.map(t=>`<tr>
+    <td style="white-space:nowrap;font-family:var(--mono);font-size:12px">${t.date||'—'}${t.time?` <span style="color:var(--text3);font-size:11px">${t.time}</span>`:''}</td>
+    <td style="font-size:12px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.strategy||'—'}</td>
+    <td><strong>${t.symbol||'—'}</strong></td>
+    <td>${t.direction?`<span class="badge badge-${t.direction}">${t.direction}</span>`:'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${t.entry??'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${t.sl??'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${t.tp??'—'}</td>
+    <td>${t.outcome?`<span class="badge badge-${t.outcome}">${t.outcome}</span>`:'—'}</td>
+    <td class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}">${t.result!=null?((t.result>0?'+':'')+t.result.toFixed(2)+'R'):'—'}</td>
+    <td style="font-weight:700;color:${t.grade==='A+'?'var(--green)':t.grade==='A'?'var(--teal)':t.grade==='B'?'var(--amber)':'var(--red)'}">${t.grade||'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${t.checklist_pct!=null?t.checklist_pct+'%':'—'}</td>
+    <td><button class="del-btn" onclick="deleteTrade('${t.id}')">✕</button></td>
+  </tr>`).join('');
+  body.innerHTML=`<table class="jtable"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function sortBy(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}renderJournal();}
+
+function exportCSV(){
+  const cols=["date","time","strategy","symbol","direction","entry","sl","tp","outcome","result","grade","checklist_pct","notes"];
+  const csv=[cols.join(","),...journal.map(t=>cols.map(c=>{const v=t[c]??'';return typeof v==='string'&&v.includes(',')? `"${v}"`:v;}).join(","))].join("\n");
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='tradelog.csv';a.click();
+}
+</script>
+</body>
+</html>
