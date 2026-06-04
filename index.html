@@ -30,8 +30,11 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .auth-tab.active{background:var(--navy);color:#fff;}
 .form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
 .form-group label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
-.auth-input,.form-control{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);color:var(--text);background:var(--bg);transition:border-color .15s;}
+.form-group.wide{grid-column:1/-1;}
+.form-group.half{grid-column:span 2;}
+.auth-input,.form-control{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);color:var(--text);background:var(--bg);transition:border-color .15s;width:100%;}
 .auth-input:focus,.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.form-control.textarea{resize:vertical;min-height:64px;}
 .auth-btn,.btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .15s;font-weight:500;}
 .auth-btn{width:100%;background:var(--navy);color:#fff;border-color:var(--navy);margin-top:4px;}
 .auth-btn:hover{background:#1a2d4f;}
@@ -39,9 +42,11 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .btn-primary:hover{background:#1d4ed8;}
 .btn-ghost{background:transparent;color:var(--text2);}
 .btn-ghost:hover{background:var(--gray-lt);}
-.btn-sm{padding:5px 10px;font-size:12px;}
 .btn-danger{background:transparent;color:var(--red);border-color:#fca5a5;}
 .btn-danger:hover{background:var(--red-lt);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-success:hover{background:#15803d;}
 .auth-err{font-size:12px;color:var(--red);margin-top:6px;min-height:16px;}
 .auth-msg{font-size:12px;color:var(--green);margin-top:6px;}
 
@@ -62,7 +67,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .main{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 50px);}
 .sidebar{background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;}
 .sidebar-scroll{flex:1;overflow-y:auto;}
-.content{background:var(--bg2);overflow-y:auto;padding:20px;}
+.content{background:var(--bg2);overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
 
 /* STRATEGY BAR */
 .strategy-bar{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg2);}
@@ -81,7 +86,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .status-banner.warn{background:var(--amber-lt);color:var(--amber);}
 .status-banner.neutral{background:var(--gray-lt);color:var(--gray);}
 
-/* PHASE */
+/* CHECKLIST */
 .phase{border-bottom:1px solid var(--border);}
 .phase-header{padding:9px 14px;display:flex;align-items:center;gap:7px;cursor:pointer;background:var(--bg);transition:background .1s;}
 .phase-header:hover{background:var(--gray-lt);}
@@ -103,50 +108,52 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .check-label strong{font-weight:500;color:var(--text);}
 .check-label .sub{font-size:11px;color:var(--text3);margin-top:1px;}
 .check-stop{font-size:10px;background:var(--red-lt);color:var(--red);padding:1px 5px;border-radius:4px;margin-top:2px;display:inline-block;font-weight:500;}
-
-/* SIDEBAR BOTTOM */
-.sidebar-bottom{border-top:1px solid var(--border);padding:10px 14px;background:var(--bg);}
+.sidebar-bottom{border-top:1px solid var(--border);padding:10px 14px;background:var(--bg);display:flex;align-items:center;gap:8px;}
+.saving-indicator{font-size:11px;color:var(--text3);font-family:var(--mono);}
 
 /* TRADE FORM */
 .trade-form{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:18px;box-shadow:var(--shadow);}
 .form-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .form-header-title{font-size:14px;font-weight:600;}
 .form-header-actions{display:flex;gap:8px;align-items:center;}
-.saving-indicator{font-size:11px;color:var(--text3);font-family:var(--mono);}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.form-group.wide{grid-column:1/-1;}
-.form-group.half{grid-column:span 2;}
-.form-control.textarea{resize:vertical;min-height:64px;}
-.rr-display{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--mono);font-weight:500;background:var(--bg2);color:var(--text2);}
+.rr-display{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--mono);font-weight:500;background:var(--bg2);color:var(--text2);}
 .rr-display.positive{color:var(--green);background:var(--green-lt);border-color:#86efac;}
 .rr-display.negative{color:var(--red);background:var(--red-lt);border-color:#fca5a5;}
-
-/* GRADE BUTTONS */
+.rr-display.neutral{color:var(--amber);background:var(--amber-lt);border-color:#fcd34d;}
 .grade-btns{display:flex;gap:5px;}
 .grade-btn{padding:5px 11px;border-radius:6px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text3);}
 .grade-btn.sel{background:var(--green-lt);border-color:var(--green);color:var(--green);}
 
-/* IMAGE/LINK UPLOAD */
-.media-row{display:flex;gap:8px;align-items:flex-start;}
-.img-preview{width:100%;max-height:180px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border);margin-top:6px;display:none;}
-.img-preview.visible{display:block;}
+/* MEDIA FIELD */
+.media-input-wrap{display:flex;gap:6px;align-items:center;}
+.media-input-wrap input{flex:1;}
+.media-preview{width:100%;max-height:160px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border);margin-top:6px;display:none;cursor:pointer;}
+.media-preview.visible{display:block;}
 
 /* CUSTOM FIELDS */
 .custom-fields-section{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);}
-.custom-fields-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.custom-fields-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
-.custom-field-row{display:grid;grid-template-columns:1fr 120px 32px;gap:6px;align-items:center;margin-bottom:6px;}
-.custom-field-val{padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);color:var(--text);}
+.custom-fields-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.custom-field-row{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;margin-bottom:6px;}
 .custom-field-label{font-size:12px;color:var(--text2);font-weight:500;}
-.field-manager{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-top:8px;}
+.field-manager{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-top:10px;}
 .field-manager-title{font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text2);}
-.field-item{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.field-item input{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);}
-.field-item select{padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);}
-.field-remove{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 5px;border-radius:4px;}
+.field-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.field-item input,.field-item select{padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);}
+.field-remove{background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 5px;border-radius:4px;}
 .field-remove:hover{background:var(--red-lt);color:var(--red);}
 .add-field-row{display:flex;gap:6px;margin-top:8px;}
 .add-field-row input,.add-field-row select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);flex:1;}
+
+/* RECENT TRADES PANEL */
+.recent-panel{background:var(--bg);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.recent-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.recent-title{font-size:13px;font-weight:600;color:var(--text);}
+.recent-subtitle{font-size:11px;color:var(--text3);}
+.recent-row{display:grid;grid-template-columns:90px 60px 50px 70px 50px 60px 1fr;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;font-size:12px;}
+.recent-row:last-child{border-bottom:none;}
+.recent-row:hover{background:var(--gray-lt);}
+.recent-empty{padding:20px 16px;text-align:center;color:var(--text3);font-size:12px;}
 
 /* JOURNAL */
 .page{display:none;}
@@ -157,10 +164,11 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .journal-filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .filter-select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);color:var(--text2);background:var(--bg);}
 .jtable{width:100%;border-collapse:collapse;font-size:12px;}
-.jtable th{padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);cursor:pointer;white-space:nowrap;}
+.jtable th{padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);cursor:pointer;white-space:nowrap;user-select:none;}
 .jtable td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
 .jtable tr:last-child td{border-bottom:none;}
-.jtable tr:hover td{background:var(--gray-lt);}
+.jtable tbody tr{cursor:pointer;}
+.jtable tbody tr:hover td{background:var(--blue-lt);}
 .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;}
 .badge-W{background:var(--green-lt);color:var(--green);}
 .badge-L{background:var(--red-lt);color:var(--red);}
@@ -170,9 +178,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .r-pos{color:var(--green);font-family:var(--mono);font-weight:500;}
 .r-neg{color:var(--red);font-family:var(--mono);font-weight:500;}
 .r-neu{color:var(--amber);font-family:var(--mono);font-weight:500;}
-.del-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 5px;border-radius:4px;}
-.del-btn:hover{background:var(--red-lt);color:var(--red);}
-.thumb{width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer;}
+.thumb{width:28px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--border);}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
@@ -185,14 +191,28 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .empty{padding:36px 20px;text-align:center;color:var(--text3);font-size:13px;}
 
 /* MODAL */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100;display:none;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:200;}
 .modal-backdrop.open{display:flex;}
-.modal{background:var(--bg);border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal{background:var(--bg);border-radius:12px;padding:0;max-width:640px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:1;}
 .modal-title{font-size:15px;font-weight:600;}
+.modal-header-actions{display:flex;gap:8px;align-items:center;}
 .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:2px 6px;border-radius:4px;}
 .modal-close:hover{background:var(--gray-lt);}
-.modal img{width:100%;border-radius:var(--r);}
+.modal-body{padding:20px;}
+.modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.modal-grid .wide{grid-column:1/-1;}
+.modal-grid .half{grid-column:span 2;}
+.modal-img{width:100%;max-height:220px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border);margin-top:4px;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-radius:0 0 12px 12px;}
+
+/* CONFIRM */
+.confirm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:300;}
+.confirm-backdrop.open{display:flex;}
+.confirm-box{background:var(--bg);border-radius:10px;padding:24px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.confirm-title{font-size:15px;font-weight:600;margin-bottom:8px;}
+.confirm-msg{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;}
+.confirm-actions{display:flex;gap:8px;justify-content:flex-end;}
 </style>
 </head>
 <body>
@@ -255,15 +275,14 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
       <div id="checklistContainer"></div>
     </div>
     <div class="sidebar-bottom">
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" onclick="resetChecklist()">↺ Nollställ</button>
-        <span id="savingIndicator" class="saving-indicator"></span>
-      </div>
+      <button class="btn btn-ghost btn-sm" onclick="resetChecklist()">↺ Nollställ</button>
+      <span id="savingIndicator" class="saving-indicator"></span>
     </div>
   </div>
 
-  <!-- RIGHT: TRADE FORM -->
+  <!-- RIGHT CONTENT -->
   <div class="content">
+    <!-- TRADE FORM -->
     <div class="trade-form">
       <div class="form-header">
         <div class="form-header-title">📋 Trade-detaljer</div>
@@ -272,8 +291,6 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
           <button class="btn btn-primary btn-sm" onclick="logToJournal()">💾 Logga trade</button>
         </div>
       </div>
-
-      <!-- STANDARD FIELDS -->
       <div class="form-grid" id="standardFields">
         <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
         <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
@@ -283,64 +300,65 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
             <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
           </select>
         </div>
-        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR()" placeholder="0.00"></div>
-        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR()" placeholder="0.00"></div>
-        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR()" placeholder="0.00"></div>
+        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR(false)" placeholder="0.00"></div>
         <div class="form-group"><label>Utfall</label>
-          <select class="form-control" id="f-outcome" onchange="calcRR()">
+          <select class="form-control" id="f-outcome" onchange="calcRR(false)">
             <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
           </select>
         </div>
-        <div class="form-group"><label>Resultat (R) <span style="color:var(--text3);font-weight:400">auto</span></label>
+        <div class="form-group"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
           <div class="rr-display" id="rrDisplay">—</div>
         </div>
         <div class="form-group"><label>Setup-kvalitet</label>
           <div class="grade-btns">
-            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+')">A+</button>
-            <button class="grade-btn" data-grade="A" onclick="setGrade('A')">A</button>
-            <button class="grade-btn" data-grade="B" onclick="setGrade('B')">B</button>
-            <button class="grade-btn" data-grade="C" onclick="setGrade('C')">C</button>
+            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+',this.closest('.grade-btns'))">A+</button>
+            <button class="grade-btn" data-grade="A" onclick="setGrade('A',this.closest('.grade-btns'))">A</button>
+            <button class="grade-btn" data-grade="B" onclick="setGrade('B',this.closest('.grade-btns'))">B</button>
+            <button class="grade-btn" data-grade="C" onclick="setGrade('C',this.closest('.grade-btns'))">C</button>
           </div>
         </div>
-        <div class="form-group half"><label>Chart-länk (TradingView etc.)</label>
-          <input type="url" class="form-control" id="f-chartlink" placeholder="https://www.tradingview.com/…">
-        </div>
-        <div class="form-group half"><label>Skärmbild (bild-URL eller ladda upp)</label>
-          <div class="media-row">
-            <input type="url" class="form-control" id="f-imgurl" placeholder="https://…" oninput="previewImg()" style="flex:1">
-            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap">
-              📎 Ladda upp<input type="file" accept="image/*" id="f-imgfile" style="display:none" onchange="handleImgUpload(this)">
+        <div class="form-group half"><label>Chart / Skärmbild <span style="color:var(--text3);font-weight:400;font-size:10px">URL eller ladda upp</span></label>
+          <div class="media-input-wrap">
+            <input type="text" class="form-control" id="f-media" placeholder="https://… eller ladda upp bild →" oninput="previewMedia('f-media','mediaPreview')">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">
+              📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'f-media','mediaPreview')">
             </label>
           </div>
-          <img id="imgPreview" class="img-preview" src="" alt="förhandsgranskning" onclick="openImgModal(this.src)">
+          <img id="mediaPreview" class="media-preview" src="" alt="" onclick="openImgModal(this.src)">
         </div>
         <div class="form-group wide"><label>Noteringar</label>
           <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre? Avvikelser från reglerna?"></textarea>
         </div>
       </div>
-
       <!-- CUSTOM FIELDS -->
       <div class="custom-fields-section" id="customFieldsSection" style="display:none">
-        <div class="custom-fields-header">
-          <span class="custom-fields-title">Egna fält</span>
-        </div>
-        <div id="customFieldInputs"></div>
+        <div class="custom-fields-title">Egna fält</div>
+        <div class="form-grid" id="customFieldInputs"></div>
       </div>
-
       <!-- FIELD MANAGER -->
       <div class="field-manager" id="fieldManager" style="display:none">
         <div class="field-manager-title">⚙ Hantera egna fält</div>
         <div id="fieldList"></div>
         <div class="add-field-row">
-          <input type="text" id="newFieldName" placeholder="Fältnamn (t.ex. Dag i vecka)">
-          <select id="newFieldType">
-            <option value="text">Text</option>
-            <option value="number">Nummer</option>
-            <option value="select">Dropdown</option>
-          </select>
+          <input type="text" id="newFieldName" placeholder="Fältnamn (t.ex. Confluences)">
+          <select id="newFieldType"><option value="text">Text</option><option value="number">Nummer</option><option value="select">Dropdown</option></select>
           <button class="btn btn-primary btn-sm" onclick="addCustomField()">+ Lägg till</button>
         </div>
       </div>
+    </div>
+
+    <!-- RECENT TRADES PANEL -->
+    <div class="recent-panel">
+      <div class="recent-header">
+        <div class="recent-title">Senaste trades</div>
+        <div class="recent-subtitle">Klicka på en rad för att se eller redigera</div>
+      </div>
+      <div style="padding:6px 16px 4px;display:grid;grid-template-columns:90px 60px 50px 70px 50px 60px 1fr;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);">
+        <span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span><span>Strategi</span>
+      </div>
+      <div id="recentTradesList"></div>
     </div>
   </div>
 </div>
@@ -379,48 +397,120 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 </div>
 </div>
 
-<!-- IMAGE MODAL -->
-<div class="modal-backdrop" id="imgModal" onclick="closeImgModal()">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:800px">
+<!-- TRADE MODAL (view/edit) -->
+<div class="modal-backdrop" id="tradeModal">
+  <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Skärmbild</span>
-      <button class="modal-close" onclick="closeImgModal()">✕</button>
+      <div class="modal-title" id="modalTitle">Trade</div>
+      <div class="modal-header-actions">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
     </div>
-    <img id="modalImg" src="" alt="">
+    <div class="modal-body">
+      <div class="modal-grid">
+        <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="m-date"></div>
+        <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="m-time"></div>
+        <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="m-symbol"></div>
+        <div class="form-group"><label>Riktning</label>
+          <select class="form-control" id="m-direction">
+            <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="m-entry" oninput="calcRR(true)"></div>
+        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="m-sl" oninput="calcRR(true)"></div>
+        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="m-tp" oninput="calcRR(true)"></div>
+        <div class="form-group"><label>Utfall</label>
+          <select class="form-control" id="m-outcome" onchange="calcRR(true)">
+            <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
+          <div class="rr-display" id="mRrDisplay">—</div>
+        </div>
+        <div class="form-group"><label>Setup-kvalitet</label>
+          <div class="grade-btns" id="modalGradeBtns">
+            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+',this.closest('.grade-btns'))">A+</button>
+            <button class="grade-btn" data-grade="A" onclick="setGrade('A',this.closest('.grade-btns'))">A</button>
+            <button class="grade-btn" data-grade="B" onclick="setGrade('B',this.closest('.grade-btns'))">B</button>
+            <button class="grade-btn" data-grade="C" onclick="setGrade('C',this.closest('.grade-btns'))">C</button>
+          </div>
+        </div>
+        <div class="form-group half"><label>Chart / Skärmbild</label>
+          <div class="media-input-wrap">
+            <input type="text" class="form-control" id="m-media" oninput="previewMedia('m-media','mMediaPreview')" placeholder="https://…">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">
+              📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'m-media','mMediaPreview')">
+            </label>
+          </div>
+          <img id="mMediaPreview" class="media-preview" src="" alt="" onclick="openImgModal(this.src)">
+        </div>
+        <div class="form-group wide"><label>Noteringar</label>
+          <textarea class="form-control textarea" id="m-notes"></textarea>
+        </div>
+        <div class="form-group wide" id="modalCustomFields"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete()">🗑 Ta bort trade</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Avbryt</button>
+        <button class="btn btn-success btn-sm" onclick="saveModalTrade()">💾 Spara ändringar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="confirm-backdrop" id="confirmBackdrop">
+  <div class="confirm-box">
+    <div class="confirm-title">Ta bort trade?</div>
+    <div class="confirm-msg">Detta går inte att ångra. Traden och all dess data raderas permanent från databasen.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeConfirm()">Avbryt</button>
+      <button class="btn btn-danger btn-sm" onclick="doDelete()">Ja, ta bort</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMG MODAL -->
+<div class="modal-backdrop" id="imgModal" onclick="document.getElementById('imgModal').classList.remove('open')" style="z-index:400">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:800px;padding:0">
+    <div class="modal-header">
+      <span class="modal-title">Bild</span>
+      <button class="modal-close" onclick="document.getElementById('imgModal').classList.remove('open')">✕</button>
+    </div>
+    <div style="padding:16px"><img id="imgModalSrc" src="" style="width:100%;border-radius:var(--r)"></div>
   </div>
 </div>
 
 <script>
 const SUPA_URL='https://zmtpgnnqtkkdsrswhrzk.supabase.co';
 const SUPA_KEY='sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ';
-const {createClient}=supabase;
-const sb=createClient(SUPA_URL,SUPA_KEY);
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 
-let currentUser=null,journal=[],checked={},selectedGrade='',activeStrategy='unicorn',sortCol='date',sortDir=-1;
+let currentUser=null,journal=[],checked={},activeStrategy='unicorn',sortCol='date',sortDir=-1;
+let selectedGrade='',modalGrade='',calculatedR=null,modalCalculatedR=null;
 let customFields=JSON.parse(localStorage.getItem('customFields')||'[]');
-let calculatedR=null;
-let authMode='login';
+let editingTradeId=null,authMode='login';
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function switchAuthTab(m){
   authMode=m;
   document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&m==='login')||(i===1&&m==='signup')));
   document.getElementById('authBtn').textContent=m==='login'?'Logga in':'Skapa konto';
-  document.getElementById('authErr').textContent='';
-  document.getElementById('authMsg').textContent='';
+  ['authErr','authMsg'].forEach(id=>document.getElementById(id).textContent='');
 }
 async function doAuth(){
   const email=document.getElementById('authEmail').value.trim();
   const password=document.getElementById('authPassword').value;
   const errEl=document.getElementById('authErr');
-  errEl.textContent='';
-  document.getElementById('authMsg').textContent='';
+  errEl.textContent='';document.getElementById('authMsg').textContent='';
   if(!email||!password){errEl.textContent='Fyll i e-post och lösenord.';return;}
   document.getElementById('authBtn').textContent='…';
   if(authMode==='signup'){
     const{error}=await sb.auth.signUp({email,password});
     if(error)errEl.textContent=error.message;
-    else document.getElementById('authMsg').textContent='Konto skapat! Kolla din e-post, logga sedan in.';
+    else document.getElementById('authMsg').textContent='Konto skapat! Kolla din e-post och logga sedan in.';
   }else{
     const{data,error}=await sb.auth.signInWithPassword({email,password});
     if(error)errEl.textContent='Fel e-post eller lösenord.';
@@ -437,6 +527,7 @@ async function onLogin(user){
   await fetchJournal();
   renderChecklist();
   renderCustomFieldInputs();
+  renderRecentTrades();
 }
 async function doLogout(){
   await sb.auth.signOut();
@@ -447,109 +538,100 @@ async function doLogout(){
 sb.auth.getSession().then(({data:{session}})=>{if(session)onLogin(session.user);});
 
 // ── RR CALC ───────────────────────────────────────────────────────────────────
-function calcRR(){
-  const entry=parseFloat(document.getElementById('f-entry').value);
-  const sl=parseFloat(document.getElementById('f-sl').value);
-  const tp=parseFloat(document.getElementById('f-tp').value);
-  const outcome=document.getElementById('f-outcome').value;
-  const disp=document.getElementById('rrDisplay');
-  if(!entry||!sl||isNaN(entry)||isNaN(sl)){disp.textContent='—';disp.className='rr-display';calculatedR=null;return;}
+function calcRR(isModal){
+  const pfx=isModal?'m-':'f-';
+  const dispId=isModal?'mRrDisplay':'rrDisplay';
+  const entry=parseFloat(document.getElementById(pfx+'entry').value);
+  const sl=parseFloat(document.getElementById(pfx+'sl').value);
+  const tp=parseFloat(document.getElementById(pfx+'tp').value);
+  const outcome=document.getElementById(pfx+'outcome').value;
+  const disp=document.getElementById(dispId);
   const risk=Math.abs(entry-sl);
-  if(risk===0){disp.textContent='—';disp.className='rr-display';calculatedR=null;return;}
-  if(outcome==='BE'){disp.textContent='0.00R';disp.className='rr-display r-neu';calculatedR=0;return;}
+  if(!entry||!sl||isNaN(entry)||isNaN(sl)||risk===0){
+    disp.textContent='—';disp.className='rr-display';
+    if(isModal)modalCalculatedR=null;else calculatedR=null;return;
+  }
+  if(outcome==='BE'){disp.textContent='0.00R';disp.className='rr-display neutral';if(isModal)modalCalculatedR=0;else calculatedR=0;return;}
   if(outcome==='W'&&tp&&!isNaN(tp)){
-    const reward=Math.abs(tp-entry);
-    const r=(reward/risk).toFixed(2);
-    disp.textContent='+'+r+'R';disp.className='rr-display positive';calculatedR=parseFloat(r);
+    const r=parseFloat((Math.abs(tp-entry)/risk).toFixed(2));
+    disp.textContent='+'+r.toFixed(2)+'R';disp.className='rr-display positive';
+    if(isModal)modalCalculatedR=r;else calculatedR=r;
   }else if(outcome==='L'){
-    disp.textContent='-1.00R';disp.className='rr-display negative';calculatedR=-1;
+    disp.textContent='-1.00R';disp.className='rr-display negative';
+    if(isModal)modalCalculatedR=-1;else calculatedR=-1;
   }else if(tp&&!isNaN(tp)){
-    const reward=Math.abs(tp-entry);
-    const r=(reward/risk).toFixed(2);
-    disp.textContent=r+'R (planerat)';disp.className='rr-display';calculatedR=null;
+    const r=(Math.abs(tp-entry)/risk).toFixed(2);
+    disp.textContent=r+'R (plan)';disp.className='rr-display';
+    if(isModal)modalCalculatedR=null;else calculatedR=null;
   }else{
-    disp.textContent='—';disp.className='rr-display';calculatedR=null;
+    disp.textContent='—';disp.className='rr-display';
+    if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
 }
 
-// ── IMAGE ─────────────────────────────────────────────────────────────────────
-function previewImg(){
-  const url=document.getElementById('f-imgurl').value;
-  const prev=document.getElementById('imgPreview');
-  if(url){prev.src=url;prev.classList.add('visible');}
+// ── GRADE ─────────────────────────────────────────────────────────────────────
+function setGrade(g,container){
+  container.querySelectorAll('.grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===g));
+  if(container.id==='modalGradeBtns')modalGrade=g;
+  else selectedGrade=g;
+}
+
+// ── MEDIA ─────────────────────────────────────────────────────────────────────
+function previewMedia(inputId,previewId){
+  const url=document.getElementById(inputId).value;
+  const prev=document.getElementById(previewId);
+  const isImg=/\.(jpg|jpeg|png|gif|webp|svg)/i.test(url)||url.startsWith('data:image');
+  if(url&&isImg){prev.src=url;prev.classList.add('visible');}
   else{prev.src='';prev.classList.remove('visible');}
 }
-function handleImgUpload(input){
-  const file=input.files[0];
-  if(!file)return;
+function handleImgUpload(input,inputId,previewId){
+  const file=input.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{
-    document.getElementById('f-imgurl').value=e.target.result;
-    previewImg();
-  };
+  reader.onload=e=>{document.getElementById(inputId).value=e.target.result;previewMedia(inputId,previewId);};
   reader.readAsDataURL(file);
 }
-function openImgModal(src){document.getElementById('modalImg').src=src;document.getElementById('imgModal').classList.add('open');}
-function closeImgModal(){document.getElementById('imgModal').classList.remove('open');}
+function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.add('open');}
 
 // ── CUSTOM FIELDS ─────────────────────────────────────────────────────────────
 function saveCustomFields(){localStorage.setItem('customFields',JSON.stringify(customFields));}
-
 function renderCustomFieldInputs(){
-  const section=document.getElementById('customFieldsSection');
+  const sec=document.getElementById('customFieldsSection');
   const container=document.getElementById('customFieldInputs');
-  if(!customFields.length){section.style.display='none';return;}
-  section.style.display='block';
+  if(!customFields.length){sec.style.display='none';return;}
+  sec.style.display='block';
   container.innerHTML=customFields.map(f=>`
-    <div class="custom-field-row">
-      <div class="custom-field-label">${f.name}</div>
+    <div class="form-group">
+      <label>${f.name}</label>
       ${f.type==='select'
-        ?`<select class="custom-field-val form-control" id="cf-${f.id}"><option value="">—</option>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`
-        :`<input type="${f.type}" class="custom-field-val form-control" id="cf-${f.id}" placeholder="">`}
-      <div></div>
+        ?`<select class="form-control" id="cf-${f.id}"><option value="">—</option>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`
+        :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}
     </div>`).join('');
 }
-
 function toggleFieldManager(){
   const fm=document.getElementById('fieldManager');
   fm.style.display=fm.style.display==='none'?'block':'none';
   if(fm.style.display==='block')renderFieldManager();
 }
-
 function renderFieldManager(){
   const list=document.getElementById('fieldList');
   if(!customFields.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Inga egna fält ännu.</div>';return;}
   list.innerHTML=customFields.map((f,i)=>`
     <div class="field-item">
       <span style="font-size:12px;flex:1">${f.name} <span style="color:var(--text3)">(${f.type})</span></span>
-      ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2,val3" onchange="updateFieldOptions(${i},this.value)" style="flex:2;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:' '}
+      ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="flex:2;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
       <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
     </div>`).join('');
 }
-
 function addCustomField(){
   const name=document.getElementById('newFieldName').value.trim();
   const type=document.getElementById('newFieldType').value;
   if(!name)return;
   customFields.push({id:Date.now(),name,type,options:type==='select'?[]:undefined});
-  saveCustomFields();
-  document.getElementById('newFieldName').value='';
-  renderFieldManager();
-  renderCustomFieldInputs();
+  saveCustomFields();document.getElementById('newFieldName').value='';
+  renderFieldManager();renderCustomFieldInputs();
 }
-
-function removeCustomField(i){
-  customFields.splice(i,1);
-  saveCustomFields();
-  renderFieldManager();
-  renderCustomFieldInputs();
-}
-
-function updateFieldOptions(i,val){
-  customFields[i].options=val.split(',').map(s=>s.trim()).filter(Boolean);
-  saveCustomFields();
-  renderCustomFieldInputs();
-}
+function removeCustomField(i){customFields.splice(i,1);saveCustomFields();renderFieldManager();renderCustomFieldInputs();}
+function updateFieldOptions(i,val){customFields[i].options=val.split(',').map(s=>s.trim()).filter(Boolean);saveCustomFields();}
 
 // ── DB ────────────────────────────────────────────────────────────────────────
 async function fetchJournal(){
@@ -560,16 +642,20 @@ async function saveTrade(trade){
   const ind=document.getElementById('savingIndicator');
   ind.textContent='💾 sparar…';
   const{data,error}=await sb.from('trades').insert([{...trade,user_id:currentUser.id}]).select();
-  if(!error&&data){journal.unshift(data[0]);ind.textContent='✓ sparat';setTimeout(()=>ind.textContent='',2000);}
-  else{ind.textContent='⚠ fel';console.error(error);}
+  if(!error&&data){journal.unshift(data[0]);ind.textContent='✓ sparat';setTimeout(()=>ind.textContent='',2000);return data[0];}
+  else{ind.textContent='⚠ fel';console.error(error);return null;}
+}
+async function updateTrade(id,fields){
+  const{error}=await sb.from('trades').update(fields).eq('id',id);
+  if(!error){const idx=journal.findIndex(t=>t.id===id);if(idx>-1)journal[idx]={...journal[idx],...fields};}
+  return !error;
 }
 async function deleteTrade(id){
   await sb.from('trades').delete().eq('id',id);
   journal=journal.filter(t=>t.id!==id);
-  updateStats();renderJournal();
 }
 
-// ── STRATEGIES ────────────────────────────────────────────────────────────────
+// ── CHECKLIST ─────────────────────────────────────────────────────────────────
 const STRATEGIES={
   unicorn:{name:"ICT Unicorn Model",phases:[
     {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
@@ -582,12 +668,12 @@ const STRATEGIES={
       {id:"s2",label:"Handelsriktning bestämd",sub:"DOL ovan pris = Long. DOL under pris = Short."},
       {id:"s3",label:"Manipulation Leg sedd",sub:"Impulsiv rörelse bort från DOL (1–3 candles)",blocker:true,stop:"Utdragen/choppy = lägre sannolikhet"},
       {id:"s4",label:"Breaker identifierad",sub:"Bullish: sista gröna BEFORE lower low. Bearish: sista röda BEFORE higher high.",blocker:true,stop:"Ej tydlig Breaker → inget setup"},
-      {id:"s5",label:"Fair Value Gap (FVG) identifierad",sub:"3-candle-formation, icke-överlappande wicks",blocker:true,stop:"Ingen FVG → inget setup"},
+      {id:"s5",label:"Fair Value Gap (FVG) identifierad",sub:"3-candle, icke-överlappande wicks",blocker:true,stop:"Ingen FVG → inget setup"},
       {id:"s6",label:"⚑ OVERLAP: Breaker + FVG överlappar",sub:"Det överlappande området är entry-zonen. KRITISK.",blocker:true,stop:"INGET overlap = INGET Unicorn → STOP"},
       {id:"s7",label:"TP beräknad ≥ 2R",sub:"Fib på manipulation leg. 2 STDV = primär TP.",blocker:true,stop:"RR < 2R → NO TRADE"},
     ]},
     {id:"entry",title:"Entry & Execution",color:"#059669",items:[
-      {id:"e1",label:"TP ej redan träffad",sub:"Om priset kört till TP-nivån utan retest → cancel",blocker:true,stop:"TP träffad = cancel order"},
+      {id:"e1",label:"TP ej redan träffad",sub:"Om priset kört till TP utan retest → cancel",blocker:true,stop:"TP träffad = cancel order"},
       {id:"e2",label:"Limit order satt",sub:"Entry vid topp av overlap-zon (long) / botten (short)"},
       {id:"e3",label:"Stop Loss satt",sub:"Body high/low av manipulation leg"},
       {id:"e4",label:"Take Profit satt",sub:"2 STDV (primär) eller DOL (sekundär)"},
@@ -600,19 +686,19 @@ const STRATEGIES={
   ]},
   globex:{name:"Bernd's Globex Strategy",phases:[
     {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
-      {id:"p1",label:"Economic calendar kollad",sub:"Ingen red folder news?",blocker:true,stop:"Red folder → NO TRADE"},
+      {id:"p1",label:"Economic calendar kollad",sub:"",blocker:true,stop:"Red folder → NO TRADE"},
       {id:"p2",label:"NY session öppen (9:30+)",sub:"",blocker:true,stop:"Ej NY session → vänta"},
     ]},
     {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
       {id:"s1",label:"Globex High & Low markerade",sub:"H/L från ETH 18:00–09:30 ET",blocker:true,stop:"Ej markerade = ej valid"},
       {id:"s2",label:"Globex H eller L sweepat",sub:"",blocker:true,stop:"Inget sweep = inget setup"},
       {id:"s3",label:"Fresh Supply/Demand-zon finns",sub:"Skapad 8:00–11:00 ET, <6 candles, explosiv avgång",blocker:true,stop:"Ingen fresh S/D → hoppa"},
-      {id:"s4",label:"RR beräknat ≥ 2",sub:"Fib -0.33/0/2.33/3.66/6.32",blocker:true,stop:"RR < 2R → hoppa"},
+      {id:"s4",label:"RR beräknat ≥ 2",sub:"",blocker:true,stop:"RR < 2R → hoppa"},
     ]},
     {id:"entry",title:"Entry",color:"#059669",items:[
-      {id:"e1",label:"Limit order vid zon",sub:"Buy limit efter Globex Low sweep. Sell limit efter High."},
+      {id:"e1",label:"Limit order vid zon",sub:""},
       {id:"e2",label:"SL = -0.33 bortom zon",sub:""},
-      {id:"e3",label:"TP satt (2R eller 4R)",sub:"HTF-trend → 4R + B/E vid 2R. Counter → 2R + B/E vid 1R."},
+      {id:"e3",label:"TP satt (2R eller 4R)",sub:"HTF-trend → 4R + B/E vid 2R"},
     ]},
     {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
       {id:"m1",label:"B/E satt vid halvvägs",sub:""},
@@ -628,11 +714,11 @@ const STRATEGIES={
     {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
       {id:"s1",label:"Sweep av 8–9:30 H eller L",sub:"",blocker:true,stop:"Inget sweep = inget setup"},
       {id:"s2",label:"Initial FVG skapad",sub:"",blocker:true,stop:"Ingen FVG → inget setup"},
-      {id:"s3",label:"Trigger 1 (BPR) eller Trigger 2 (Breakout)",sub:"T1: BPR overlap. T2: Engulfing inverterar FVG."},
+      {id:"s3",label:"Trigger 1 (BPR) eller Trigger 2 (Breakout)",sub:""},
       {id:"s4",label:"2R möjligt",sub:"",blocker:true,stop:"RR < 2R → hoppa"},
     ]},
     {id:"entry",title:"Entry",color:"#059669",items:[
-      {id:"e1",label:"Order satt",sub:"T1: limit på BPR. T2: market vid breakout-close."},
+      {id:"e1",label:"Order satt",sub:""},
       {id:"e2",label:"TP ej träffad pre-retest",sub:"",blocker:true,stop:"TP träffad = cancel"},
     ]},
     {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
@@ -644,17 +730,17 @@ const STRATEGIES={
     {id:"prep",title:"Förberedelse",color:"#6366f1",items:[
       {id:"p1",label:"Economic calendar kollad",sub:"",blocker:true,stop:"Red folder → NO TRADE"},
       {id:"p2",label:"NY AM session (efter 9:30)",sub:"",blocker:true,stop:"Utanför session → vänta"},
-      {id:"p3",label:"Bias identifierad",sub:"Vilken TBL-nivå är nästa mål?"},
+      {id:"p3",label:"Bias identifierad",sub:""},
     ]},
     {id:"setup",title:"Identifiera Setup",color:"#0891b2",items:[
-      {id:"s1",label:"TBL-sweep sedd",sub:"Session H/L, PDH/PDL, NWOG sweepat",blocker:true,stop:"Inget TBL-sweep → vänta"},
-      {id:"s2",label:"T1 (reversal): CISD efter sweep",sub:"Tydlig stor-body candle"},
-      {id:"s3",label:"T2 (continuation): FVG i riktningen",sub:"Tydlig DOL identifierad"},
+      {id:"s1",label:"TBL-sweep sedd",sub:"",blocker:true,stop:"Inget TBL-sweep → vänta"},
+      {id:"s2",label:"T1 (reversal): CISD efter sweep",sub:""},
+      {id:"s3",label:"T2 (continuation): FVG i riktningen",sub:""},
       {id:"s4",label:"Inte för nära nästa TBL",sub:""},
     ]},
     {id:"entry",title:"Entry",color:"#059669",items:[
       {id:"e1",label:"T1: Limit på CISD-retest",sub:"SL = recent H/L. TP ~1.5R."},
-      {id:"e2",label:"T2: Limit på FVG-retest",sub:"SL = H/L av FVG-candeln. TP 2R fixed."},
+      {id:"e2",label:"T2: Limit på FVG-retest",sub:"SL = H/L av FVG-candeln. TP 2R."},
       {id:"e3",label:"Cancel om TP nås pre-fill",sub:"",blocker:true,stop:"TP träffad = cancel"},
     ]},
     {id:"mgmt",title:"Trade Management",color:"#d97706",items:[
@@ -668,7 +754,7 @@ const STRATEGIES={
       {id:"p2",label:"Filterkontroll 2",sub:""},
     ]},
     {id:"setup",title:"Setup-check",color:"#0891b2",items:[
-      {id:"s1",label:"Bias / riktning klar",sub:""},
+      {id:"s1",label:"Bias klar",sub:""},
       {id:"s2",label:"Setup identifierat",sub:""},
       {id:"s3",label:"RR ≥ 2",sub:"",blocker:true,stop:"RR < 2 → hoppa"},
     ]},
@@ -680,43 +766,34 @@ const STRATEGIES={
   ]}
 };
 
-// ── CHECKLIST ─────────────────────────────────────────────────────────────────
 function loadStrategy(){activeStrategy=document.getElementById('strategyPicker').value;checked={};renderChecklist();}
-
 function renderChecklist(){
   const strat=STRATEGIES[activeStrategy];
   const container=document.getElementById('checklistContainer');
   container.innerHTML='';
   strat.phases.forEach(phase=>{
-    const total=phase.items.length;
-    const done=phase.items.filter(it=>checked[it.id]).length;
+    const total=phase.items.length,done=phase.items.filter(it=>checked[it.id]).length;
     const div=document.createElement('div');
     div.className='phase open';div.id='phase-'+phase.id;
-    div.innerHTML=`
-      <div class="phase-header" onclick="togglePhase('${phase.id}')">
+    div.innerHTML=`<div class="phase-header" onclick="togglePhase('${phase.id}')">
         <div class="phase-dot" style="background:${phase.color}"></div>
         <span class="phase-title">${phase.title}</span>
         <span class="phase-count" id="pc-${phase.id}">${done}/${total}</span>
         <span class="phase-chevron">▾</span>
       </div>
       <div class="checklist-body">
-        ${phase.items.map(item=>`
-          <div class="check-item ${checked[item.id]?'checked':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}','${phase.id}')">
+        ${phase.items.map(item=>`<div class="check-item ${checked[item.id]?'checked':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}','${phase.id}')">
             <div class="check-box"><span class="check-tick">✓</span></div>
-            <div class="check-label">
-              <strong>${item.label}</strong>
+            <div class="check-label"><strong>${item.label}</strong>
               ${item.sub?`<div class="sub">${item.sub}</div>`:''}
               ${item.stop&&!checked[item.id]?`<div class="check-stop">⛔ ${item.stop}</div>`:''}
-            </div>
-          </div>`).join('')}
+            </div></div>`).join('')}
       </div>`;
     container.appendChild(div);
   });
   updateProgress();
 }
-
 function togglePhase(id){document.getElementById('phase-'+id).classList.toggle('open');}
-
 function toggleCheck(id,phaseId){
   checked[id]=!checked[id];
   const el=document.getElementById('ci-'+id);
@@ -724,52 +801,47 @@ function toggleCheck(id,phaseId){
   const strat=STRATEGIES[activeStrategy];
   const item=strat.phases.flatMap(p=>p.items).find(i=>i.id===id);
   if(item&&item.stop){
-    const stopEl=el.querySelector('.check-stop');
-    if(checked[id]&&stopEl)stopEl.remove();
-    else if(!checked[id]&&!stopEl){const s=document.createElement('div');s.className='check-stop';s.textContent='⛔ '+item.stop;el.querySelector('.check-label').appendChild(s);}
+    const se=el.querySelector('.check-stop');
+    if(checked[id]&&se)se.remove();
+    else if(!checked[id]&&!se){const s=document.createElement('div');s.className='check-stop';s.textContent='⛔ '+item.stop;el.querySelector('.check-label').appendChild(s);}
   }
   const phase=strat.phases.find(p=>p.id===phaseId);
   if(phase){const done=phase.items.filter(it=>checked[it.id]).length;document.getElementById('pc-'+phaseId).textContent=`${done}/${phase.items.length}`;}
   updateProgress();
 }
-
 function updateProgress(){
   const strat=STRATEGIES[activeStrategy];
-  const allItems=strat.phases.flatMap(p=>p.items);
-  const total=allItems.length;
-  const done=allItems.filter(it=>checked[it.id]).length;
+  const all=strat.phases.flatMap(p=>p.items);
+  const total=all.length,done=all.filter(it=>checked[it.id]).length;
   const pct=total?Math.round(done/total*100):0;
   document.getElementById('progressLabel').textContent=`${done} / ${total} steg klara`;
   document.getElementById('progressPct').textContent=pct+'%';
   document.getElementById('progressFill').style.width=pct+'%';
   const banner=document.getElementById('statusBanner');
-  const blockers=allItems.filter(it=>it.blocker&&!checked[it.id]);
+  const blockers=all.filter(it=>it.blocker&&!checked[it.id]);
   if(pct===100){banner.style.display='block';banner.className='status-banner go';banner.textContent='✅ Alla steg klara – A+ setup!';}
   else if(blockers.length>0&&done>0){banner.style.display='block';banner.className='status-banner warn';banner.textContent=`⚠ Blockerande: "${blockers[0].label}"`;}
   else{banner.style.display='none';}
 }
-
 function resetChecklist(){
   checked={};selectedGrade='';calculatedR=null;
-  document.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('sel'));
-  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-chartlink','f-imgurl'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelectorAll('#standardFields .grade-btn').forEach(b=>b.classList.remove('sel'));
+  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-direction').value='';
   document.getElementById('f-outcome').value='';
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('rrDisplay').textContent='—';
   document.getElementById('rrDisplay').className='rr-display';
-  document.getElementById('imgPreview').src='';
-  document.getElementById('imgPreview').classList.remove('visible');
+  const prev=document.getElementById('mediaPreview');prev.src='';prev.classList.remove('visible');
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)el.value='';});
   renderChecklist();
 }
 
-function setGrade(g){selectedGrade=g;document.querySelectorAll('.grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===g));}
-
+// ── LOG TRADE ─────────────────────────────────────────────────────────────────
 async function logToJournal(){
   const strat=STRATEGIES[activeStrategy];
-  const allItems=strat.phases.flatMap(p=>p.items);
-  const pct=allItems.length?Math.round(allItems.filter(it=>checked[it.id]).length/allItems.length*100):0;
+  const all=strat.phases.flatMap(p=>p.items);
+  const pct=all.length?Math.round(all.filter(it=>checked[it.id]).length/all.length*100):0;
   const customData={};
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)customData[f.name]=el.value||null;});
   const trade={
@@ -786,13 +858,116 @@ async function logToJournal(){
     grade:selectedGrade||null,
     checklist_pct:pct,
     notes:document.getElementById('f-notes').value||null,
-    chart_link:document.getElementById('f-chartlink').value||null,
-    image_url:document.getElementById('f-imgurl').value||null,
+    chart_link:document.getElementById('f-media').value||null,
+    image_url:document.getElementById('f-media').value||null,
     custom_data:Object.keys(customData).length?customData:null,
   };
-  await saveTrade(trade);
-  resetChecklist();
-  showPage('journal',document.querySelectorAll('.htab')[1]);
+  const saved=await saveTrade(trade);
+  if(saved){resetChecklist();renderRecentTrades();}
+}
+
+// ── RECENT TRADES ─────────────────────────────────────────────────────────────
+function renderRecentTrades(){
+  const list=document.getElementById('recentTradesList');
+  const recent=journal.slice(0,8);
+  if(!recent.length){list.innerHTML='<div class="recent-empty">Inga trades loggade ännu.</div>';return;}
+  list.innerHTML=recent.map(t=>`
+    <div class="recent-row" onclick="openTradeModal('${t.id}')">
+      <span style="font-family:var(--mono);font-size:11px">${t.date||'—'}</span>
+      <strong>${t.symbol||'—'}</strong>
+      <span>${t.direction?`<span class="badge badge-${t.direction}" style="font-size:10px">${t.direction}</span>`:'—'}</span>
+      <span>${t.outcome?`<span class="badge badge-${t.outcome}" style="font-size:10px">${t.outcome}</span>`:'—'}</span>
+      <span class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}" style="font-size:11px">${t.result!=null?((t.result>0?'+':'')+Number(t.result).toFixed(2)+'R'):'—'}</span>
+      <span style="font-weight:700;font-size:11px;color:${t.grade==='A+'?'var(--green)':t.grade==='A'?'var(--teal)':t.grade==='B'?'var(--amber)':t.grade==='C'?'var(--red)':'var(--text3)'}">${t.grade||'—'}</span>
+      <span style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.strategy||'—'}</span>
+    </div>`).join('');
+}
+
+// ── TRADE MODAL ───────────────────────────────────────────────────────────────
+function openTradeModal(id){
+  const t=journal.find(x=>x.id===id||x.id===parseInt(id));
+  if(!t)return;
+  editingTradeId=t.id;
+  document.getElementById('modalTitle').textContent=`${t.date||''} · ${t.symbol||''} ${t.direction||''}`;
+  document.getElementById('m-date').value=t.date||'';
+  document.getElementById('m-time').value=t.time||'';
+  document.getElementById('m-symbol').value=t.symbol||'';
+  document.getElementById('m-direction').value=t.direction||'';
+  document.getElementById('m-entry').value=t.entry||'';
+  document.getElementById('m-sl').value=t.sl||'';
+  document.getElementById('m-tp').value=t.tp||'';
+  document.getElementById('m-outcome').value=t.outcome||'';
+  document.getElementById('m-notes').value=t.notes||'';
+  const media=t.chart_link||t.image_url||'';
+  document.getElementById('m-media').value=media;
+  // grade
+  modalGrade=t.grade||'';
+  document.getElementById('modalGradeBtns').querySelectorAll('.grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===modalGrade));
+  // RR display
+  modalCalculatedR=t.result;
+  const disp=document.getElementById('mRrDisplay');
+  if(t.result!=null){
+    disp.textContent=(t.result>0?'+':'')+Number(t.result).toFixed(2)+'R';
+    disp.className='rr-display '+(t.result>0?'positive':t.result<0?'negative':'neutral');
+  }else{disp.textContent='—';disp.className='rr-display';}
+  // media preview
+  const prev=document.getElementById('mMediaPreview');
+  const isImg=/\.(jpg|jpeg|png|gif|webp|svg)/i.test(media)||media.startsWith('data:image');
+  if(media&&isImg){prev.src=media;prev.classList.add('visible');}
+  else{prev.src='';prev.classList.remove('visible');}
+  // custom fields
+  const cf=document.getElementById('modalCustomFields');
+  if(customFields.length){
+    cf.style.display='block';
+    cf.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;grid-column:1/-1">Egna fält</div>'+
+      customFields.map(f=>`<div class="form-group">
+        <label>${f.name}</label>
+        ${f.type==='select'
+          ?`<select class="form-control" id="mcf-${f.id}"><option value="">—</option>${(f.options||[]).map(o=>`<option ${(t.custom_data&&t.custom_data[f.name])===o?'selected':''}>${o}</option>`).join('')}</select>`
+          :`<input type="${f.type}" class="form-control" id="mcf-${f.id}" value="${(t.custom_data&&t.custom_data[f.name])||''}">`}
+      </div>`).join('');
+  }else{cf.style.display='none';}
+  document.getElementById('tradeModal').classList.add('open');
+}
+
+async function saveModalTrade(){
+  const media=document.getElementById('m-media').value||null;
+  const customData={};
+  customFields.forEach(f=>{const el=document.getElementById('mcf-'+f.id);if(el)customData[f.name]=el.value||null;});
+  const fields={
+    date:document.getElementById('m-date').value||null,
+    time:document.getElementById('m-time').value||null,
+    symbol:document.getElementById('m-symbol').value||null,
+    direction:document.getElementById('m-direction').value||null,
+    entry:parseFloat(document.getElementById('m-entry').value)||null,
+    sl:parseFloat(document.getElementById('m-sl').value)||null,
+    tp:parseFloat(document.getElementById('m-tp').value)||null,
+    outcome:document.getElementById('m-outcome').value||null,
+    result:modalCalculatedR,
+    grade:modalGrade||null,
+    notes:document.getElementById('m-notes').value||null,
+    chart_link:media,image_url:media,
+    custom_data:Object.keys(customData).length?customData:null,
+  };
+  const ok=await updateTrade(editingTradeId,fields);
+  if(ok){
+    closeModal();
+    renderRecentTrades();
+    if(document.getElementById('page-journal').classList.contains('active')){updateStats();renderJournal();}
+  }
+}
+
+function closeModal(){document.getElementById('tradeModal').classList.remove('open');editingTradeId=null;}
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
+function confirmDelete(){document.getElementById('confirmBackdrop').classList.add('open');}
+function closeConfirm(){document.getElementById('confirmBackdrop').classList.remove('open');}
+async function doDelete(){
+  closeConfirm();
+  await deleteTrade(editingTradeId);
+  closeModal();
+  renderRecentTrades();
+  if(document.getElementById('page-journal').classList.contains('active')){updateStats();renderJournal();}
 }
 
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
@@ -803,7 +978,6 @@ function showPage(p,btn){
   if(btn)btn.classList.add('active');
   if(p==='journal'){updateStats();renderJournal();}
 }
-
 function updateStats(){
   const fs=document.getElementById('filterStrategy').value;
   const fo=document.getElementById('filterOutcome').value;
@@ -822,7 +996,6 @@ function updateStats(){
   const trEl=document.getElementById('s-totalr');trEl.textContent=withR.length===0?'—':(totalR>=0?'+':'')+totalR.toFixed(2)+'R';trEl.className='stat-value'+(totalR>0?' green':totalR<0?' red':'');
   document.getElementById('s-pf').textContent=pf;
 }
-
 function renderJournal(){
   updateStats();
   const fs=document.getElementById('filterStrategy').value;
@@ -830,14 +1003,13 @@ function renderJournal(){
   let trades=journal.filter(t=>(!fs||t.strategy===fs)&&(!fo||t.outcome===fo));
   trades.sort((a,b)=>{let av=a[sortCol]||'',bv=b[sortCol]||'';return typeof av==='string'?av.localeCompare(bv)*sortDir:(av-bv)*sortDir;});
   const body=document.getElementById('journalBody');
-  if(!trades.length){body.innerHTML='<div class="empty">Inga trades loggade ännu.</div>';return;}
-  const th=['Datum','Strategi','Sym','Dir','Entry','SL','TP','Utfall','R','Grade','%','📷','🔗',''].map((h,i)=>{
-    const cols=['date','strategy','symbol','direction','entry','sl','tp','outcome','result','grade','checklist_pct','image_url','chart_link',''];
-    return h?`<th onclick="sortBy('${cols[i]}')" title="${cols[i]}">${h}${sortCol===cols[i]?(sortDir>0?' ▴':' ▾'):''}</th>`:'<th></th>';
-  }).join('');
-  const rows=trades.map(t=>`<tr>
+  if(!trades.length){body.innerHTML='<div class="empty">Inga trades. Logga din första trade via Checklista-fliken.</div>';return;}
+  const headers=['Datum','Strategi','Sym','Dir','Entry','SL','TP','Utfall','R','Grade','%','📷'];
+  const keys=['date','strategy','symbol','direction','entry','sl','tp','outcome','result','grade','checklist_pct','image_url'];
+  const th=headers.map((h,i)=>`<th onclick="sortBy('${keys[i]}')">${h}${sortCol===keys[i]?(sortDir>0?' ▴':' ▾'):''}</th>`).join('');
+  const rows=trades.map(t=>`<tr onclick="openTradeModal('${t.id}')">
     <td style="white-space:nowrap;font-family:var(--mono);font-size:11px">${t.date||'—'}${t.time?`<br><span style="color:var(--text3)">${t.time}</span>`:''}</td>
-    <td style="font-size:11px;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.strategy||'—'}</td>
+    <td style="font-size:11px;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.strategy||'—'}</td>
     <td><strong>${t.symbol||'—'}</strong></td>
     <td>${t.direction?`<span class="badge badge-${t.direction}">${t.direction}</span>`:'—'}</td>
     <td style="font-family:var(--mono);font-size:11px">${t.entry??'—'}</td>
@@ -847,15 +1019,11 @@ function renderJournal(){
     <td class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}">${t.result!=null?((t.result>0?'+':'')+Number(t.result).toFixed(2)+'R'):'—'}</td>
     <td style="font-weight:700;color:${t.grade==='A+'?'var(--green)':t.grade==='A'?'var(--teal)':t.grade==='B'?'var(--amber)':t.grade==='C'?'var(--red)':'var(--text3)'}">${t.grade||'—'}</td>
     <td style="font-family:var(--mono);font-size:11px">${t.checklist_pct!=null?t.checklist_pct+'%':'—'}</td>
-    <td>${t.image_url?`<img src="${t.image_url}" class="thumb" onclick="openImgModal('${t.image_url}')" alt="chart">`:'—'}</td>
-    <td>${t.chart_link?`<a href="${t.chart_link}" target="_blank" style="color:var(--blue);font-size:11px">↗ TV</a>`:'—'}</td>
-    <td><button class="del-btn" onclick="deleteTrade('${t.id}')">✕</button></td>
+    <td>${t.image_url&&(/\.(jpg|jpeg|png|gif|webp|svg)/i.test(t.image_url)||t.image_url.startsWith('data:image'))?`<img src="${t.image_url}" class="thumb" alt="chart" onclick="event.stopPropagation();openImgModal('${t.image_url}')">`:(t.chart_link?`<a href="${t.chart_link}" target="_blank" onclick="event.stopPropagation()" style="color:var(--blue);font-size:11px">↗</a>`:'—')}</td>
   </tr>`).join('');
   body.innerHTML=`<table class="jtable"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
 }
-
 function sortBy(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}renderJournal();}
-
 function exportCSV(){
   const cols=["date","time","strategy","symbol","direction","entry","sl","tp","outcome","result","grade","checklist_pct","chart_link","notes"];
   const csv=[cols.join(","),...journal.map(t=>cols.map(c=>{const v=t[c]??'';return typeof v==='string'&&v.includes(',')? `"${v}"`:v;}).join(","))].join("\n");
