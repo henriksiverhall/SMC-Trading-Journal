@@ -15,8 +15,16 @@
   --bg:#fff;--bg2:#f9fafb;--shadow:0 1px 3px rgba(0,0,0,.08);
   --r:8px;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
 }
+[data-theme="dark"]{
+  --navy:#0a1628;--blue:#3b82f6;--blue-lt:#1e3a5f;--teal:#2dd4bf;--teal-lt:#134e4a;
+  --green:#22c55e;--green-lt:#14532d;--amber:#f59e0b;--amber-lt:#451a03;
+  --red:#f87171;--red-lt:#450a0a;--gray:#9ca3af;--gray-lt:#1f2937;
+  --border:#374151;--text:#f9fafb;--text2:#e5e7eb;--text3:#9ca3af;
+  --bg:#111827;--bg2:#1f2937;--shadow:0 1px 3px rgba(0,0,0,.4);
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;}
+body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;transition:background .2s,color .2s;}
+[data-theme="dark"] body{background:#0d1117;}
 .app{max-width:1140px;margin:0 auto;}
 
 /* AUTH */
@@ -66,6 +74,8 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .header-user{font-size:12px;color:#93c5fd;}
 .logout-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:#93c5fd;padding:5px 10px;border-radius:6px;font-size:12px;font-family:var(--font);cursor:pointer;}
 .logout-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+.btn-theme-toggle{background:transparent;border:1px solid rgba(255,255,255,.2);color:#93c5fd;padding:5px 8px;border-radius:6px;font-size:14px;cursor:pointer;transition:all .15s;line-height:1;}
+.btn-theme-toggle:hover{background:rgba(255,255,255,.08);}
 
 /* LAYOUT */
 .main{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 50px);}
@@ -144,6 +154,18 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .field-remove:hover{background:var(--red-lt);color:var(--red);}
 .add-field-row{display:flex;gap:6px;margin-top:8px;}
 .add-field-row input,.add-field-row select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);flex:1;}
+.std-field-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.std-field-row:last-child{border-bottom:none;}
+.std-field-name{flex:1;color:var(--text2);font-weight:500;}
+.toggle-sw{position:relative;width:34px;height:18px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-sw-track{position:absolute;inset:0;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s;}
+.toggle-sw input:checked+.toggle-sw-track{background:var(--green);}
+.toggle-sw-track:before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;}
+.toggle-sw input:checked+.toggle-sw-track:before{transform:translateX(16px);}
+.req-badge{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);cursor:pointer;color:var(--text3);background:var(--bg);white-space:nowrap;transition:all .15s;}
+.req-badge.active{background:var(--red-lt);color:var(--red);border-color:#fca5a5;}
+.field-disabled-overlay{opacity:.4;pointer-events:none;}
 
 /* RECENT TRADES */
 .recent-panel{background:var(--bg);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
@@ -244,7 +266,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
     <div class="auth-logo">TradeLog <span>v1.1</span></div>
-    <div class="auth-sub">Logga in för att komma åt ditt journal</div>
+    <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
@@ -264,10 +286,11 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
   <div class="header-logo">TradeLog <span>v1.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
-      <button class="htab active" onclick="showPage('checklist',this)">Checklista</button>
+      <button class="htab active" onclick="showPage('checklist',this)">Setup & Logg</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
     </div>
     <span class="header-user" id="headerUser"></span>
+    <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
     <button class="logout-btn" onclick="doLogout()">Logga ut</button>
   </div>
 </div>
@@ -325,9 +348,9 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
     <!-- TRADE FORM -->
     <div class="trade-form" id="tradeFormPanel">
       <div class="form-header">
-        <div class="form-header-title">📋 Trade-detaljer</div>
+        <div class="form-header-title">📋 Journalför trade</div>
         <div class="form-header-actions">
-          <button class="btn btn-ghost btn-sm" onclick="toggleFieldManager()">⚙ Anpassa fält</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleFieldManager()">⚙ Anpassa</button>
           <button class="btn btn-primary btn-sm" onclick="logToJournal()">💾 Logga trade</button>
         </div>
       </div>
@@ -348,10 +371,10 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
             <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
           </select>
         </div>
-        <div class="form-group"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
+        <div class="form-group" id="rrDisplayGroup"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
           <div class="rr-display" id="rrDisplay">—</div>
         </div>
-        <div class="form-group"><label>Setup-kvalitet</label>
+        <div class="form-group" id="gradeGroup"><label>Setup-kvalitet</label>
           <div class="grade-btns" id="mainGradeBtns">
             <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','main')">A+</button>
             <button class="grade-btn" data-grade="A" onclick="setGrade('A','main')">A</button>
@@ -359,7 +382,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
             <button class="grade-btn" data-grade="C" onclick="setGrade('C','main')">C</button>
           </div>
         </div>
-        <div class="form-group half"><label>Chart / Skärmbild <span style="color:var(--text3);font-weight:400;font-size:10px">URL eller ladda upp</span></label>
+        <div class="form-group half" id="mediaGroup"><label>Chart / Skärmbild <span style="color:var(--text3);font-weight:400;font-size:10px">URL eller ladda upp</span></label>
           <div class="media-input-wrap">
             <input type="text" class="form-control" id="f-media" placeholder="https://… eller ladda upp →" oninput="previewMedia('f-media','mediaPreview')">
             <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'f-media','mediaPreview')"></label>
@@ -376,7 +399,9 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <div class="form-grid" id="customFieldInputs"></div>
       </div>
       <div class="field-manager" id="fieldManager" style="display:none">
-        <div class="field-manager-title">⚙ Hantera egna fält</div>
+        <div class="field-manager-title">⚙ Standardfält – visa/dölj & tvingande</div>
+        <div id="stdFieldList" style="margin-bottom:12px"></div>
+        <div class="field-manager-title" style="margin-top:12px">➕ Egna fält</div>
         <div id="fieldList"></div>
         <div class="add-field-row">
           <input type="text" id="newFieldName" placeholder="Fältnamn">
@@ -513,6 +538,96 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 </div>
 
 <script>
+// ── THEME ─────────────────────────────────────────────────────────────────────
+(function(){
+  const saved=localStorage.getItem('theme')||'light';
+  if(saved==='dark')document.documentElement.setAttribute('data-theme','dark');
+})();
+function toggleTheme(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
+  localStorage.setItem('theme',isDark?'light':'dark');
+  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
+}
+function initThemeBtn(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const btn=document.getElementById('themeBtn');
+  if(btn)btn.textContent=isDark?'☀️':'🌙';
+}
+
+// ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
+const STD_FIELDS=[
+  {id:'grp-datetime',label:'Datum & Tid',ids:['f-date','f-time'],required:true},
+  {id:'grp-symbol',label:'Instrument & Riktning',ids:['f-symbol','f-direction'],required:true},
+  {id:'grp-prices',label:'Entry / SL / TP',ids:['f-entry','f-sl','f-tp'],required:false},
+  {id:'grp-outcome',label:'Utfall',ids:['f-outcome'],required:true},
+  {id:'grp-rr',label:'Resultat R (auto)',ids:['rrDisplayGroup'],required:false},
+  {id:'grp-grade',label:'Setup-kvalitet',ids:['gradeGroup'],required:false},
+  {id:'grp-media',label:'Chart / Skärmbild',ids:['mediaGroup'],required:false},
+  {id:'grp-notes',label:'Noteringar',ids:['f-notes'],required:false},
+];
+let fieldSettings=JSON.parse(localStorage.getItem('fieldSettings')||'{}');
+
+function getFieldSetting(id,prop){
+  if(fieldSettings[id]&&fieldSettings[id][prop]!==undefined)return fieldSettings[id][prop];
+  const def=STD_FIELDS.find(f=>f.id===id);
+  if(prop==='visible')return true;
+  if(prop==='required')return def?def.required:false;
+  return false;
+}
+function setFieldSetting(id,prop,val){
+  if(!fieldSettings[id])fieldSettings[id]={};
+  fieldSettings[id][prop]=val;
+  localStorage.setItem('fieldSettings',JSON.stringify(fieldSettings));
+  applyFieldSettings();
+}
+function applyFieldSettings(){
+  STD_FIELDS.forEach(f=>{
+    const visible=getFieldSetting(f.id,'visible');
+    // Find the form-group containers by looking for the input IDs
+    f.ids.forEach(inputId=>{
+      const el=document.getElementById(inputId);
+      if(!el)return;
+      const grp=el.closest('.form-group')||el.parentElement;
+      if(grp)grp.style.display=visible?'':'none';
+    });
+  });
+}
+
+function renderStdFieldManager(){
+  const cont=document.getElementById('stdFieldList');
+  if(!cont)return;
+  cont.innerHTML=STD_FIELDS.map(f=>{
+    const vis=getFieldSetting(f.id,'visible');
+    const req=getFieldSetting(f.id,'required');
+    return`<div class="std-field-row">
+      <span class="std-field-name">${f.label}</span>
+      <label class="toggle-sw" title="Visa/dölj fält">
+        <input type="checkbox" ${vis?'checked':''} onchange="setFieldSetting('${f.id}','visible',this.checked);renderStdFieldManager()">
+        <span class="toggle-sw-track"></span>
+      </label>
+      <button class="req-badge ${req?'active':''}" onclick="setFieldSetting('${f.id}','required',${!req});renderStdFieldManager()" title="Tvingande = måste fyllas i">
+        ${req?'⚠ Tvingande':'Frivilligt'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function validateRequiredFields(){
+  const missing=[];
+  STD_FIELDS.forEach(f=>{
+    if(!getFieldSetting(f.id,'visible'))return;
+    if(!getFieldSetting(f.id,'required'))return;
+    f.ids.forEach(inputId=>{
+      const el=document.getElementById(inputId);
+      if(!el)return;
+      if(el.tagName==='SELECT'&&!el.value)missing.push(f.label);
+      else if(el.tagName==='INPUT'&&!el.value)missing.push(f.label);
+    });
+  });
+  return[...new Set(missing)];
+}
+
 const SUPA_URL='https://zmtpgnnqtkkdsrswhrzk.supabase.co';
 const SUPA_KEY='sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ';
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
@@ -650,12 +765,14 @@ async function onLogin(user){
   document.getElementById('appWrap').style.display='block';
   document.getElementById('headerUser').textContent=user.email;
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  initThemeBtn();
   await Promise.all([fetchJournal(),fetchChecklists()]);
   populateStrategyPicker();
   loadStrategy();
   renderCustomFieldInputs();
   renderRecentTrades();
   updateFilterOptions();
+  applyFieldSettings();
 }
 async function doLogout(){
   await sb.auth.signOut();
@@ -989,7 +1106,11 @@ function renderCustomFieldInputs(){
       :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}
     </div>`).join('');
 }
-function toggleFieldManager(){const fm=document.getElementById('fieldManager');fm.style.display=fm.style.display==='none'?'block':'none';if(fm.style.display==='block')renderFieldManager();}
+function toggleFieldManager(){
+  const fm=document.getElementById('fieldManager');
+  fm.style.display=fm.style.display==='none'?'block':'none';
+  if(fm.style.display==='block'){renderFieldManager();renderStdFieldManager();}
+}
 function renderFieldManager(){
   const list=document.getElementById('fieldList');
   if(!customFields.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Inga egna fält.</div>';return;}
@@ -1034,6 +1155,10 @@ async function deleteTrade(id){
 
 // ── LOG TRADE ─────────────────────────────────────────────────────────────────
 async function logToJournal(){
+  const missing=validateRequiredFields();
+  if(missing.length){
+    alert('Fyll i tvingande fält: '+missing.join(', '));return;
+  }
   const strat=activeStrat||getActiveChecklist();
   const all=strat.phases.flatMap(p=>p.items);
   const pct=all.length?Math.round(all.filter(it=>checked[it.id]).length/all.length*100):0;
