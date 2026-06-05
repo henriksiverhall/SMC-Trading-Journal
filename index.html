@@ -126,8 +126,9 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .check-item{padding:6px 14px 6px 10px;display:flex;align-items:flex-start;gap:9px;cursor:pointer;transition:background .1s;border-left:3px solid transparent;}
 .check-item:hover{background:var(--gray-lt);}
 .check-item.checked{background:#f0fdf4;border-left-color:var(--green);}
-.check-box{width:17px;height:17px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.check-box{width:17px;height:17px;border:2px solid #9ca3af;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--bg);}
 .check-item.checked .check-box{background:var(--green);border-color:var(--green);}
+[data-theme="dark"] .check-box{border-color:#6b7280;}
 .check-tick{color:#fff;font-size:10px;display:none;}
 .check-item.checked .check-tick{display:block;}
 .check-label{font-size:12px;color:var(--text2);line-height:1.4;flex:1;}
@@ -353,7 +354,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .streak-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--amber-lt);color:var(--amber);}
 
 /* ADMIN */
-.admin-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;max-width:none;}
 .admin-section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;gap:8px;}
 .admin-table{width:100%;border-collapse:collapse;font-size:12px;}
 .admin-table th{padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
@@ -412,7 +413,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.1</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.1</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -430,7 +431,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.1</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -464,13 +465,10 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
     <!-- Snabbåtgärder -->
     <div class="dash-quick-actions">
       <button class="quick-action-btn primary" onclick="showPage('checklist',document.querySelectorAll('.htab')[1])">
-        ✚ Logga ny trade
+        ✚ Logga trade
       </button>
       <button class="quick-action-btn" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">
         📋 Se journal
-      </button>
-      <button class="quick-action-btn" onclick="showPage('checklist',document.querySelectorAll('.htab')[1]);setTimeout(()=>toggleEditor(),300)">
-        ✏️ Redigera checklista
       </button>
     </div>
 
@@ -947,6 +945,36 @@ function initThemeBtn(){
   if(btn)btn.textContent=isDark?'☀️':'🌙';
 }
 
+
+// ── RISK ─────────────────────────────────────────────────────────────────────
+function saveRisk(){
+  const risk=document.getElementById('f-risk').value;
+  const curr=document.getElementById('f-riskcurrency').value;
+  if(risk)localStorage.setItem('tradeRisk',JSON.stringify({risk,curr}));
+}
+function loadRisk(){
+  const saved=localStorage.getItem('tradeRisk');
+  if(saved){
+    const{risk,curr}=JSON.parse(saved);
+    const rEl=document.getElementById('f-risk');
+    const cEl=document.getElementById('f-riskcurrency');
+    if(rEl)rEl.value=risk;
+    if(cEl)cEl.value=curr;
+  }
+}
+function calcMonetary(){
+  const risk=parseFloat(document.getElementById('f-risk').value);
+  const curr=document.getElementById('f-riskcurrency').value;
+  const r=calculatedR;
+  const el=document.getElementById('monetaryResult');
+  if(!risk||isNaN(risk)||r===null){el.textContent='';return;}
+  const monetary=(risk*Math.abs(r)).toFixed(0);
+  const sign=r>0?'+':r<0?'-':'';
+  el.textContent=`${sign}${monetary} ${curr} (${r>0?'vinst':r<0?'förlust':'break even'})`;
+  el.style.color=r>0?'var(--green)':r<0?'var(--red)':'var(--amber)';
+}
+
+
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
   {id:'grp-datetime',label:'Datum & Tid',ids:['f-date','f-time'],required:true},
@@ -972,6 +1000,7 @@ function setFieldSetting(id,prop,val){
   fieldSettings[id][prop]=val;
   localStorage.setItem('fieldSettings',JSON.stringify(fieldSettings));
   applyFieldSettings();
+  loadRisk();
   loadDashboard();
 }
 function applyFieldSettings(){
@@ -1181,6 +1210,7 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
+  loadRisk();
   loadDashboard();
 }
 async function doLogout(){
@@ -1351,6 +1381,7 @@ function resetChecklist(){
   document.getElementById('f-direction').value='';document.getElementById('f-outcome').value='';
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('rrDisplay').textContent='—';document.getElementById('rrDisplay').className='rr-display';
+  document.getElementById('monetaryResult').textContent='';
   const prev=document.getElementById('mediaPreview');prev.src='';prev.classList.remove('visible');
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)el.value='';});
   renderChecklist();renderJournalTaggedFields();
@@ -1479,6 +1510,7 @@ function calcRR(isModal){
     disp.textContent='—';disp.className='rr-display';
     if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
+  if(!isModal)calcMonetary();
 }
 
 function setGrade(g,ctx){
@@ -1522,12 +1554,36 @@ function toggleFieldManager(){
 }
 function renderFieldManager(){
   const list=document.getElementById('fieldList');
-  if(!customFields.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Inga egna fält.</div>';return;}
-  list.innerHTML=customFields.map((f,i)=>`<div class="field-item">
+  if(!customFields.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Inga egna fält. Lägg till nedan.</div>';return;}
+  list.innerHTML=customFields.map((f,i)=>`<div class="field-item" draggable="true" id="fi-${i}"
+    ondragstart="fieldDragStart(${i})"
+    ondragover="event.preventDefault()"
+    ondrop="fieldDrop(${i})">
+    <span class="item-drag" title="Dra för att flytta">⠿</span>
     <span style="font-size:12px;flex:1">${f.name} <span style="color:var(--text3)">(${f.type})</span></span>
-    ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="flex:2;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
-    <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
+    ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
+    <div style="display:flex;gap:3px">
+      <button class="field-remove" onclick="moveField(${i},-1)" title="Flytta upp" style="font-size:12px">↑</button>
+      <button class="field-remove" onclick="moveField(${i},1)" title="Flytta ned" style="font-size:12px">↓</button>
+      <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
+    </div>
   </div>`).join('');
+}
+
+let dragFieldIdx=null;
+function fieldDragStart(i){dragFieldIdx=i;}
+function fieldDrop(targetIdx){
+  if(dragFieldIdx===null||dragFieldIdx===targetIdx)return;
+  const moved=customFields.splice(dragFieldIdx,1)[0];
+  customFields.splice(targetIdx,0,moved);
+  saveCustomFields();renderFieldManager();renderCustomFieldInputs();
+  dragFieldIdx=null;
+}
+function moveField(i,dir){
+  const ni=i+dir;
+  if(ni<0||ni>=customFields.length)return;
+  [customFields[i],customFields[ni]]=[customFields[ni],customFields[i]];
+  saveCustomFields();renderFieldManager();renderCustomFieldInputs();
 }
 function toggleDropdownOptions(type){
   document.getElementById('dropdownOptionsRow').style.display=type==='select'?'block':'none';
@@ -1603,6 +1659,8 @@ async function logToJournal(){
     checklist_pct:pct,
     notes:document.getElementById('f-notes').value||null,
     chart_link:media,image_url:media,
+    risk_amount:parseFloat(document.getElementById('f-risk').value)||null,
+    risk_currency:document.getElementById('f-riskcurrency').value||null,
     custom_data:{...customData,...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})},
   };
   const saved=await saveTrade(trade);
@@ -2171,7 +2229,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.1</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.1</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
