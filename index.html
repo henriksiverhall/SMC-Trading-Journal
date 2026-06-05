@@ -145,7 +145,6 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .form-header-title{font-size:14px;font-weight:600;}
 .form-header-actions{display:flex;gap:8px;align-items:center;}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.form-grid>.form-group{order:99;}/* default order */
 .rr-display{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--mono);font-weight:500;background:var(--bg2);color:var(--text2);}
 .rr-display.positive{color:var(--green);background:var(--green-lt);border-color:#86efac;}
 .rr-display.negative{color:var(--red);background:var(--red-lt);border-color:#fca5a5;}
@@ -414,7 +413,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.2</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.3</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -432,7 +431,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.2</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.3</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -615,6 +614,18 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <div class="form-group" id="rrDisplayGroup"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
           <div class="rr-display" id="rrDisplay">—</div>
         </div>
+        <div class="form-group" id="riskGroup">
+          <label>Risk per trade <span style="color:var(--text3);font-weight:400;font-size:10px">sparas</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="0.01" class="form-control" id="f-risk" placeholder="100" style="flex:1" oninput="saveRisk();calcMonetary()">
+            <select class="form-control" id="f-riskcurrency" style="width:70px" onchange="saveRisk();calcMonetary()">
+              <option value="SEK">SEK</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
+        </div>
         <div class="form-group" id="gradeGroup"><label>Setup-kvalitet</label>
           <div class="grade-btns" id="mainGradeBtns">
             <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','main')">A+</button>
@@ -633,15 +644,18 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <div class="form-group wide"><label>Noteringar</label>
           <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre?"></textarea>
         </div>
-        <div id="journalTaggedFields"></div>
+      </div>
+
+      <!-- Journal-taggade steg -->
+      <div id="journalTaggedFieldsWrap" style="margin-top:10px;display:none">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Journal-taggade steg</div>
+        <div id="journalTaggedFields" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
       <div id="customFieldsSection" style="display:none">
         <div id="customFieldInputs"></div>
       </div>
       <div class="field-manager" id="fieldManager" style="display:none">
-        <div class="field-manager-title">⚙ Standardfält – visa/dölj & tvingande</div>
-        <div id="stdFieldList" style="margin-bottom:12px"></div>
-        <div class="field-manager-title" style="margin-top:12px">➕ Egna fält</div>
+<div class="field-manager-title">⚙ Fält – ordning, visa/dölj & tvingande</div>
         <div id="fieldList"></div>
         <div class="add-field-row">
           <input type="text" id="newFieldName" placeholder="Fältnamn">
@@ -978,85 +992,6 @@ function calcMonetary(){
 
 
 
-// ── FIELD ORDER (standard + egna blandade) ────────────────────────────────────
-// Varje fält har ett "slot-id": std:grp-datetime, std:grp-symbol, custom:12345 osv.
-// Ordningen sparas i localStorage
-
-function getFieldOrder(){
-  const saved=localStorage.getItem('fieldOrder');
-  if(saved){
-    try{return JSON.parse(saved);}catch(e){}
-  }
-  // Default: alla standard-fält i ordning, egna fält sist
-  return [
-    'std:grp-datetime','std:grp-symbol','std:grp-prices','std:grp-outcome',
-    'std:grp-rr','std:grp-risk','std:grp-grade','std:grp-media','std:grp-notes',
-    ...customFields.map(f=>'custom:'+f.id)
-  ];
-}
-
-function saveFieldOrder(order){
-  localStorage.setItem('fieldOrder',JSON.stringify(order));
-}
-
-function ensureCustomsInOrder(){
-  // Lägg till nya egna fält i ordningen om de saknas
-  let order=getFieldOrder();
-  customFields.forEach(f=>{
-    const key='custom:'+f.id;
-    if(!order.includes(key))order.push(key);
-  });
-  // Ta bort borttagna fält
-  order=order.filter(key=>{
-    if(key.startsWith('std:'))return true;
-    const id=parseInt(key.replace('custom:',''));
-    return customFields.some(f=>f.id===id||f.id===key.replace('custom:',''));
-  });
-  saveFieldOrder(order);
-  return order;
-}
-
-function applyFieldOrder(){
-  const order=ensureCustomsInOrder();
-  const grid=document.querySelector('.form-grid');
-  if(!grid)return;
-  // Ordna standard-fält
-  const stdMap={
-    'std:grp-datetime':['f-date','f-time'],
-    'std:grp-symbol':['f-symbol','f-direction'],
-    'std:grp-prices':['f-entry','f-sl','f-tp'],
-    'std:grp-outcome':['f-outcome'],
-    'std:grp-rr':['rrDisplayGroup'],
-    'std:grp-risk':['riskGroup'],
-    'std:grp-grade':['gradeGroup'],
-    'std:grp-media':['mediaGroup'],
-    'std:grp-notes':['f-notes'],
-  };
-  order.forEach((key,idx)=>{
-    if(key.startsWith('std:')){
-      const ids=stdMap[key]||[];
-      ids.forEach(id=>{
-        const el=document.getElementById(id);
-        if(el){
-          const grp=el.closest('.form-group')||el.parentElement;
-          if(grp&&grp.parentElement===grid){
-            grp.style.order=idx;
-          }
-        }
-      });
-    }else{
-      // Eget fält
-      const fid=key.replace('custom:','');
-      const el=document.getElementById('cf-'+fid);
-      if(el){
-        const grp=el.closest('.form-group');
-        if(grp)grp.style.order=idx;
-      }
-    }
-  });
-}
-
-
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
   {id:'grp-datetime',label:'Datum & Tid',ids:['f-date','f-time'],required:true},
@@ -1089,7 +1024,6 @@ function setFieldSetting(id,prop,val){
 function applyFieldSettings(){
   STD_FIELDS.forEach(f=>{
     const visible=getFieldSetting(f.id,'visible');
-    // Find the form-group containers by looking for the input IDs
     f.ids.forEach(inputId=>{
       const el=document.getElementById(inputId);
       if(!el)return;
@@ -1447,14 +1381,15 @@ function updateProgress(){
 function renderJournalTaggedFields(){
   const strat=activeStrat||getActiveChecklist();
   const tagged=strat.phases.flatMap(p=>p.items).filter(it=>it.journal);
+  const wrap=document.getElementById('journalTaggedFieldsWrap');
   const container=document.getElementById('journalTaggedFields');
-  if(!tagged.length){container.innerHTML='';return;}
-  container.style.gridColumn='1/-1';
-  container.innerHTML='<div style="grid-column:1/-1;font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;margin-bottom:4px">📋 Journal-taggade steg</div>'+
-    tagged.map(it=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;color:var(--text2)">
-      <span style="color:${checked[it.id]?'var(--green)':'var(--text3)'};font-size:14px">${checked[it.id]?'✓':'○'}</span>
-      <span>${it.label}</span>
-    </div>`).join('');
+  if(!wrap||!container)return;
+  if(!tagged.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  container.innerHTML=tagged.map(it=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--text2)">
+    <span style="color:${checked[it.id]?'var(--green)':'var(--text3)'};font-size:14px;width:16px">${checked[it.id]?'✓':'○'}</span>
+    <span>${it.label}</span>
+  </div>`).join('');
 }
 
 function resetChecklist(){
@@ -1621,13 +1556,11 @@ function openImgModal(src){document.getElementById('imgModalSrc').src=src;docume
 function saveCustomFields(){localStorage.setItem('customFields',JSON.stringify(customFields));}
 function renderCustomFieldInputs(){
   const sec=document.getElementById('customFieldsSection');
-  const cont=document.getElementById('customFieldInputs');
-  // Flytta egna fält-divs till form-grid
   const grid=document.querySelector('.form-grid');
-  // Ta bort gamla egna fält-divs från grid
+  // Ta bort gamla egna fält från grid
   grid.querySelectorAll('.custom-field-in-grid').forEach(el=>el.remove());
-  if(!customFields.length){sec.style.display='none';return;}
-  sec.style.display='none'; // dölj wrapper, vi lägger direkt i grid
+  if(!customFields.length){if(sec)sec.style.display='none';return;}
+  if(sec)sec.style.display='none';
   customFields.forEach(f=>{
     const div=document.createElement('div');
     div.className='form-group custom-field-in-grid';
@@ -1638,77 +1571,62 @@ function renderCustomFieldInputs(){
         :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}`;
     grid.appendChild(div);
   });
-  applyFieldOrder();
 }
+
 function toggleFieldManager(){
   const fm=document.getElementById('fieldManager');
   fm.style.display=fm.style.display==='none'?'block':'none';
-  if(fm.style.display==='block'){renderStdFieldManager();renderFieldManager();}
+  if(fm.style.display==='block')renderFieldManager();
 }
-// Sortering av alla fält (standard + egna)
-const STD_FIELD_LABELS={
-  'std:grp-datetime':'Datum & Tid','std:grp-symbol':'Instrument & Riktning',
-  'std:grp-prices':'Entry / SL / TP','std:grp-outcome':'Utfall',
-  'std:grp-rr':'Resultat R (auto)','std:grp-risk':'Risk per trade',
-  'std:grp-grade':'Setup-kvalitet','std:grp-media':'Chart / Skärmbild',
-  'std:grp-notes':'Noteringar'
-};
+function renderStdFieldManager(){} // noop - ersatt av renderFieldManager
 
 function renderFieldManager(){
+  // En enda lista: standard-fält + egna fält, toggle + tvingande + pilar
   const list=document.getElementById('fieldList');
-  const order=ensureCustomsInOrder();
-  list.innerHTML=order.map((key,idx)=>{
-    const isStd=key.startsWith('std:');
-    const label=isStd?STD_FIELD_LABELS[key]:(customFields.find(f=>'custom:'+f.id===key||'custom:'+String(f.id)===key)||{name:key}).name;
-    const cfIdx=isStd?-1:customFields.findIndex(f=>'custom:'+f.id===key||'custom:'+String(f.id)===key);
-    const f=cfIdx>=0?customFields[cfIdx]:null;
-    return`<div class="field-item" draggable="true"
-      ondragstart="orderDragStart(${idx})"
-      ondragover="event.preventDefault()"
-      ondrop="orderDrop(${idx})">
-      <span class="item-drag">⠿</span>
-      <span style="font-size:12px;flex:1;${isStd?'color:var(--text2);':'color:var(--blue);font-weight:500;'}">${label}
-        ${isStd?'<span style="font-size:10px;color:var(--text3);margin-left:4px">standard</span>':'<span style="font-size:10px;color:var(--blue);margin-left:4px">eget</span>'}
-      </span>
-      ${f&&f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${cfIdx},this.value)" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
-      <div style="display:flex;gap:3px">
-        <button class="field-remove" onclick="moveOrder(${idx},-1)" title="Upp" style="font-size:12px">↑</button>
-        <button class="field-remove" onclick="moveOrder(${idx},1)" title="Ned" style="font-size:12px">↓</button>
-        ${!isStd&&cfIdx>=0?`<button class="field-remove" onclick="removeCustomField(${cfIdx})">✕</button>`:''}
-      </div>
+  const stdHtml=STD_FIELDS.map((f,i)=>{
+    const vis=getFieldSetting(f.id,'visible');
+    const req=getFieldSetting(f.id,'required');
+    return`<div class="std-field-row">
+      <span class="std-field-name">${f.label} <span style="font-size:10px;color:var(--text3)">(standard)</span></span>
+      <label class="toggle-sw" title="Visa/dölj">
+        <input type="checkbox" ${vis?'checked':''} onchange="setFieldSetting('${f.id}','visible',this.checked)">
+        <span class="toggle-sw-track"></span>
+      </label>
+      <button class="req-badge ${req?'active':''}" onclick="setFieldSetting('${f.id}','required',${!req});renderFieldManager()">${req?'⚠ Tvingande':'Frivilligt'}</button>
     </div>`;
   }).join('');
+
+  const cfHtml=customFields.length
+    ? '<div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Egna fält</div>'+
+      customFields.map((f,i)=>`<div class="std-field-row">
+        <span class="item-drag" ondragstart="cfDragStart(${i})" draggable="true">⠿</span>
+        <span class="std-field-name">${f.name} <span style="font-size:10px;color:var(--blue)">(eget, ${f.type})</span>
+          ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="margin-left:8px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;width:180px">`:''}
+        </span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="field-remove" onclick="moveCF(${i},-1)" title="Upp">↑</button>
+          <button class="field-remove" onclick="moveCF(${i},1)" title="Ned">↓</button>
+          <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
+        </div>
+      </div>`).join('')
+    : '<div style="font-size:12px;color:var(--text3);margin-top:10px">Inga egna fält ännu.</div>';
+
+  list.innerHTML = stdHtml + cfHtml;
 }
 
-let orderDragIdx=null;
-function orderDragStart(i){orderDragIdx=i;}
-function orderDrop(targetIdx){
-  if(orderDragIdx===null||orderDragIdx===targetIdx)return;
-  const order=ensureCustomsInOrder();
-  const moved=order.splice(orderDragIdx,1)[0];
-  order.splice(targetIdx,0,moved);
-  saveFieldOrder(order);
-  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
-  orderDragIdx=null;
-}
-function moveOrder(idx,dir){
-  const order=ensureCustomsInOrder();
-  const ni=idx+dir;
-  if(ni<0||ni>=order.length)return;
-  [order[idx],order[ni]]=[order[ni],order[idx]];
-  saveFieldOrder(order);
-  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
-}
-
-let dragFieldIdx=null;
-function fieldDragStart(i){dragFieldIdx=i;}
-function fieldDrop(targetIdx){dragFieldIdx=null;}
-function moveField(i,dir){
+let cfDragIdx=null;
+function cfDragStart(i){cfDragIdx=i;}
+function moveCF(i,dir){
   const ni=i+dir;
   if(ni<0||ni>=customFields.length)return;
   [customFields[i],customFields[ni]]=[customFields[ni],customFields[i]];
   saveCustomFields();renderFieldManager();renderCustomFieldInputs();
 }
+
+let dragFieldIdx=null;
+
+
+
 function toggleDropdownOptions(type){
   document.getElementById('dropdownOptionsRow').style.display=type==='select'?'block':'none';
 }
@@ -1721,20 +1639,15 @@ function addCustomField(){
     const raw=document.getElementById('newFieldOptions').value;
     options=raw.split(',').map(s=>s.trim()).filter(Boolean);
   }
-  const newField={id:Date.now(),name,type,options};
-  customFields.push(newField);
+  customFields.push({id:Date.now(),name,type,options});
   saveCustomFields();
-  // Lägg till i ordningen
-  const order=ensureCustomsInOrder();
-  if(!order.includes('custom:'+newField.id))order.push('custom:'+newField.id);
-  saveFieldOrder(order);
   document.getElementById('newFieldName').value='';
   document.getElementById('newFieldOptions').value='';
   document.getElementById('newFieldType').value='text';
   document.getElementById('dropdownOptionsRow').style.display='none';
-  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
+  renderFieldManager();renderCustomFieldInputs();
 }
-function removeCustomField(i){customFields.splice(i,1);saveCustomFields();renderFieldManager();renderCustomFieldInputs();}
+function removeCustomField(i){customFields.splice(i,1);saveCustomFields();renderFieldManager();renderCustomFieldInputs();applyFieldSettings();}
 function updateFieldOptions(i,val){customFields[i].options=val.split(',').map(s=>s.trim()).filter(Boolean);saveCustomFields();}
 
 // ── DB TRADES ─────────────────────────────────────────────────────────────────
@@ -2358,7 +2271,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.2</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.3</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
