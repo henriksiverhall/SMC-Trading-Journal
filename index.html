@@ -252,8 +252,66 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 
 
 /* DASHBOARD */
-.dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
-.dash-greeting{font-size:22px;font-weight:600;color:var(--text);}
+.dashboard-wrap{padding:28px 32px;display:flex;flex-direction:column;gap:22px;max-width:1320px;margin:0 auto;}
+.dash-greeting{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
+.dash-greeting span{color:var(--blue);}
+.dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:3px;}
+.dash-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+.dash-stat{background:var(--bg);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:transform .15s,box-shadow .15s;border-top:3px solid transparent;position:relative;overflow:hidden;}
+.dash-stat:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.1);}
+.dash-stat.c-blue{border-top-color:var(--blue);}
+.dash-stat.c-green{border-top-color:var(--green);}
+.dash-stat.c-teal{border-top-color:var(--teal);}
+.dash-stat.c-amber{border-top-color:var(--amber);}
+.dash-stat.c-purple{border-top-color:#8b5cf6;}
+.dash-stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;font-weight:600;}
+.dash-stat-value{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1;}
+.dash-stat-sub{font-size:11px;color:var(--text3);margin-top:6px;}
+.dash-stat-value.green{color:var(--green);}
+.dash-stat-value.red{color:var(--red);}
+.dash-stat-value.blue{color:var(--blue);}
+.dash-stat-value.amber{color:var(--amber);}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.dash-row.three{grid-template-columns:1fr 1fr 1fr;}
+.dash-card{background:var(--bg);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.dash-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg);}
+.dash-card-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
+.dash-card-body{padding:16px 18px;}
+.dash-card-scroll{max-height:340px;overflow-y:auto;}
+.dash-card-scroll::-webkit-scrollbar{width:4px;}
+.dash-card-scroll::-webkit-scrollbar-track{background:transparent;}
+.dash-card-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.dash-trade-row{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background .1s;}
+.dash-trade-row:last-child{border-bottom:none;}
+.dash-trade-row:hover{background:var(--gray-lt);}
+.dash-trade-cols{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;padding:6px 18px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg2);}
+.news-item{padding:9px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;transition:background .1s;}
+.news-item:last-child{border-bottom:none;}
+.news-item:hover{background:var(--gray-lt);}
+.news-time{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;min-width:44px;padding-top:2px;}
+.news-impact{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.news-impact.high{background:var(--red);}
+.news-impact.medium{background:var(--amber);}
+.news-impact.low{background:#94a3b8;}
+.news-title{font-size:12px;color:var(--text2);line-height:1.4;flex:1;font-weight:500;}
+.news-country{font-size:10px;color:var(--text3);margin-top:2px;}
+.news-empty{padding:24px 18px;font-size:12px;color:var(--text3);text-align:center;}
+.news-filter-bar{padding:8px 18px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;background:var(--bg2);}
+.news-filter-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3);transition:all .15s;font-family:var(--font);font-weight:500;}
+.news-filter-btn.active-high{background:var(--red-lt);color:var(--red);border-color:#fca5a5;}
+.news-filter-btn.active-medium{background:var(--amber-lt);color:var(--amber);border-color:#fcd34d;}
+.news-filter-btn.active-low{background:var(--gray-lt);color:var(--gray);border-color:var(--border);}
+.expand-btn{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px 4px;border-radius:4px;line-height:1;transition:all .15s;}
+.expand-btn:hover{background:var(--gray-lt);color:var(--text2);}
+.dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.quick-action-btn{padding:10px 20px;border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.quick-action-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.25);}
+.quick-action-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(37,99,235,.3);}
+.quick-action-btn.primary:hover{background:#1d4ed8;box-shadow:0 4px 14px rgba(37,99,235,.4);}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--amber-lt),#fef9c3);color:var(--amber);border:1px solid #fcd34d;}
+
+
+
 .dash-greeting span{color:var(--blue);}
 .dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:4px;}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;}
@@ -396,7 +454,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 
 
 <!-- DASHBOARD PAGE -->
-<div id="page-dashboard" class="page active" style="display:block">
+<div id="page-dashboard" class="page active">
   <div class="dashboard-wrap">
     <div>
       <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
@@ -425,21 +483,39 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
       <div class="dash-card">
         <div class="dash-card-header">
           <div class="dash-card-title">📈 Senaste trades</div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">Se alla →</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="expand-btn" onclick="openNewsModal('trades')" title="Expandera">⤢</button>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">Se alla →</button>
+          </div>
         </div>
         <div class="dash-trade-cols">
           <span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span>
         </div>
-        <div id="dashRecentTrades"></div>
+        <div class="dash-card-scroll" id="dashRecentTrades"></div>
       </div>
 
       <!-- Ekonomisk kalender -->
       <div class="dash-card">
         <div class="dash-card-header">
           <div class="dash-card-title">📰 Ekonomisk kalender <span style="font-size:10px;color:var(--text3);font-weight:400">idag (ET)</span></div>
-          <div id="newsLastUpdated" style="font-size:10px;color:var(--text3)"></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div id="newsLastUpdated" style="font-size:10px;color:var(--text3)"></div>
+            <button class="expand-btn" onclick="openNewsModal('news')" title="Expandera">⤢</button>
+          </div>
         </div>
-        <div id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
+        <div class="news-filter-bar">
+          <span style="font-size:11px;color:var(--text3);font-weight:600;padding-top:3px">Filter:</span>
+          <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
+          <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
+          <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
+          <span style="font-size:11px;color:var(--text3);font-weight:600;padding-top:3px;margin-left:4px">Land:</span>
+          <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
+          <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
+          <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
+          <button class="news-filter-btn active-high" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
+          <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla länder</button>
+        </div>
+        <div class="dash-card-scroll" id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
       </div>
     </div>
 
@@ -1552,6 +1628,10 @@ function gradeColor(g){return g==='A+'?'var(--green)':g==='A'?'var(--teal)':g===
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────────
 function openTradeModal(id){
+  // Återställ modal-footer om den dolts av expand
+  const footer=document.querySelector('#tradeModal .modal-footer');
+  if(footer)footer.style.display='';
+  document.getElementById('modalEditBtn').style.display='inline-flex';
   const t=journal.find(x=>String(x.id)===String(id));
   if(!t)return;
   editingTradeId=t.id;
@@ -1686,11 +1766,11 @@ function renderDashStats(){
   const monthTrades=withR.filter(t=>(t.date||'').startsWith(thisMonth));
   const monthR=monthTrades.reduce((a,t)=>a+(t.result||0),0);
   document.getElementById('dashStats').innerHTML=`
-    <div class="dash-stat"><div class="dash-stat-label">Totala trades</div><div class="dash-stat-value blue">${journal.length}</div><div class="dash-stat-sub">alla strategier</div></div>
-    <div class="dash-stat"><div class="dash-stat-label">Win Rate</div><div class="dash-stat-value ${wr>50?'green':wr<45?'red':''}">${wr==='—'?'—':wr+'%'}</div><div class="dash-stat-sub">${withR.length} trades med R</div></div>
-    <div class="dash-stat"><div class="dash-stat-label">Avg R</div><div class="dash-stat-value ${avgR>0?'green':avgR<0?'red':''}">${avgR==='—'?'—':(avgR>0?'+':'')+avgR+'R'}</div><div class="dash-stat-sub">per trade</div></div>
-    <div class="dash-stat"><div class="dash-stat-label">Total R</div><div class="dash-stat-value ${totalR>0?'green':totalR<0?'red':''}">${withR.length===0?'—':(totalR>=0?'+':'')+totalR.toFixed(2)+'R'}</div><div class="dash-stat-sub">alla tider</div></div>
-    <div class="dash-stat"><div class="dash-stat-label">Denna månad</div><div class="dash-stat-value ${monthR>0?'green':monthR<0?'red':'amber'}">${monthTrades.length===0?'—':(monthR>=0?'+':'')+monthR.toFixed(2)+'R'}</div><div class="dash-stat-sub">${monthTrades.length} trades</div></div>`;
+    <div class="dash-stat c-blue"><div class="dash-stat-label">Totala trades</div><div class="dash-stat-value blue">${journal.length}</div><div class="dash-stat-sub">alla strategier</div></div>
+    <div class="dash-stat c-green"><div class="dash-stat-label">Win Rate</div><div class="dash-stat-value ${wr>50?'green':wr<45?'red':''}">${wr==='—'?'—':wr+'%'}</div><div class="dash-stat-sub">${withR.length} trades med R</div></div>
+    <div class="dash-stat c-teal"><div class="dash-stat-label">Avg R</div><div class="dash-stat-value ${avgR>0?'green':avgR<0?'red':''}">${avgR==='—'?'—':(avgR>0?'+':'')+avgR+'R'}</div><div class="dash-stat-sub">per trade</div></div>
+    <div class="dash-stat c-purple"><div class="dash-stat-label">Total R</div><div class="dash-stat-value ${totalR>0?'green':totalR<0?'red':''}">${withR.length===0?'—':(totalR>=0?'+':'')+totalR.toFixed(2)+'R'}</div><div class="dash-stat-sub">alla tider</div></div>
+    <div class="dash-stat c-amber"><div class="dash-stat-label">Denna månad</div><div class="dash-stat-value ${monthR>0?'green':monthR<0?'red':'amber'}">${monthTrades.length===0?'—':(monthR>=0?'+':'')+monthR.toFixed(2)+'R'}</div><div class="dash-stat-sub">${monthTrades.length} trades</div></div>`;
 }
 
 function renderDashRecentTrades(){
@@ -1764,6 +1844,105 @@ function renderDashMonth(){
     </div>`;
 }
 
+
+// ── NEWS FILTER ───────────────────────────────────────────────────────────────
+let newsFilterImpact=new Set(['high','medium']);
+let newsFilterCountries=new Set(['US','EU','GB','JP']);
+let allNewsEvents=[];
+
+function toggleNewsFilter(level){
+  if(newsFilterImpact.has(level))newsFilterImpact.delete(level);
+  else newsFilterImpact.add(level);
+  const btn=document.getElementById('nf-'+level);
+  if(btn)btn.className='news-filter-btn'+(newsFilterImpact.has(level)?' active-'+level:'');
+  applyNewsFilter();
+}
+function toggleCountryFilter(country){
+  if(newsFilterCountries.has(country))newsFilterCountries.delete(country);
+  else newsFilterCountries.add(country);
+  const btn=document.getElementById('nf-'+country);
+  if(btn)btn.className='news-filter-btn'+(newsFilterCountries.has(country)?' active-high':'');
+  document.getElementById('nf-ALL').className='news-filter-btn';
+  applyNewsFilter();
+}
+function toggleAllCountries(){
+  newsFilterCountries=new Set(['US','EU','GB','JP','ALL']);
+  ['US','EU','GB','JP'].forEach(c=>{const b=document.getElementById('nf-'+c);if(b)b.className='news-filter-btn active-high';});
+  document.getElementById('nf-ALL').className='news-filter-btn active-high';
+  applyNewsFilter();
+}
+function applyNewsFilter(){
+  const filtered=allNewsEvents.filter(e=>{
+    const impact=getImpactLevel(e);
+    const country=(e.country||'').toUpperCase();
+    const impactOk=newsFilterImpact.has(impact);
+    const countryOk=newsFilterCountries.has('ALL')||newsFilterCountries.size===0||newsFilterCountries.has(country)||country==='';
+    return impactOk&&countryOk;
+  });
+  renderNewsItems(filtered,document.getElementById('dashNews'));
+}
+function getImpactLevel(e){
+  const raw=(e.impact||'').toLowerCase();
+  if(raw==='high'||raw==='3'||e.impact===3)return'high';
+  if(raw==='medium'||raw==='2'||e.impact===2)return'medium';
+  return'low';
+}
+function renderNewsItems(events,el){
+  if(!events||!events.length){el.innerHTML='<div class="news-empty">Inga händelser matchar filtret.</div>';return;}
+  el.innerHTML=events.map(e=>{
+    const impact=getImpactLevel(e);
+    const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
+    return`<div class="news-item">
+      <span class="news-time">${time}</span>
+      <span class="news-impact ${impact}"></span>
+      <div>
+        <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
+        <div class="news-country">${e.country||''}${e.actual!=null?' • Utfall: '+e.actual:''}${e.estimate!=null?' • Prognos: '+e.estimate:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── EXPAND MODAL ──────────────────────────────────────────────────────────────
+function openNewsModal(type){
+  const modal=document.getElementById('tradeModal');
+  const title=document.getElementById('modalTitle');
+  const body=document.getElementById('tradeModal').querySelector('.modal-body');
+  const footer=document.getElementById('tradeModal').querySelector('.modal-footer');
+  if(type==='news'){
+    title.textContent='📰 Ekonomisk kalender – fullständig lista';
+    footer.style.display='none';
+    let html='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
+    html+=['high','medium','low'].map(l=>`<button class="news-filter-btn ${newsFilterImpact.has(l)?'active-'+l:''}" onclick="toggleNewsFilter('${l}');this.className='news-filter-btn '+(newsFilterImpact.has('${l}')?'active-${l}':'')">${l==='high'?'🔴 Hög':l==='medium'?'🟡 Medium':'⚪ Låg'}</button>`).join('');
+    html+='</div><div id="modalNewsList" style="max-height:60vh;overflow-y:auto"></div>';
+    body.innerHTML=html;
+    renderNewsItems(allNewsEvents.filter(e=>{
+      const impact=getImpactLevel(e);
+      return newsFilterImpact.has(impact);
+    }),document.getElementById('modalNewsList'));
+  }else if(type==='trades'){
+    title.textContent='📈 Alla senaste trades';
+    footer.style.display='none';
+    body.innerHTML=`<div style="overflow-x:auto"><table class="jtable" style="font-size:12px">
+      <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Strategi</th></tr></thead>
+      <tbody>${journal.slice(0,30).map(t=>`<tr onclick="closeModal();openTradeModal('${t.id}')" style="cursor:pointer">
+        <td style="font-family:var(--mono);font-size:11px">${t.date||'—'}</td>
+        <td><strong>${t.symbol||'—'}</strong></td>
+        <td>${t.direction?`<span class="badge badge-${t.direction}">${t.direction}</span>`:'—'}</td>
+        <td>${t.outcome?`<span class="badge badge-${t.outcome}">${t.outcome}</span>`:'—'}</td>
+        <td class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}">${t.result!=null?((t.result>0?'+':'')+Number(t.result).toFixed(2)+'R'):'—'}</td>
+        <td style="font-weight:700;color:${gradeColor(t.grade)}">${t.grade||'—'}</td>
+        <td style="font-size:11px;color:var(--text3)">${t.strategy||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+  // Visa stäng-knapp men dölj spara/radera
+  document.getElementById('modalEditBtn').style.display='none';
+  document.getElementById('modalReadonlyNotice').style.display='none';
+  modal.classList.add('open');
+}
+
+
 // ── NYHETER (FINNHUB) ─────────────────────────────────────────────────────────
 async function loadNews(){
   const today=new Date().toISOString().split('T')[0];
@@ -1778,42 +1957,21 @@ async function loadNews(){
     return;
   }
   try{
-    // Hämta ekonomisk kalender för idag
-    const from=today;
-    const to=today;
-    const url=`https://finnhub.io/api/v1/calendar/economic?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+    const url=`https://finnhub.io/api/v1/calendar/economic?from=${today}&to=${today}&token=${FINNHUB_KEY}`;
     const res=await fetch(url);
     const data=await res.json();
-    const events=(data.economicCalendar||[]);
+    const events=(data.economicCalendar||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     localStorage.setItem(cacheKey,JSON.stringify(events));
     renderNews(events);
     lastUpdEl.textContent='Uppdaterad '+new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
-    el.innerHTML='<div class="news-empty">Kunde inte hämta nyheter. Kontrollera anslutningen.</div>';
+    el.innerHTML='<div class="news-empty">Kunde inte hämta nyheter.</div>';
   }
 }
 
 function renderNews(events){
-  const el=document.getElementById('dashNews');
-  if(!events||!events.length){
-    el.innerHTML='<div class="news-empty">Inga ekonomiska händelser idag.</div>';return;
-  }
-  // Sortera på tid, filtrera på high/medium impact
-  const sorted=[...events].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const impactMap={high:'high',medium:'medium',low:'low',3:'high',2:'medium',1:'low'};
-  const html=sorted.map(e=>{
-    const impact=impactMap[(e.impact||'').toLowerCase()]||impactMap[e.impact]||'low';
-    const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
-    return`<div class="news-item">
-      <span class="news-time">${time}</span>
-      <span class="news-impact ${impact}" title="${impact} impact"></span>
-      <div>
-        <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
-        <div class="news-country">${e.country||''} ${e.actual!=null?'• Utfall: '+e.actual:''} ${e.estimate!=null?'• Prognos: '+e.estimate:''}</div>
-      </div>
-    </div>`;
-  }).join('');
-  el.innerHTML=html||'<div class="news-empty">Inga händelser matchar filter.</div>';
+  allNewsEvents=events||[];
+  applyNewsFilter();
 }
 
 // ── LOGIN LOG ─────────────────────────────────────────────────────────────────
@@ -2059,9 +2217,14 @@ async function requestAccountDeletion(){
 
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
-  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  // Dölj alla sidor explicit
+  ['dashboard','checklist','journal','profil','admin'].forEach(id=>{
+    const el=document.getElementById('page-'+id);
+    if(el){el.classList.remove('active');el.style.display='none';}
+  });
   document.querySelectorAll('.htab').forEach(x=>x.classList.remove('active'));
-  document.getElementById('page-'+p).classList.add('active');
+  const target=document.getElementById('page-'+p);
+  if(target){target.classList.add('active');target.style.display='';}
   if(btn)btn.classList.add('active');
   if(p==='journal'){updateStats();renderJournal();}
   if(p==='profil'){loadProfil();}
