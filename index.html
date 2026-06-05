@@ -25,7 +25,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;transition:background .2s,color .2s;}
 [data-theme="dark"] body{background:#0d1117;}
-.app{max-width:1140px;margin:0 auto;}
+.app{max-width:1360px;margin:0 auto;}
 
 /* AUTH */
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;}
@@ -63,7 +63,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .auth-msg{font-size:12px;color:var(--green);margin-top:6px;}
 
 /* HEADER */
-.header{background:var(--navy);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header{background:linear-gradient(135deg,#0f1f3d 0%,#1a3158 100%);padding:13px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);}
 .header-logo{color:#fff;font-size:15px;font-weight:600;}
 .header-logo span{font-family:var(--mono);font-size:12px;color:#60a5fa;margin-left:6px;}
 .header-right{display:flex;align-items:center;gap:10px;}
@@ -239,7 +239,8 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
-.stat-card{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:11px 13px;box-shadow:var(--shadow);}
+.stat-card{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;cursor:default;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
 .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
 .stat-value{font-size:20px;font-weight:600;font-family:var(--mono);}
 .stat-value.green{color:var(--green);}
@@ -249,8 +250,65 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 
 /* MODAL */
 
+
+/* DASHBOARD */
+.dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.dash-greeting{font-size:22px;font-weight:600;color:var(--text);}
+.dash-greeting span{color:var(--blue);}
+.dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:4px;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;}
+.dash-stat{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;}
+.dash-stat:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.dash-stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.dash-stat-value{font-size:26px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.dash-stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.dash-stat-value.green{color:var(--green);}
+.dash-stat-value.red{color:var(--red);}
+.dash-stat-value.blue{color:var(--blue);}
+.dash-stat-value.amber{color:var(--amber);}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.dash-row.three{grid-template-columns:1fr 1fr 1fr;}
+.dash-card{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:0;box-shadow:var(--shadow);overflow:hidden;}
+.dash-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.dash-card-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
+.dash-card-body{padding:14px 18px;}
+.dash-trade-row{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;align-items:center;padding:7px 18px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background .1s;}
+.dash-trade-row:last-child{border-bottom:none;}
+.dash-trade-row:hover{background:var(--gray-lt);}
+.dash-trade-cols{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;padding:6px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
+.news-item{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .1s;}
+.news-item:last-child{border-bottom:none;}
+.news-item:hover{background:var(--gray-lt);}
+.news-time{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;min-width:48px;}
+.news-impact{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.news-impact.high{background:var(--red);}
+.news-impact.medium{background:var(--amber);}
+.news-impact.low{background:var(--green);}
+.news-title{font-size:12px;color:var(--text2);line-height:1.4;flex:1;}
+.news-country{font-size:10px;color:var(--text3);margin-top:2px;}
+.news-empty{padding:20px 18px;font-size:12px;color:var(--text3);text-align:center;}
+.dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.quick-action-btn{padding:10px 18px;border-radius:var(--r);border:1px solid var(--border);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:7px;}
+.quick-action-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.quick-action-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.quick-action-btn.primary:hover{background:#1d4ed8;}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--amber-lt);color:var(--amber);}
+
+/* ADMIN */
+.admin-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.admin-section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.admin-table{width:100%;border-collapse:collapse;font-size:12px;}
+.admin-table th{padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
+.admin-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:var(--gray-lt);}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+.status-pill.pending{background:var(--amber-lt);color:var(--amber);}
+.status-pill.done{background:var(--green-lt);color:var(--green);}
+
 /* PROFIL */
-.profil-wrap{max-width:560px;margin:0 auto;padding:24px 18px;display:flex;flex-direction:column;gap:16px;}
+.profil-wrap{max-width:860px;margin:0 auto;padding:28px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.profil-wrap .profil-card.full-width{grid-column:1/-1;}
 .profil-card{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);}
 .profil-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
 .profil-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
@@ -317,7 +375,8 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
   <div class="header-logo">TradeLog <span>v1.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
-      <button class="htab active" onclick="showPage('checklist',this)">Setup & Logg</button>
+      <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
+      <button class="htab" onclick="showPage('checklist',this)">Setup & Logg</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
     </div>
     <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
@@ -327,6 +386,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <div class="avatar-menu-email" id="avatarEmail">—</div>
         <div class="avatar-menu-divider"></div>
         <button class="avatar-menu-item" onclick="showPage('profil',null);closeAvatarMenu()">👤 Profil</button>
+        <button class="avatar-menu-item" id="adminMenuBtn" style="display:none" onclick="showPage('admin',null);closeAvatarMenu()">⚙️ Administration</button>
         <div class="avatar-menu-divider"></div>
         <button class="avatar-menu-item danger" onclick="doLogout();closeAvatarMenu()">↩ Logga ut</button>
       </div>
@@ -334,8 +394,75 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
   </div>
 </div>
 
+
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page active" style="display:block">
+  <div class="dashboard-wrap">
+    <div>
+      <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
+      <div class="dash-greeting-sub" id="dashDate">—</div>
+    </div>
+
+    <!-- Snabbåtgärder -->
+    <div class="dash-quick-actions">
+      <button class="quick-action-btn primary" onclick="showPage('checklist',document.querySelectorAll('.htab')[1])">
+        ✚ Logga ny trade
+      </button>
+      <button class="quick-action-btn" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">
+        📋 Se journal
+      </button>
+      <button class="quick-action-btn" onclick="showPage('checklist',document.querySelectorAll('.htab')[1]);setTimeout(()=>toggleEditor(),300)">
+        ✏️ Redigera checklista
+      </button>
+    </div>
+
+    <!-- Statistik-rad -->
+    <div class="dash-grid" id="dashStats"></div>
+
+    <!-- Trades + Nyheter -->
+    <div class="dash-row">
+      <!-- Senaste trades -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <div class="dash-card-title">📈 Senaste trades</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">Se alla →</button>
+        </div>
+        <div class="dash-trade-cols">
+          <span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span>
+        </div>
+        <div id="dashRecentTrades"></div>
+      </div>
+
+      <!-- Ekonomisk kalender -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <div class="dash-card-title">📰 Ekonomisk kalender <span style="font-size:10px;color:var(--text3);font-weight:400">idag (ET)</span></div>
+          <div id="newsLastUpdated" style="font-size:10px;color:var(--text3)"></div>
+        </div>
+        <div id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
+      </div>
+    </div>
+
+    <!-- Streak + Grade-fördelning -->
+    <div class="dash-row three">
+      <div class="dash-card">
+        <div class="dash-card-header"><div class="dash-card-title">🔥 Streak & Konsistens</div></div>
+        <div class="dash-card-body" id="dashStreak"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><div class="dash-card-title">🏅 Grade-fördelning</div></div>
+        <div class="dash-card-body" id="dashGrades"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><div class="dash-card-title">📊 Denna månad</div></div>
+        <div class="dash-card-body" id="dashMonth"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CHECKLIST PAGE -->
-<div id="page-checklist" class="page active">
+<div id="page-checklist" class="page">
 <div class="main">
   <div class="sidebar">
     <div class="sidebar-scroll">
@@ -497,12 +624,51 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 </div>
 
 
+
+<!-- ADMIN PAGE -->
+<div id="page-admin" class="page" style="padding:0">
+  <div class="admin-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:20px;font-weight:700;color:var(--text)">⚙️ Administration</div>
+      <span style="font-size:12px;color:var(--text3)">Synlig bara för administratörer</span>
+    </div>
+
+    <!-- Raderingsförfrågningar -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <div class="dash-card-title">🗑 Raderingsförfrågningar</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAdminData()">↺ Uppdatera</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="admin-table" id="deletionTable">
+          <thead><tr><th>E-post</th><th>Begärd</th><th>Status</th><th>Anteckning</th><th></th></tr></thead>
+          <tbody id="deletionBody"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Inloggningslogg -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <div class="dash-card-title">🔐 Senaste inloggningar</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAdminData()">↺ Uppdatera</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>E-post</th><th>Tidpunkt</th><th>Enhet/Webbläsare</th><th>IP (hint)</th></tr></thead>
+          <tbody id="loginLogBody"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PROFIL PAGE -->
 <div id="page-profil" class="page" style="padding:0">
   <div class="profil-wrap">
 
     <!-- Kontoinformation -->
-    <div class="profil-card">
+    <div class="profil-card full-width">
       <div class="profil-card-title">👤 Kontoinformation</div>
       <div class="profil-row">
         <span class="profil-label">E-post</span>
@@ -730,6 +896,7 @@ function setFieldSetting(id,prop,val){
   fieldSettings[id][prop]=val;
   localStorage.setItem('fieldSettings',JSON.stringify(fieldSettings));
   applyFieldSettings();
+  loadDashboard();
 }
 function applyFieldSettings(){
   STD_FIELDS.forEach(f=>{
@@ -938,6 +1105,7 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
+  loadDashboard();
 }
 async function doLogout(){
   await sb.auth.signOut();
@@ -946,7 +1114,7 @@ async function doLogout(){
   document.getElementById('authWrap').style.display='flex';
 }
 sb.auth.getSession().then(({data:{session}})=>{if(session)onLogin(session.user);});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();document.getElementById('imgModal').classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
 async function fetchChecklists(){
@@ -1479,6 +1647,236 @@ async function doDelete(){
 }
 
 
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
+
+async function loadDashboard(){
+  if(!currentUser)return;
+  // Namn & datum
+  const meta=currentUser.user_metadata||{};
+  const name=meta.display_name||(currentUser.email||'').split('@')[0];
+  document.getElementById('dashName').textContent=name;
+  const now=new Date();
+  document.getElementById('dashDate').textContent=now.toLocaleDateString('sv-SE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // Stats
+  renderDashStats();
+  renderDashRecentTrades();
+  renderDashStreak();
+  renderDashGrades();
+  renderDashMonth();
+  await loadNews();
+  // Logga inloggning
+  logLogin();
+  // Admin-knapp
+  if(meta.is_admin){document.getElementById('adminMenuBtn').style.display='block';}
+}
+
+function renderDashStats(){
+  const withR=journal.filter(t=>t.result!=null);
+  const wins=withR.filter(t=>t.outcome==='W').length;
+  const wr=withR.length?(wins/withR.length*100).toFixed(0):'—';
+  const totalR=withR.reduce((a,t)=>a+(t.result||0),0);
+  const avgR=withR.length?(totalR/withR.length).toFixed(2):'—';
+  const winR=withR.filter(t=>t.result>0).reduce((a,t)=>a+t.result,0);
+  const lossR=Math.abs(withR.filter(t=>t.result<0).reduce((a,t)=>a+t.result,0));
+  const pf=lossR>0?(winR/lossR).toFixed(2):'—';
+  // Denna månad
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const monthTrades=withR.filter(t=>(t.date||'').startsWith(thisMonth));
+  const monthR=monthTrades.reduce((a,t)=>a+(t.result||0),0);
+  document.getElementById('dashStats').innerHTML=`
+    <div class="dash-stat"><div class="dash-stat-label">Totala trades</div><div class="dash-stat-value blue">${journal.length}</div><div class="dash-stat-sub">alla strategier</div></div>
+    <div class="dash-stat"><div class="dash-stat-label">Win Rate</div><div class="dash-stat-value ${wr>50?'green':wr<45?'red':''}">${wr==='—'?'—':wr+'%'}</div><div class="dash-stat-sub">${withR.length} trades med R</div></div>
+    <div class="dash-stat"><div class="dash-stat-label">Avg R</div><div class="dash-stat-value ${avgR>0?'green':avgR<0?'red':''}">${avgR==='—'?'—':(avgR>0?'+':'')+avgR+'R'}</div><div class="dash-stat-sub">per trade</div></div>
+    <div class="dash-stat"><div class="dash-stat-label">Total R</div><div class="dash-stat-value ${totalR>0?'green':totalR<0?'red':''}">${withR.length===0?'—':(totalR>=0?'+':'')+totalR.toFixed(2)+'R'}</div><div class="dash-stat-sub">alla tider</div></div>
+    <div class="dash-stat"><div class="dash-stat-label">Denna månad</div><div class="dash-stat-value ${monthR>0?'green':monthR<0?'red':'amber'}">${monthTrades.length===0?'—':(monthR>=0?'+':'')+monthR.toFixed(2)+'R'}</div><div class="dash-stat-sub">${monthTrades.length} trades</div></div>`;
+}
+
+function renderDashRecentTrades(){
+  const recent=journal.slice(0,6);
+  const el=document.getElementById('dashRecentTrades');
+  if(!recent.length){el.innerHTML='<div class="news-empty">Inga trades loggade ännu.</div>';return;}
+  el.innerHTML=recent.map(t=>`
+    <div class="dash-trade-row" onclick="openTradeModal('${t.id}')">
+      <span style="font-family:var(--mono);font-size:11px">${t.date||'—'}</span>
+      <strong>${t.symbol||'—'}</strong>
+      <span>${t.direction?`<span class="badge badge-${t.direction}" style="font-size:10px">${t.direction}</span>`:'—'}</span>
+      <span>${t.outcome?`<span class="badge badge-${t.outcome}" style="font-size:10px">${t.outcome}</span>`:'—'}</span>
+      <span class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}" style="font-size:11px">${t.result!=null?((t.result>0?'+':'')+Number(t.result).toFixed(2)+'R'):'—'}</span>
+      <span style="font-weight:700;font-size:11px;color:${gradeColor(t.grade)}">${t.grade||'—'}</span>
+    </div>`).join('');
+}
+
+function renderDashStreak(){
+  const el=document.getElementById('dashStreak');
+  const sorted=[...journal].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  let streak=0,best=0,cur=0;
+  sorted.forEach(t=>{if(t.outcome==='W'){cur++;best=Math.max(best,cur);}else{cur=0;}});
+  // Nuvarande streak (från senaste)
+  for(let t of sorted){if(t.outcome==='W')streak++;else break;}
+  el.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="streak-badge">🔥 ${streak} i rad</span>
+        <span style="font-size:12px;color:var(--text3)">nuvarande vinst-streak</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2)">Bästa streak: <strong>${best} vinster i rad</strong></div>
+      <div style="font-size:12px;color:var(--text2)">Totalt loggade dagar: <strong>${new Set(journal.map(t=>t.date).filter(Boolean)).size}</strong></div>
+    </div>`;
+}
+
+function renderDashGrades(){
+  const el=document.getElementById('dashGrades');
+  const grades=['A+','A','B','C'];
+  const counts={};
+  grades.forEach(g=>counts[g]=journal.filter(t=>t.grade===g).length);
+  const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
+  const colors={'A+':'var(--green)','A':'var(--teal)','B':'var(--amber)','C':'var(--red)'};
+  el.innerHTML=grades.map(g=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-weight:700;font-size:12px;color:${colors[g]};width:24px">${g}</span>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${(counts[g]/total*100).toFixed(0)}%;background:${colors[g]};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <span style="font-size:11px;color:var(--text3);width:30px;text-align:right">${counts[g]}</span>
+    </div>`).join('');
+}
+
+function renderDashMonth(){
+  const el=document.getElementById('dashMonth');
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const mt=journal.filter(t=>(t.date||'').startsWith(thisMonth));
+  const wins=mt.filter(t=>t.outcome==='W').length;
+  const losses=mt.filter(t=>t.outcome==='L').length;
+  const bes=mt.filter(t=>t.outcome==='BE').length;
+  const r=mt.filter(t=>t.result!=null).reduce((a,t)=>a+(t.result||0),0);
+  el.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Trades</span><strong>${mt.length}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--green)">Vinster</span><strong style="color:var(--green)">${wins}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--red)">Förluster</span><strong style="color:var(--red)">${losses}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--amber)">Break Even</span><strong style="color:var(--amber)">${bes}</strong></div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between">
+        <span style="color:var(--text3)">Netto R</span>
+        <strong class="${r>0?'r-pos':r<0?'r-neg':'r-neu'}">${mt.length===0?'—':(r>=0?'+':'')+r.toFixed(2)+'R'}</strong>
+      </div>
+    </div>`;
+}
+
+// ── NYHETER (FINNHUB) ─────────────────────────────────────────────────────────
+async function loadNews(){
+  const today=new Date().toISOString().split('T')[0];
+  const cacheKey='finnhub_news_'+today;
+  const cached=localStorage.getItem(cacheKey);
+  const el=document.getElementById('dashNews');
+  const lastUpdEl=document.getElementById('newsLastUpdated');
+
+  if(cached){
+    renderNews(JSON.parse(cached));
+    lastUpdEl.textContent='Cachad – '+today;
+    return;
+  }
+  try{
+    // Hämta ekonomisk kalender för idag
+    const from=today;
+    const to=today;
+    const url=`https://finnhub.io/api/v1/calendar/economic?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+    const res=await fetch(url);
+    const data=await res.json();
+    const events=(data.economicCalendar||[]);
+    localStorage.setItem(cacheKey,JSON.stringify(events));
+    renderNews(events);
+    lastUpdEl.textContent='Uppdaterad '+new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    el.innerHTML='<div class="news-empty">Kunde inte hämta nyheter. Kontrollera anslutningen.</div>';
+  }
+}
+
+function renderNews(events){
+  const el=document.getElementById('dashNews');
+  if(!events||!events.length){
+    el.innerHTML='<div class="news-empty">Inga ekonomiska händelser idag.</div>';return;
+  }
+  // Sortera på tid, filtrera på high/medium impact
+  const sorted=[...events].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const impactMap={high:'high',medium:'medium',low:'low',3:'high',2:'medium',1:'low'};
+  const html=sorted.map(e=>{
+    const impact=impactMap[(e.impact||'').toLowerCase()]||impactMap[e.impact]||'low';
+    const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
+    return`<div class="news-item">
+      <span class="news-time">${time}</span>
+      <span class="news-impact ${impact}" title="${impact} impact"></span>
+      <div>
+        <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
+        <div class="news-country">${e.country||''} ${e.actual!=null?'• Utfall: '+e.actual:''} ${e.estimate!=null?'• Prognos: '+e.estimate:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML=html||'<div class="news-empty">Inga händelser matchar filter.</div>';
+}
+
+// ── LOGIN LOG ─────────────────────────────────────────────────────────────────
+async function logLogin(){
+  try{
+    const ua=navigator.userAgent;
+    // Hämta IP via publik tjänst
+    let ip='—';
+    try{const r=await fetch('https://api.ipify.org?format=json');const d=await r.json();ip=d.ip||'—';}catch(e){}
+    await sb.from('login_log').insert([{
+      user_id:currentUser.id,
+      email:currentUser.email,
+      user_agent:ua.substring(0,200),
+      ip_hint:ip,
+    }]);
+  }catch(e){console.log('Login log failed (non-critical)',e);}
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+async function loadAdminData(){
+  // Raderingsförfrågningar
+  const{data:delReqs}=await sb.from('deletion_requests').select('*').order('requested_at',{ascending:false});
+  const delBody=document.getElementById('deletionBody');
+  if(!delReqs||!delReqs.length){
+    delBody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:16px">Inga förfrågningar</td></tr>';
+  }else{
+    delBody.innerHTML=delReqs.map(r=>`<tr>
+      <td>${r.email||'—'}</td>
+      <td style="font-family:var(--mono);font-size:11px">${new Date(r.requested_at).toLocaleString('sv-SE')}</td>
+      <td><span class="status-pill ${r.status==='pending'?'pending':'done'}">${r.status==='pending'?'Väntar':'Behandlad'}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${r.admin_note||'—'}</td>
+      <td>
+        ${r.status==='pending'?`<button class="btn btn-success btn-sm" onclick="markDeletionDone('${r.id}')">✓ Markera klar</button>`:''}
+      </td>
+    </tr>`).join('');
+  }
+  // Inloggningslogg - använd service_role via RLS om admin
+  const{data:logs}=await sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(50);
+  const logBody=document.getElementById('loginLogBody');
+  if(!logs||!logs.length){
+    logBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px">Inga inloggningar loggade</td></tr>';
+  }else{
+    logBody.innerHTML=logs.map(l=>{
+      const ua=l.user_agent||'';
+      const browser=ua.includes('Chrome')?'Chrome':ua.includes('Firefox')?'Firefox':ua.includes('Safari')?'Safari':ua.includes('Edge')?'Edge':'Okänd';
+      const device=ua.includes('Mobile')?'📱 Mobil':'💻 Dator';
+      return`<tr>
+        <td style="font-size:11px">${l.email||'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${new Date(l.logged_in_at).toLocaleString('sv-SE')}</td>
+        <td style="font-size:11px">${device} ${browser}</td>
+        <td style="font-family:var(--mono);font-size:11px">${l.ip_hint||'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+async function markDeletionDone(id){
+  const note=prompt('Anteckning (valfri):','Data raderat');
+  const{error}=await sb.from('deletion_requests').update({status:'done',admin_note:note||''}).eq('id',id);
+  if(!error)loadAdminData();
+}
+
+
 // ── PROFIL ────────────────────────────────────────────────────────────────────
 let mfaFactors=[];
 let mfaSetupData=null;
@@ -1667,6 +2065,8 @@ function showPage(p,btn){
   if(btn)btn.classList.add('active');
   if(p==='journal'){updateStats();renderJournal();}
   if(p==='profil'){loadProfil();}
+  if(p==='dashboard'){loadDashboard();}
+  if(p==='admin'){loadAdminData();}
 }
 function updateStats(){
   const fs=document.getElementById('filterStrategy').value;
