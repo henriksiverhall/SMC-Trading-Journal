@@ -430,7 +430,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.6</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -441,6 +441,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
     <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
     <div class="auth-err" id="authErr"></div>
     <div class="auth-msg" id="authMsg"></div>
+    <div id="continueAs" style="display:none"></div>
   </div>
 </div>
 
@@ -448,7 +449,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.6</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1051,11 +1052,14 @@ let userSettings={};
 
 async function loadUserSettings(){
   if(!currentUser)return;
-  const{data}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
-  if(data&&data.settings){
-    userSettings=data.settings;
-    // Applicera sparade inställningar
-    applyUserSettings();
+  try{
+    const{data,error}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
+    if(data&&data.settings&&!error){
+      userSettings=data.settings;
+      applyUserSettings();
+    }
+  }catch(e){
+    console.warn('loadUserSettings:',e);
   }
 }
 
@@ -1102,10 +1106,12 @@ function applyUserSettings(){
     fieldSettings=userSettings.fieldSettings;
     applyFieldSettings();
   }
-  // customFields
-  if(userSettings.customFields){
+  // customFields – uppdatera bara om de faktiskt skiljer sig
+  if(userSettings.customFields&&JSON.stringify(userSettings.customFields)!==JSON.stringify(customFields)){
     customFields=userSettings.customFields;
-    renderCustomFieldInputs();
+    localStorage.setItem('customFields',JSON.stringify(customFields));
+    // Rendera bara om appen redan är initialiserad
+    if(document.querySelector('.form-grid'))renderCustomFieldInputs();
   }
 }
 
@@ -1318,6 +1324,7 @@ async function doAuth(){
   errEl.textContent='';document.getElementById('authMsg').textContent='';
   if(!email||!pw){errEl.textContent='Fyll i e-post och lösenord.';return;}
   document.getElementById('authBtn').textContent='…';
+  document.getElementById('authBtn').disabled=true;
   if(authMode==='signup'){
     const{error}=await sb.auth.signUp({email,password:pw});
     if(error)errEl.textContent=error.message;
@@ -1341,6 +1348,7 @@ async function doAuth(){
     }
   }
   document.getElementById('authBtn').textContent=authMode==='login'?'Logga in':'Skapa konto';
+  document.getElementById('authBtn').disabled=false;
 }
 async function onLogin(user){
   currentUser=user;
@@ -1370,7 +1378,37 @@ async function doLogout(){
   document.getElementById('appWrap').style.display='none';
   document.getElementById('authWrap').style.display='flex';
 }
-sb.auth.getSession().then(({data:{session}})=>{if(session)onLogin(session.user);});
+sb.auth.getSession().then(({data:{session}})=>{
+  if(session&&session.user){
+    // Visa "Fortsätt som"-prompt istället för auto-login
+    const u=session.user;
+    const cont=document.getElementById('continueAs');
+    if(cont){
+      cont.style.display='block';
+      cont.innerHTML=`<div style="margin-top:16px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:13px">
+        <div style="color:var(--text3);margin-bottom:8px">Senast inloggad som:</div>
+        <div style="font-weight:600;color:var(--text);margin-bottom:10px">${u.email}</div>
+        <button class="auth-btn" style="margin-top:0" onclick="resumeSession()">Fortsätt som denna användare</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="clearAndShowLogin()">Logga in som annan</button>
+      </div>`;
+    }
+    window._pendingSession=session;
+  }
+});
+
+async function resumeSession(){
+  const s=window._pendingSession;
+  if(s)onLogin(s.user);
+}
+
+async function clearAndShowLogin(){
+  await sb.auth.signOut();
+  window._pendingSession=null;
+  const cont=document.getElementById('continueAs');
+  if(cont)cont.style.display='none';
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
@@ -2437,7 +2475,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.6</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
