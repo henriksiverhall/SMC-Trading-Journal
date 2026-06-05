@@ -430,7 +430,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.4</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.5</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -448,7 +448,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.4</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.5</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1147,7 +1147,7 @@ function setFieldSetting(id,prop,val){
   if(!fieldSettings[id])fieldSettings[id]={};
   fieldSettings[id][prop]=val;
   localStorage.setItem('fieldSettings',JSON.stringify(fieldSettings));
-  await loadUserSettings();
+  try{await loadUserSettings();}catch(e){console.warn('loadUserSettings failed',e);}
   applyFieldSettings();
   loadDashboard();
 }
@@ -1326,15 +1326,18 @@ async function doAuth(){
     const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
     if(error){errEl.textContent='Fel e-post eller lösenord.';}
     else{
-      // Kolla om MFA krävs
-      const{data:{session}}=await sb.auth.getSession();
-      if(session&&session.user){
-        const aal=session.aal;
-        if(aal==='aal1'){
-          // Kolla om användaren har MFA
+      try{
+        // Kolla om MFA krävs
+        const{data:aalData}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+        if(aalData&&aalData.nextLevel==='aal2'&&aalData.currentLevel==='aal1'){
           await handleMfaChallenge(data.user);
-        }else{onLogin(data.user);}
-      }else{onLogin(data.user);}
+        }else{
+          onLogin(data.user);
+        }
+      }catch(e){
+        // Fallback om MFA-kollen kraschar
+        onLogin(data.user);
+      }
     }
   }
   document.getElementById('authBtn').textContent=authMode==='login'?'Logga in':'Skapa konto';
@@ -1357,7 +1360,7 @@ async function onLogin(user){
   renderCustomFieldInputs();
   renderRecentTrades();
   updateFilterOptions();
-  await loadUserSettings();
+  try{await loadUserSettings();}catch(e){console.warn('loadUserSettings failed',e);}
   applyFieldSettings();
   loadDashboard();
 }
@@ -1982,6 +1985,7 @@ const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
   if(!currentUser)return;
+  try{
   // Namn & datum
   const meta=currentUser.user_metadata||{};
   const name=meta.display_name||(currentUser.email||'').split('@')[0];
@@ -1998,7 +2002,14 @@ async function loadDashboard(){
   // Logga inloggning
   logLogin();
   // Admin-knapp
-  if(meta.is_admin){document.getElementById('adminMenuBtn').style.display='block';}
+  // Kolla admin via separat DB-anrop
+  try{
+    const{data:adminCheck}=await sb.from('user_settings').select('settings').eq('user_id',user.id).single();
+    const isAdmin=(adminCheck&&adminCheck.settings&&adminCheck.settings.is_admin)||(meta&&meta.is_admin);
+    if(isAdmin)document.getElementById('adminMenuBtn').style.display='block';
+  }catch(e){
+    if(meta&&meta.is_admin)document.getElementById('adminMenuBtn').style.display='block';
+  }
 }
 
 function renderDashStats(){
@@ -2426,7 +2437,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.4</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.5</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
