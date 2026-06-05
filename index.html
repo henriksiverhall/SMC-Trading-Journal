@@ -430,18 +430,17 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.1</span></div>
+    <div class="auth-logo">TradeLog <span>v1.3.2</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
     </div>
-    <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com" onfocus="dismissContinueAs()" oninput="dismissContinueAs()"></div>
+    <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com"></div>
     <div class="form-group"><label>Lösenord</label><input type="password" class="auth-input" id="authPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()"></div>
     <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
     <div class="auth-err" id="authErr"></div>
     <div class="auth-msg" id="authMsg"></div>
-    <div id="continueAs" style="display:none"></div>
   </div>
 </div>
 
@@ -449,7 +448,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.1</span></div>
+  <div class="header-logo">TradeLog <span>v1.3.2</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1396,43 +1395,7 @@ async function doLogout(){
   document.getElementById('appWrap').style.display='none';
   document.getElementById('authWrap').style.display='flex';
 }
-sb.auth.getSession().then(({data:{session}})=>{
-  if(session&&session.user){
-    // Visa "Fortsätt som"-prompt istället för auto-login
-    const u=session.user;
-    const cont=document.getElementById('continueAs');
-    if(cont){
-      cont.style.display='block';
-      cont.innerHTML=`<div style="margin-top:16px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:13px">
-        <div style="color:var(--text3);margin-bottom:8px">Senast inloggad som:</div>
-        <div style="font-weight:600;color:var(--text);margin-bottom:10px">${u.email}</div>
-        <button class="auth-btn" style="margin-top:0" onclick="resumeSession()">Fortsätt som denna användare</button>
-        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="clearAndShowLogin()">Logga in som annan</button>
-      </div>`;
-    }
-    window._pendingSession=session;
-  }
-});
-
-function dismissContinueAs(){
-  window._pendingSession=null;
-  const cont=document.getElementById('continueAs');
-  if(cont)cont.style.display='none';
-}
-
-async function resumeSession(){
-  const s=window._pendingSession;
-  if(s)onLogin(s.user);
-}
-
-async function clearAndShowLogin(){
-  await sb.auth.signOut();
-  window._pendingSession=null;
-  const cont=document.getElementById('continueAs');
-  if(cont)cont.style.display='none';
-  document.getElementById('authEmail').value='';
-  document.getElementById('authPassword').value='';
-}
+sb.auth.getSession().then(({data:{session}})=>{if(session&&session.user)onLogin(session.user);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
@@ -2496,7 +2459,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.1</span></div>
+      <div class="auth-logo">TradeLog <span>v1.3.2</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
