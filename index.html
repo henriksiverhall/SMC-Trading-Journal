@@ -236,6 +236,25 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .empty{padding:36px 20px;text-align:center;color:var(--text3);font-size:13px;}
 
 /* MODAL */
+
+/* PROFIL */
+.profil-wrap{max-width:560px;margin:0 auto;padding:24px 18px;display:flex;flex-direction:column;gap:16px;}
+.profil-card{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);}
+.profil-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.profil-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.profil-row:last-child{border-bottom:none;}
+.profil-label{color:var(--text3);font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+.profil-value{color:var(--text2);font-family:var(--mono);font-size:12px;}
+.mfa-status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.mfa-on{background:var(--green-lt);color:var(--green);}
+.mfa-off{background:var(--amber-lt);color:var(--amber);}
+.qr-wrap{text-align:center;padding:16px 0;}
+.qr-wrap img{border:4px solid var(--bg);border-radius:var(--r);box-shadow:var(--shadow);}
+.totp-input{letter-spacing:.3em;font-family:var(--mono);font-size:18px;text-align:center;padding:10px;width:100%;border:2px solid var(--border);border-radius:var(--r);}
+.totp-input:focus{outline:none;border-color:var(--blue);}
+.danger-zone{border-color:#fca5a5;}
+.danger-zone .profil-card-title{color:var(--red);}
+
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:200;}
 .modal-backdrop.open{display:flex;}
 .modal{background:var(--bg);border-radius:12px;padding:0;max-width:640px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
@@ -266,7 +285,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
     <div class="auth-logo">TradeLog <span>v1.1</span></div>
-    <div class="auth-sub">Logga in för att komma åt din journal</div>
+    <div class="auth-sub">Logga in för att komma åt ditt journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
@@ -288,6 +307,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('checklist',this)">Setup & Logg</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
+      <button class="htab" onclick="showPage('profil',this)">Profil</button>
     </div>
     <span class="header-user" id="headerUser"></span>
     <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
@@ -405,8 +425,15 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <div id="fieldList"></div>
         <div class="add-field-row">
           <input type="text" id="newFieldName" placeholder="Fältnamn">
-          <select id="newFieldType"><option value="text">Text</option><option value="number">Nummer</option><option value="select">Dropdown</option></select>
+          <select id="newFieldType" onchange="toggleDropdownOptions(this.value)">
+            <option value="text">Text</option>
+            <option value="number">Nummer</option>
+            <option value="select">Dropdown</option>
+          </select>
           <button class="btn btn-primary btn-sm" onclick="addCustomField()">+ Lägg till</button>
+        </div>
+        <div id="dropdownOptionsRow" style="display:none;margin-top:6px">
+          <input type="text" id="newFieldOptions" placeholder="Ange värden separerade med komma: val1,val2,val3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font)">
         </div>
       </div>
     </div>
@@ -448,6 +475,80 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
   </div>
 </div>
 </div>
+</div>
+
+
+<!-- PROFIL PAGE -->
+<div id="page-profil" class="page" style="padding:0">
+  <div class="profil-wrap">
+
+    <!-- Kontoinformation -->
+    <div class="profil-card">
+      <div class="profil-card-title">👤 Kontoinformation</div>
+      <div class="profil-row">
+        <span class="profil-label">E-post</span>
+        <span class="profil-value" id="profil-email">—</span>
+      </div>
+      <div class="profil-row">
+        <span class="profil-label">Visningsnamn</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" class="form-control" id="profil-displayname" placeholder="Valfritt namn" style="width:180px">
+          <button class="btn btn-primary btn-sm" onclick="saveDisplayName()">Spara</button>
+        </div>
+      </div>
+      <div class="profil-row">
+        <span class="profil-label">Konto skapat</span>
+        <span class="profil-value" id="profil-created">—</span>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-ghost btn-sm" onclick="showChangePassword()">🔑 Byt lösenord</button>
+      </div>
+      <div id="changePwSection" style="display:none;margin-top:12px;display:none">
+        <div class="form-group"><label>Nytt lösenord</label><input type="password" class="form-control" id="newPw1" placeholder="Minst 6 tecken"></div>
+        <div class="form-group"><label>Bekräfta lösenord</label><input type="password" class="form-control" id="newPw2" placeholder="Upprepa lösenordet"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('changePwSection').style.display='none'">Avbryt</button>
+          <button class="btn btn-primary btn-sm" onclick="doChangePassword()">Uppdatera lösenord</button>
+        </div>
+        <div id="pwMsg" style="font-size:12px;margin-top:6px;min-height:16px"></div>
+      </div>
+    </div>
+
+    <!-- Tvåfaktorautentisering -->
+    <div class="profil-card">
+      <div class="profil-card-title">🔐 Tvåfaktorautentisering (TOTP)</div>
+      <div class="profil-row">
+        <span class="profil-label">Status</span>
+        <span id="mfaStatusBadge" class="mfa-status-badge mfa-off">⚠ Ej aktiverad</span>
+      </div>
+      <div id="mfaSection" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Statistik -->
+    <div class="profil-card">
+      <div class="profil-card-title">📊 Din data</div>
+      <div class="profil-row">
+        <span class="profil-label">Loggade trades</span>
+        <span class="profil-value" id="profil-tradecount">—</span>
+      </div>
+      <div class="profil-row">
+        <span class="profil-label">Strategier</span>
+        <span class="profil-value" id="profil-stratcount">—</span>
+      </div>
+    </div>
+
+    <!-- GDPR / Radering -->
+    <div class="profil-card danger-zone">
+      <div class="profil-card-title">⚠️ Radera konto & data</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+        Om du vill radera ditt konto och all din data skickas en begäran till administratören. 
+        Din data tas bort inom 30 dagar i enlighet med GDPR. Du får en bekräftelse via e-post.
+      </p>
+      <div id="deletionRequestStatus" style="font-size:12px;color:var(--text3);margin-bottom:10px"></div>
+      <button class="btn btn-danger btn-sm" onclick="requestAccountDeletion()">🗑 Begär radering av konto och data</button>
+    </div>
+
+  </div>
 </div>
 
 <!-- TRADE MODAL -->
@@ -510,6 +611,22 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         <button class="btn btn-ghost btn-sm" onclick="closeModal()">Stäng</button>
         <button class="btn btn-success btn-sm" id="modalSaveBtn" onclick="saveModalTrade()" style="display:none">💾 Spara ändringar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MFA SETUP MODAL -->
+<div class="modal-backdrop" id="mfaModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title" id="mfaModalTitle">Aktivera tvåfaktor</div>
+      <button class="modal-close" onclick="closeMfaModal()">✕</button>
+    </div>
+    <div class="modal-body" id="mfaModalBody"></div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeMfaModal()">Avbryt</button>
+      <button class="btn btn-primary btn-sm" id="mfaActionBtn" onclick="mfaAction()">Nästa</button>
     </div>
   </div>
 </div>
@@ -754,8 +871,18 @@ async function doAuth(){
     else document.getElementById('authMsg').textContent='Konto skapat! Kolla din e-post och logga sedan in.';
   }else{
     const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
-    if(error)errEl.textContent='Fel e-post eller lösenord.';
-    else onLogin(data.user);
+    if(error){errEl.textContent='Fel e-post eller lösenord.';}
+    else{
+      // Kolla om MFA krävs
+      const{data:{session}}=await sb.auth.getSession();
+      if(session&&session.user){
+        const aal=session.aal;
+        if(aal==='aal1'){
+          // Kolla om användaren har MFA
+          await handleMfaChallenge(data.user);
+        }else{onLogin(data.user);}
+      }else{onLogin(data.user);}
+    }
   }
   document.getElementById('authBtn').textContent=authMode==='login'?'Logga in':'Skapa konto';
 }
@@ -1120,12 +1247,24 @@ function renderFieldManager(){
     <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
   </div>`).join('');
 }
+function toggleDropdownOptions(type){
+  document.getElementById('dropdownOptionsRow').style.display=type==='select'?'block':'none';
+}
 function addCustomField(){
   const name=document.getElementById('newFieldName').value.trim();
   const type=document.getElementById('newFieldType').value;
   if(!name)return;
-  customFields.push({id:Date.now(),name,type,options:type==='select'?[]:undefined});
-  saveCustomFields();document.getElementById('newFieldName').value='';
+  let options=undefined;
+  if(type==='select'){
+    const raw=document.getElementById('newFieldOptions').value;
+    options=raw.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+  customFields.push({id:Date.now(),name,type,options});
+  saveCustomFields();
+  document.getElementById('newFieldName').value='';
+  document.getElementById('newFieldOptions').value='';
+  document.getElementById('newFieldType').value='text';
+  document.getElementById('dropdownOptionsRow').style.display='none';
   renderFieldManager();renderCustomFieldInputs();
 }
 function removeCustomField(i){customFields.splice(i,1);saveCustomFields();renderFieldManager();renderCustomFieldInputs();}
@@ -1301,6 +1440,187 @@ async function doDelete(){
   if(document.getElementById('page-journal').classList.contains('active')){updateStats();renderJournal();}
 }
 
+
+// ── PROFIL ────────────────────────────────────────────────────────────────────
+let mfaFactors=[];
+let mfaSetupData=null;
+let mfaStep='enroll'; // enroll | verify | manage
+
+async function loadProfil(){
+  if(!currentUser)return;
+  document.getElementById('profil-email').textContent=currentUser.email||'—';
+  const meta=currentUser.user_metadata||{};
+  document.getElementById('profil-displayname').value=meta.display_name||'';
+  const created=new Date(currentUser.created_at).toLocaleDateString('sv-SE');
+  document.getElementById('profil-created').textContent=created;
+  document.getElementById('profil-tradecount').textContent=journal.length+' trades';
+  document.getElementById('profil-stratcount').textContent=userChecklists.length+' st';
+  await checkMfaStatus();
+  await checkDeletionRequest();
+}
+
+async function saveDisplayName(){
+  const name=document.getElementById('profil-displayname').value.trim();
+  const{error}=await sb.auth.updateUser({data:{display_name:name}});
+  if(!error){alert('Visningsnamn sparat!');}
+  else{alert('Kunde inte spara: '+error.message);}
+}
+
+function showChangePassword(){
+  const sec=document.getElementById('changePwSection');
+  sec.style.display=sec.style.display==='none'?'block':'none';
+}
+
+async function doChangePassword(){
+  const pw1=document.getElementById('newPw1').value;
+  const pw2=document.getElementById('newPw2').value;
+  const msg=document.getElementById('pwMsg');
+  if(!pw1||pw1.length<6){msg.style.color='var(--red)';msg.textContent='Lösenordet måste vara minst 6 tecken.';return;}
+  if(pw1!==pw2){msg.style.color='var(--red)';msg.textContent='Lösenorden matchar inte.';return;}
+  const{error}=await sb.auth.updateUser({password:pw1});
+  if(!error){msg.style.color='var(--green)';msg.textContent='Lösenord uppdaterat!';document.getElementById('newPw1').value='';document.getElementById('newPw2').value='';}
+  else{msg.style.color='var(--red)';msg.textContent=error.message;}
+}
+
+async function checkMfaStatus(){
+  const{data}=await sb.auth.mfa.listFactors();
+  mfaFactors=(data&&data.totp)||[];
+  const verified=mfaFactors.filter(f=>f.status==='verified');
+  const badge=document.getElementById('mfaStatusBadge');
+  const sec=document.getElementById('mfaSection');
+  if(verified.length>0){
+    badge.className='mfa-status-badge mfa-on';badge.textContent='✓ Aktiverad';
+    sec.innerHTML=`<p style="font-size:12px;color:var(--text3);margin-bottom:10px">Tvåfaktor är aktiverad med TOTP (t.ex. Google Authenticator).</p>
+      <button class="btn btn-danger btn-sm" onclick="openMfaDisable()">Inaktivera tvåfaktor</button>`;
+  }else{
+    badge.className='mfa-status-badge mfa-off';badge.textContent='⚠ Ej aktiverad';
+    sec.innerHTML=`<p style="font-size:12px;color:var(--text3);margin-bottom:10px">Skydda ditt konto med en autentiseringsapp (Google Authenticator, Authy m.fl.).</p>
+      <button class="btn btn-primary btn-sm" onclick="openMfaSetup()">Aktivera tvåfaktor</button>`;
+  }
+}
+
+async function openMfaSetup(){
+  mfaStep='enroll';
+  document.getElementById('mfaModalTitle').textContent='Aktivera tvåfaktor';
+  document.getElementById('mfaActionBtn').textContent='Verifiera kod';
+  // Enroll
+  const{data,error}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'TradeLog'});
+  if(error){alert('Fel: '+error.message);return;}
+  mfaSetupData=data;
+  const qr=data.totp.qr_code;
+  const secret=data.totp.secret;
+  document.getElementById('mfaModalBody').innerHTML=`
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Skanna QR-koden med din autentiseringsapp och ange sedan den 6-siffriga koden.</p>
+    <div class="qr-wrap"><img src="${qr}" width="180" height="180" alt="QR-kod"></div>
+    <p style="font-size:11px;color:var(--text3);text-align:center;margin:8px 0">Eller ange manuellt: <strong style="font-family:var(--mono)">${secret}</strong></p>
+    <div class="form-group" style="margin-top:16px">
+      <label>Kod från appen (6 siffror)</label>
+      <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="totpCode" placeholder="000000" autocomplete="one-time-code">
+    </div>
+    <div id="mfaErr" style="font-size:12px;color:var(--red);min-height:16px"></div>`;
+  document.getElementById('mfaModal').classList.add('open');
+}
+
+async function openMfaDisable(){
+  mfaStep='disable';
+  document.getElementById('mfaModalTitle').textContent='Inaktivera tvåfaktor';
+  document.getElementById('mfaActionBtn').textContent='Inaktivera';
+  document.getElementById('mfaModalBody').innerHTML=`
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ange din nuvarande TOTP-kod för att bekräfta att du vill inaktivera tvåfaktor.</p>
+    <div class="form-group">
+      <label>Kod från appen (6 siffror)</label>
+      <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="totpCode" placeholder="000000" autocomplete="one-time-code">
+    </div>
+    <div id="mfaErr" style="font-size:12px;color:var(--red);min-height:16px"></div>`;
+  document.getElementById('mfaModal').classList.add('open');
+}
+
+async function mfaAction(){
+  const code=(document.getElementById('totpCode').value||'').trim();
+  const errEl=document.getElementById('mfaErr');
+  errEl.textContent='';
+  if(!code||code.length!==6){errEl.textContent='Ange en 6-siffrig kod.';return;}
+
+  if(mfaStep==='enroll'){
+    // Challenge + verify
+    const{data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId:mfaSetupData.id});
+    if(chErr){errEl.textContent=chErr.message;return;}
+    const{error:verErr}=await sb.auth.mfa.verify({factorId:mfaSetupData.id,challengeId:ch.id,code});
+    if(verErr){errEl.textContent='Fel kod. Försök igen.';return;}
+    closeMfaModal();
+    await checkMfaStatus();
+    alert('✅ Tvåfaktor aktiverad!');
+  }else if(mfaStep==='disable'){
+    const factor=mfaFactors.find(f=>f.status==='verified');
+    if(!factor){errEl.textContent='Ingen aktiv faktor hittades.';return;}
+    const{data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId:factor.id});
+    if(chErr){errEl.textContent=chErr.message;return;}
+    const{error:verErr}=await sb.auth.mfa.verify({factorId:factor.id,challengeId:ch.id,code});
+    if(verErr){errEl.textContent='Fel kod.';return;}
+    const{error:unenrollErr}=await sb.auth.mfa.unenroll({factorId:factor.id});
+    if(unenrollErr){errEl.textContent=unenrollErr.message;return;}
+    closeMfaModal();
+    await checkMfaStatus();
+    alert('Tvåfaktor inaktiverad.');
+  }
+}
+
+function closeMfaModal(){document.getElementById('mfaModal').classList.remove('open');}
+
+// ── MFA CHALLENGE VID INLOGGNING ──────────────────────────────────────────────
+async function handleMfaChallenge(user){
+  const{data}=await sb.auth.mfa.listFactors();
+  const factors=(data&&data.totp)||[];
+  const verified=factors.filter(f=>f.status==='verified');
+  if(!verified.length){onLogin(user);return;}
+  // Visa TOTP-challenge
+  const factor=verified[0];
+  document.getElementById('authWrap').innerHTML=`
+    <div class="auth-card">
+      <div class="auth-logo">TradeLog <span>v1.1</span></div>
+      <div class="auth-sub">Ange koden från din autentiseringsapp</div>
+      <div class="form-group"><label>Kod (6 siffror)</label>
+        <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
+      </div>
+      <button class="auth-btn" onclick="verifyLoginMfa('${factor.id}')">Verifiera</button>
+      <div class="auth-err" id="loginMfaErr"></div>
+    </div>`;
+}
+
+async function verifyLoginMfa(factorId){
+  const code=document.getElementById('loginTotpCode').value.trim();
+  const errEl=document.getElementById('loginMfaErr');
+  if(!code||code.length!==6){errEl.textContent='Ange 6-siffrig kod.';return;}
+  const{data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
+  if(chErr){errEl.textContent=chErr.message;return;}
+  const{data,error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
+  if(error){errEl.textContent='Fel kod. Försök igen.';return;}
+  const{data:{user}}=await sb.auth.getUser();
+  onLogin(user);
+}
+
+// ── GDPR ──────────────────────────────────────────────────────────────────────
+async function checkDeletionRequest(){
+  const{data}=await sb.from('deletion_requests').select('*').eq('user_id',currentUser.id).single();
+  const el=document.getElementById('deletionRequestStatus');
+  if(data){
+    el.textContent=`En begäran om radering skickades ${new Date(data.requested_at).toLocaleDateString('sv-SE')}. Status: ${data.status==='pending'?'Väntar på behandling':'Behandlad'}.`;
+    el.style.color='var(--amber)';
+  }
+}
+
+async function requestAccountDeletion(){
+  if(!confirm('Är du säker? En begäran om radering av ditt konto och all din data skickas till administratören.'))return;
+  const{error}=await sb.from('deletion_requests').insert([{user_id:currentUser.id,email:currentUser.email}]);
+  if(!error){
+    const el=document.getElementById('deletionRequestStatus');
+    el.textContent='Begäran skickad. Din data raderas inom 30 dagar.';
+    el.style.color='var(--amber)';
+    alert('Begäran om radering har skickats. Du kommer att kontaktas via e-post.');
+  }
+}
+
+
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -1308,6 +1628,7 @@ function showPage(p,btn){
   document.getElementById('page-'+p).classList.add('active');
   if(btn)btn.classList.add('active');
   if(p==='journal'){updateStats();renderJournal();}
+  if(p==='profil'){loadProfil();}
 }
 function updateStats(){
   const fs=document.getElementById('filterStrategy').value;
