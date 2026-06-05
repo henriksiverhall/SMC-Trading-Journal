@@ -145,6 +145,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .form-header-title{font-size:14px;font-weight:600;}
 .form-header-actions{display:flex;gap:8px;align-items:center;}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.form-grid>.form-group{order:99;}/* default order */
 .rr-display{padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--mono);font-weight:500;background:var(--bg2);color:var(--text2);}
 .rr-display.positive{color:var(--green);background:var(--green-lt);border-color:#86efac;}
 .rr-display.negative{color:var(--red);background:var(--red-lt);border-color:#fca5a5;}
@@ -354,7 +355,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 .streak-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--amber-lt);color:var(--amber);}
 
 /* ADMIN */
-.admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;max-width:none;}
+.admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
 .admin-section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;gap:8px;}
 .admin-table{width:100%;border-collapse:collapse;font-size:12px;}
 .admin-table th{padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
@@ -413,7 +414,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.1</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.2</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -431,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.1</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.2</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -634,9 +635,8 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         </div>
         <div id="journalTaggedFields"></div>
       </div>
-      <div class="custom-fields-section" id="customFieldsSection" style="display:none">
-        <div class="custom-fields-title">Egna fält</div>
-        <div class="form-grid" id="customFieldInputs"></div>
+      <div id="customFieldsSection" style="display:none">
+        <div id="customFieldInputs"></div>
       </div>
       <div class="field-manager" id="fieldManager" style="display:none">
         <div class="field-manager-title">⚙ Standardfält – visa/dölj & tvingande</div>
@@ -701,6 +701,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 
 <!-- ADMIN PAGE -->
 <div id="page-admin" class="page" style="padding:0">
+  <div class="app" style="padding:0">
   <div class="admin-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:20px;font-weight:700;color:var(--text)">⚙️ Administration</div>
@@ -734,6 +735,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
         </table>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -975,6 +977,86 @@ function calcMonetary(){
 }
 
 
+
+// ── FIELD ORDER (standard + egna blandade) ────────────────────────────────────
+// Varje fält har ett "slot-id": std:grp-datetime, std:grp-symbol, custom:12345 osv.
+// Ordningen sparas i localStorage
+
+function getFieldOrder(){
+  const saved=localStorage.getItem('fieldOrder');
+  if(saved){
+    try{return JSON.parse(saved);}catch(e){}
+  }
+  // Default: alla standard-fält i ordning, egna fält sist
+  return [
+    'std:grp-datetime','std:grp-symbol','std:grp-prices','std:grp-outcome',
+    'std:grp-rr','std:grp-risk','std:grp-grade','std:grp-media','std:grp-notes',
+    ...customFields.map(f=>'custom:'+f.id)
+  ];
+}
+
+function saveFieldOrder(order){
+  localStorage.setItem('fieldOrder',JSON.stringify(order));
+}
+
+function ensureCustomsInOrder(){
+  // Lägg till nya egna fält i ordningen om de saknas
+  let order=getFieldOrder();
+  customFields.forEach(f=>{
+    const key='custom:'+f.id;
+    if(!order.includes(key))order.push(key);
+  });
+  // Ta bort borttagna fält
+  order=order.filter(key=>{
+    if(key.startsWith('std:'))return true;
+    const id=parseInt(key.replace('custom:',''));
+    return customFields.some(f=>f.id===id||f.id===key.replace('custom:',''));
+  });
+  saveFieldOrder(order);
+  return order;
+}
+
+function applyFieldOrder(){
+  const order=ensureCustomsInOrder();
+  const grid=document.querySelector('.form-grid');
+  if(!grid)return;
+  // Ordna standard-fält
+  const stdMap={
+    'std:grp-datetime':['f-date','f-time'],
+    'std:grp-symbol':['f-symbol','f-direction'],
+    'std:grp-prices':['f-entry','f-sl','f-tp'],
+    'std:grp-outcome':['f-outcome'],
+    'std:grp-rr':['rrDisplayGroup'],
+    'std:grp-risk':['riskGroup'],
+    'std:grp-grade':['gradeGroup'],
+    'std:grp-media':['mediaGroup'],
+    'std:grp-notes':['f-notes'],
+  };
+  order.forEach((key,idx)=>{
+    if(key.startsWith('std:')){
+      const ids=stdMap[key]||[];
+      ids.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el){
+          const grp=el.closest('.form-group')||el.parentElement;
+          if(grp&&grp.parentElement===grid){
+            grp.style.order=idx;
+          }
+        }
+      });
+    }else{
+      // Eget fält
+      const fid=key.replace('custom:','');
+      const el=document.getElementById('cf-'+fid);
+      if(el){
+        const grp=el.closest('.form-group');
+        if(grp)grp.style.order=idx;
+      }
+    }
+  });
+}
+
+
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
   {id:'grp-datetime',label:'Datum & Tid',ids:['f-date','f-time'],required:true},
@@ -982,6 +1064,7 @@ const STD_FIELDS=[
   {id:'grp-prices',label:'Entry / SL / TP',ids:['f-entry','f-sl','f-tp'],required:false},
   {id:'grp-outcome',label:'Utfall',ids:['f-outcome'],required:true},
   {id:'grp-rr',label:'Resultat R (auto)',ids:['rrDisplayGroup'],required:false},
+  {id:'grp-risk',label:'Risk per trade',ids:['riskGroup'],required:false},
   {id:'grp-grade',label:'Setup-kvalitet',ids:['gradeGroup'],required:false},
   {id:'grp-media',label:'Chart / Skärmbild',ids:['mediaGroup'],required:false},
   {id:'grp-notes',label:'Noteringar',ids:['f-notes'],required:false},
@@ -1539,46 +1622,87 @@ function saveCustomFields(){localStorage.setItem('customFields',JSON.stringify(c
 function renderCustomFieldInputs(){
   const sec=document.getElementById('customFieldsSection');
   const cont=document.getElementById('customFieldInputs');
+  // Flytta egna fält-divs till form-grid
+  const grid=document.querySelector('.form-grid');
+  // Ta bort gamla egna fält-divs från grid
+  grid.querySelectorAll('.custom-field-in-grid').forEach(el=>el.remove());
   if(!customFields.length){sec.style.display='none';return;}
-  sec.style.display='block';
-  cont.innerHTML=customFields.map(f=>`<div class="form-group"><label>${f.name}</label>
-    ${f.type==='select'
-      ?`<select class="form-control" id="cf-${f.id}"><option value="">—</option>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`
-      :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}
-    </div>`).join('');
+  sec.style.display='none'; // dölj wrapper, vi lägger direkt i grid
+  customFields.forEach(f=>{
+    const div=document.createElement('div');
+    div.className='form-group custom-field-in-grid';
+    div.id='cfg-'+f.id;
+    div.innerHTML=`<label>${f.name}</label>
+      ${f.type==='select'
+        ?`<select class="form-control" id="cf-${f.id}"><option value="">—</option>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>`
+        :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}`;
+    grid.appendChild(div);
+  });
+  applyFieldOrder();
 }
 function toggleFieldManager(){
   const fm=document.getElementById('fieldManager');
   fm.style.display=fm.style.display==='none'?'block':'none';
-  if(fm.style.display==='block'){renderFieldManager();renderStdFieldManager();}
+  if(fm.style.display==='block'){renderStdFieldManager();renderFieldManager();}
 }
+// Sortering av alla fält (standard + egna)
+const STD_FIELD_LABELS={
+  'std:grp-datetime':'Datum & Tid','std:grp-symbol':'Instrument & Riktning',
+  'std:grp-prices':'Entry / SL / TP','std:grp-outcome':'Utfall',
+  'std:grp-rr':'Resultat R (auto)','std:grp-risk':'Risk per trade',
+  'std:grp-grade':'Setup-kvalitet','std:grp-media':'Chart / Skärmbild',
+  'std:grp-notes':'Noteringar'
+};
+
 function renderFieldManager(){
   const list=document.getElementById('fieldList');
-  if(!customFields.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:8px">Inga egna fält. Lägg till nedan.</div>';return;}
-  list.innerHTML=customFields.map((f,i)=>`<div class="field-item" draggable="true" id="fi-${i}"
-    ondragstart="fieldDragStart(${i})"
-    ondragover="event.preventDefault()"
-    ondrop="fieldDrop(${i})">
-    <span class="item-drag" title="Dra för att flytta">⠿</span>
-    <span style="font-size:12px;flex:1">${f.name} <span style="color:var(--text3)">(${f.type})</span></span>
-    ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
-    <div style="display:flex;gap:3px">
-      <button class="field-remove" onclick="moveField(${i},-1)" title="Flytta upp" style="font-size:12px">↑</button>
-      <button class="field-remove" onclick="moveField(${i},1)" title="Flytta ned" style="font-size:12px">↓</button>
-      <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
-    </div>
-  </div>`).join('');
+  const order=ensureCustomsInOrder();
+  list.innerHTML=order.map((key,idx)=>{
+    const isStd=key.startsWith('std:');
+    const label=isStd?STD_FIELD_LABELS[key]:(customFields.find(f=>'custom:'+f.id===key||'custom:'+String(f.id)===key)||{name:key}).name;
+    const cfIdx=isStd?-1:customFields.findIndex(f=>'custom:'+f.id===key||'custom:'+String(f.id)===key);
+    const f=cfIdx>=0?customFields[cfIdx]:null;
+    return`<div class="field-item" draggable="true"
+      ondragstart="orderDragStart(${idx})"
+      ondragover="event.preventDefault()"
+      ondrop="orderDrop(${idx})">
+      <span class="item-drag">⠿</span>
+      <span style="font-size:12px;flex:1;${isStd?'color:var(--text2);':'color:var(--blue);font-weight:500;'}">${label}
+        ${isStd?'<span style="font-size:10px;color:var(--text3);margin-left:4px">standard</span>':'<span style="font-size:10px;color:var(--blue);margin-left:4px">eget</span>'}
+      </span>
+      ${f&&f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${cfIdx},this.value)" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;">`:''}
+      <div style="display:flex;gap:3px">
+        <button class="field-remove" onclick="moveOrder(${idx},-1)" title="Upp" style="font-size:12px">↑</button>
+        <button class="field-remove" onclick="moveOrder(${idx},1)" title="Ned" style="font-size:12px">↓</button>
+        ${!isStd&&cfIdx>=0?`<button class="field-remove" onclick="removeCustomField(${cfIdx})">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let orderDragIdx=null;
+function orderDragStart(i){orderDragIdx=i;}
+function orderDrop(targetIdx){
+  if(orderDragIdx===null||orderDragIdx===targetIdx)return;
+  const order=ensureCustomsInOrder();
+  const moved=order.splice(orderDragIdx,1)[0];
+  order.splice(targetIdx,0,moved);
+  saveFieldOrder(order);
+  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
+  orderDragIdx=null;
+}
+function moveOrder(idx,dir){
+  const order=ensureCustomsInOrder();
+  const ni=idx+dir;
+  if(ni<0||ni>=order.length)return;
+  [order[idx],order[ni]]=[order[ni],order[idx]];
+  saveFieldOrder(order);
+  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
 }
 
 let dragFieldIdx=null;
 function fieldDragStart(i){dragFieldIdx=i;}
-function fieldDrop(targetIdx){
-  if(dragFieldIdx===null||dragFieldIdx===targetIdx)return;
-  const moved=customFields.splice(dragFieldIdx,1)[0];
-  customFields.splice(targetIdx,0,moved);
-  saveCustomFields();renderFieldManager();renderCustomFieldInputs();
-  dragFieldIdx=null;
-}
+function fieldDrop(targetIdx){dragFieldIdx=null;}
 function moveField(i,dir){
   const ni=i+dir;
   if(ni<0||ni>=customFields.length)return;
@@ -1597,13 +1721,18 @@ function addCustomField(){
     const raw=document.getElementById('newFieldOptions').value;
     options=raw.split(',').map(s=>s.trim()).filter(Boolean);
   }
-  customFields.push({id:Date.now(),name,type,options});
+  const newField={id:Date.now(),name,type,options};
+  customFields.push(newField);
   saveCustomFields();
+  // Lägg till i ordningen
+  const order=ensureCustomsInOrder();
+  if(!order.includes('custom:'+newField.id))order.push('custom:'+newField.id);
+  saveFieldOrder(order);
   document.getElementById('newFieldName').value='';
   document.getElementById('newFieldOptions').value='';
   document.getElementById('newFieldType').value='text';
   document.getElementById('dropdownOptionsRow').style.display='none';
-  renderFieldManager();renderCustomFieldInputs();
+  renderFieldManager();renderCustomFieldInputs();applyFieldSettings();
 }
 function removeCustomField(i){customFields.splice(i,1);saveCustomFields();renderFieldManager();renderCustomFieldInputs();}
 function updateFieldOptions(i,val){customFields[i].options=val.split(',').map(s=>s.trim()).filter(Boolean);saveCustomFields();}
@@ -2229,7 +2358,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.1</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.2</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
