@@ -430,13 +430,13 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.8</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.9</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
       <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
     </div>
-    <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com"></div>
+    <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com" onfocus="dismissContinueAs()" oninput="dismissContinueAs()"></div>
     <div class="form-group"><label>Lösenord</label><input type="password" class="auth-input" id="authPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()"></div>
     <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
     <div class="auth-err" id="authErr"></div>
@@ -449,7 +449,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.8</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.9</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1392,6 +1392,12 @@ sb.auth.getSession().then(({data:{session}})=>{
   }
 });
 
+function dismissContinueAs(){
+  window._pendingSession=null;
+  const cont=document.getElementById('continueAs');
+  if(cont)cont.style.display='none';
+}
+
 async function resumeSession(){
   const s=window._pendingSession;
   if(s)onLogin(s.user);
@@ -2033,10 +2039,14 @@ async function loadDashboard(){
   renderDashMonth();
   await loadNews();
   logLogin();
-  // Admin-knapp - använd currentUser (inte user)
-  if(meta&&meta.is_admin){
-    document.getElementById('adminMenuBtn').style.display='block';
-  }
+  // Admin-knapp - kolla user_settings i DB
+  try{
+    const{data:us}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
+    if(us&&us.settings&&us.settings.is_admin===true){
+      const btn=document.getElementById('adminMenuBtn');
+      if(btn)btn.style.display='block';
+    }
+  }catch(e){}
 }
 
 function renderDashStats(){
@@ -2464,7 +2474,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.8</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.9</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
