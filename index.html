@@ -16,12 +16,29 @@
   --r:8px;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
 }
 [data-theme="dark"]{
-  --navy:#0a1628;--blue:#3b82f6;--blue-lt:#1e3a5f;--teal:#2dd4bf;--teal-lt:#134e4a;
-  --green:#22c55e;--green-lt:#14532d;--amber:#f59e0b;--amber-lt:#451a03;
-  --red:#f87171;--red-lt:#450a0a;--gray:#9ca3af;--gray-lt:#1f2937;
-  --border:#374151;--text:#f9fafb;--text2:#e5e7eb;--text3:#9ca3af;
-  --bg:#111827;--bg2:#1f2937;--shadow:0 1px 3px rgba(0,0,0,.4);
+  --navy:#0d1b2e;--blue:#60a5fa;--blue-lt:#1e3a5f;--teal:#2dd4bf;--teal-lt:#134e4a;
+  --green:#4ade80;--green-lt:#14532d;--amber:#fbbf24;--amber-lt:#451a03;
+  --red:#f87171;--red-lt:#450a0a;--gray:#9ca3af;--gray-lt:#273244;
+  --border:#2d3f55;--text:#f1f5f9;--text2:#cbd5e1;--text3:#94a3b8;
+  --bg:#172032;--bg2:#1e2d42;--shadow:0 2px 8px rgba(0,0,0,.5);
 }
+[data-theme="dark"] body{background:#0d1b2e;}
+[data-theme="dark"] .header{background:linear-gradient(135deg,#0d1b2e 0%,#172032 100%);}
+[data-theme="dark"] .dash-stat{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .dash-card{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .trade-form{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .recent-panel{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .sidebar{background:var(--bg);}
+[data-theme="dark"] .phase-header{background:var(--bg);}
+[data-theme="dark"] .phase-header:hover{background:var(--bg2);}
+[data-theme="dark"] .check-item.checked{background:rgba(74,222,128,.08);}
+[data-theme="dark"] .jtable th{background:var(--bg2);}
+[data-theme="dark"] .avatar-menu{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .modal{background:var(--bg);}
+[data-theme="dark"] .profil-card{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .auth-card{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .field-manager{background:var(--bg2);border-color:var(--border);}
+[data-theme="dark"] .news-filter-bar{background:var(--bg2);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;transition:background .2s,color .2s;}
 [data-theme="dark"] body{background:#0d1117;}
@@ -413,7 +430,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.2.3</span></div>
+    <div class="auth-logo">TradeLog <span>v1.2.4</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -431,7 +448,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.2.3</span></div>
+  <div class="header-logo">TradeLog <span>v1.2.4</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -615,16 +632,23 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
           <div class="rr-display" id="rrDisplay">—</div>
         </div>
         <div class="form-group" id="riskGroup">
-          <label>Risk per trade <span style="color:var(--text3);font-weight:400;font-size:10px">sparas</span></label>
+          <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" step="0.01" class="form-control" id="f-risk" placeholder="100" style="flex:1" oninput="saveRisk();calcMonetary()">
-            <select class="form-control" id="f-riskcurrency" style="width:70px" onchange="saveRisk();calcMonetary()">
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings();calcMonetary()">
+            <span style="font-size:13px;color:var(--text3);white-space:nowrap">%</span>
+          </div>
+          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
+        </div>
+        <div class="form-group" id="accountSizeGroup">
+          <label>Kontostorlek <span style="color:var(--text3);font-weight:400;font-size:10px">valfri, sparas</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="50000" style="flex:1" oninput="saveRiskSettings();calcMonetary()">
+            <select class="form-control" id="f-currency" style="width:70px" onchange="saveRiskSettings();calcMonetary()">
               <option value="SEK">SEK</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
             </select>
           </div>
-          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
         </div>
         <div class="form-group" id="gradeGroup"><label>Setup-kvalitet</label>
           <div class="grade-btns" id="mainGradeBtns">
@@ -962,34 +986,139 @@ function initThemeBtn(){
 }
 
 
-// ── RISK ─────────────────────────────────────────────────────────────────────
-function saveRisk(){
-  const risk=document.getElementById('f-risk').value;
-  const curr=document.getElementById('f-riskcurrency').value;
-  if(risk)localStorage.setItem('tradeRisk',JSON.stringify({risk,curr}));
-}
-function loadRisk(){
-  const saved=localStorage.getItem('tradeRisk');
-  if(saved){
-    const{risk,curr}=JSON.parse(saved);
-    const rEl=document.getElementById('f-risk');
-    const cEl=document.getElementById('f-riskcurrency');
-    if(rEl)rEl.value=risk;
-    if(cEl)cEl.value=curr;
-  }
-}
-function calcMonetary(){
-  const risk=parseFloat(document.getElementById('f-risk').value);
-  const curr=document.getElementById('f-riskcurrency').value;
-  const r=calculatedR;
-  const el=document.getElementById('monetaryResult');
-  if(!risk||isNaN(risk)||r===null){el.textContent='';return;}
-  const monetary=(risk*Math.abs(r)).toFixed(0);
-  const sign=r>0?'+':r<0?'-':'';
-  el.textContent=`${sign}${monetary} ${curr} (${r>0?'vinst':r<0?'förlust':'break even'})`;
-  el.style.color=r>0?'var(--green)':r<0?'var(--red)':'var(--amber)';
+
+
+// ── DYNAMISK FÄLTSORTERING ────────────────────────────────────────────────────
+// Sparar ordningen som lista av std-IDs + custom-IDs i userSettings
+
+function getFormOrder(){
+  if(userSettings.formOrder)return userSettings.formOrder;
+  return STD_FIELDS.map(f=>f.id);
 }
 
+function saveFormOrder(order){
+  userSettings.formOrder=order;
+  saveUserSettings();
+}
+
+function applyFormOrder(){
+  const order=getFormOrder();
+  const grid=document.querySelector('.form-grid');
+  if(!grid)return;
+  // Applicera order på standardfält
+  STD_FIELDS.forEach(f=>{
+    const idx=order.indexOf(f.id);
+    const orderVal=idx>=0?idx:99;
+    f.ids.forEach(inputId=>{
+      const el=document.getElementById(inputId);
+      if(!el)return;
+      const grp=el.closest('.form-group');
+      if(grp)grp.style.order=orderVal;
+    });
+  });
+  // Egna fält efter standardfält
+  customFields.forEach((f,i)=>{
+    const customKey='custom:'+f.id;
+    const idx=order.indexOf(customKey);
+    const orderVal=idx>=0?idx:(100+i);
+    const grp=document.getElementById('cfg-'+f.id);
+    if(grp)grp.style.order=orderVal;
+  });
+  // Journal-taggade steg alltid sist bland synliga
+  const jtWrap=document.getElementById('journalTaggedFieldsWrap');
+  if(jtWrap)jtWrap.style.order=200;
+}
+
+function moveFormField(key,dir){
+  // key är antingen ett std-ID (grp-datetime etc.) eller custom:ID
+  const order=[...getFormOrder()];
+  // Se till att alla std-fält och custom-fält finns i listan
+  STD_FIELDS.forEach(f=>{if(!order.includes(f.id))order.push(f.id);});
+  customFields.forEach(f=>{const k='custom:'+f.id;if(!order.includes(k))order.push(k);});
+  const idx=order.indexOf(key);
+  if(idx<0)return;
+  const ni=idx+dir;
+  if(ni<0||ni>=order.length)return;
+  [order[idx],order[ni]]=[order[ni],order[idx]];
+  saveFormOrder(order);
+  applyFormOrder();
+  renderFieldManager();
+}
+
+
+// ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
+let userSettings={};
+
+async function loadUserSettings(){
+  if(!currentUser)return;
+  const{data}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
+  if(data&&data.settings){
+    userSettings=data.settings;
+    // Applicera sparade inställningar
+    applyUserSettings();
+  }
+}
+
+async function saveUserSettings(){
+  if(!currentUser)return;
+  await sb.from('user_settings').upsert({
+    user_id:currentUser.id,
+    settings:userSettings,
+    updated_at:new Date().toISOString()
+  });
+}
+
+function applyUserSettings(){
+  // Nyhetsfilter
+  if(userSettings.newsFilterImpact){
+    newsFilterImpact=new Set(userSettings.newsFilterImpact);
+    ['high','medium','low'].forEach(l=>{
+      const btn=document.getElementById('nf-'+l);
+      if(btn)btn.className='news-filter-btn'+(newsFilterImpact.has(l)?' active-'+l:'');
+    });
+  }
+  if(userSettings.newsFilterCountries){
+    newsFilterCountries=new Set(userSettings.newsFilterCountries);
+    ['US','EU','GB','JP','ALL'].forEach(c=>{
+      const btn=document.getElementById('nf-'+c);
+      if(btn)btn.className='news-filter-btn'+(newsFilterCountries.has(c)?' active-high':'');
+    });
+  }
+  // Risk-inställningar
+  if(userSettings.riskPct!==undefined){
+    const el=document.getElementById('f-riskpct');
+    if(el)el.value=userSettings.riskPct;
+  }
+  if(userSettings.accountSize!==undefined){
+    const el=document.getElementById('f-accountsize');
+    if(el)el.value=userSettings.accountSize;
+  }
+  if(userSettings.currency){
+    const el=document.getElementById('f-currency');
+    if(el)el.value=userSettings.currency;
+  }
+  // Fältinställningar (override localStorage)
+  if(userSettings.fieldSettings){
+    fieldSettings=userSettings.fieldSettings;
+    applyFieldSettings();
+  }
+  // customFields
+  if(userSettings.customFields){
+    customFields=userSettings.customFields;
+    renderCustomFieldInputs();
+  }
+}
+
+function saveRiskSettings(){
+  const pct=document.getElementById('f-riskpct')?.value;
+  const size=document.getElementById('f-accountsize')?.value;
+  const curr=document.getElementById('f-currency')?.value;
+  userSettings.riskPct=pct||'';
+  userSettings.accountSize=size||'';
+  userSettings.currency=curr||'SEK';
+  saveUserSettings();
+  calcMonetary();
+}
 
 
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
@@ -999,7 +1128,8 @@ const STD_FIELDS=[
   {id:'grp-prices',label:'Entry / SL / TP',ids:['f-entry','f-sl','f-tp'],required:false},
   {id:'grp-outcome',label:'Utfall',ids:['f-outcome'],required:true},
   {id:'grp-rr',label:'Resultat R (auto)',ids:['rrDisplayGroup'],required:false},
-  {id:'grp-risk',label:'Risk per trade',ids:['riskGroup'],required:false},
+  {id:'grp-risk',label:'Risk % per trade',ids:['riskGroup'],required:false},
+  {id:'grp-account',label:'Kontostorlek',ids:['accountSizeGroup'],required:false},
   {id:'grp-grade',label:'Setup-kvalitet',ids:['gradeGroup'],required:false},
   {id:'grp-media',label:'Chart / Skärmbild',ids:['mediaGroup'],required:false},
   {id:'grp-notes',label:'Noteringar',ids:['f-notes'],required:false},
@@ -1017,8 +1147,8 @@ function setFieldSetting(id,prop,val){
   if(!fieldSettings[id])fieldSettings[id]={};
   fieldSettings[id][prop]=val;
   localStorage.setItem('fieldSettings',JSON.stringify(fieldSettings));
+  await loadUserSettings();
   applyFieldSettings();
-  loadRisk();
   loadDashboard();
 }
 function applyFieldSettings(){
@@ -1031,6 +1161,7 @@ function applyFieldSettings(){
       if(grp)grp.style.display=visible?'':'none';
     });
   });
+  applyFormOrder();
 }
 
 function renderStdFieldManager(){
@@ -1226,8 +1357,8 @@ async function onLogin(user){
   renderCustomFieldInputs();
   renderRecentTrades();
   updateFilterOptions();
+  await loadUserSettings();
   applyFieldSettings();
-  loadRisk();
   loadDashboard();
 }
 async function doLogout(){
@@ -1399,7 +1530,7 @@ function resetChecklist(){
   document.getElementById('f-direction').value='';document.getElementById('f-outcome').value='';
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('rrDisplay').textContent='—';document.getElementById('rrDisplay').className='rr-display';
-  document.getElementById('monetaryResult').textContent='';
+  const mr=document.getElementById('monetaryResult');if(mr)mr.textContent='';
   const prev=document.getElementById('mediaPreview');prev.src='';prev.classList.remove('visible');
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)el.value='';});
   renderChecklist();renderJournalTaggedFields();
@@ -1553,7 +1684,11 @@ function handleImgUpload(input,inputId,previewId){
 function openImgModal(src){document.getElementById('imgModalSrc').src=src;document.getElementById('imgModal').classList.add('open');}
 
 // ── CUSTOM FIELDS ─────────────────────────────────────────────────────────────
-function saveCustomFields(){localStorage.setItem('customFields',JSON.stringify(customFields));}
+function saveCustomFields(){
+  localStorage.setItem('customFields',JSON.stringify(customFields));
+  userSettings.customFields=customFields;
+  saveUserSettings();
+}
 function renderCustomFieldInputs(){
   const sec=document.getElementById('customFieldsSection');
   const grid=document.querySelector('.form-grid');
@@ -1561,7 +1696,7 @@ function renderCustomFieldInputs(){
   grid.querySelectorAll('.custom-field-in-grid').forEach(el=>el.remove());
   if(!customFields.length){if(sec)sec.style.display='none';return;}
   if(sec)sec.style.display='none';
-  customFields.forEach(f=>{
+  customFields.forEach((f,i)=>{
     const div=document.createElement('div');
     div.className='form-group custom-field-in-grid';
     div.id='cfg-'+f.id;
@@ -1571,6 +1706,7 @@ function renderCustomFieldInputs(){
         :`<input type="${f.type}" class="form-control" id="cf-${f.id}">`}`;
     grid.appendChild(div);
   });
+  applyFormOrder();
 }
 
 function toggleFieldManager(){
@@ -1581,47 +1717,55 @@ function toggleFieldManager(){
 function renderStdFieldManager(){} // noop - ersatt av renderFieldManager
 
 function renderFieldManager(){
-  // En enda lista: standard-fält + egna fält, toggle + tvingande + pilar
   const list=document.getElementById('fieldList');
-  const stdHtml=STD_FIELDS.map((f,i)=>{
-    const vis=getFieldSetting(f.id,'visible');
-    const req=getFieldSetting(f.id,'required');
-    return`<div class="std-field-row">
-      <span class="std-field-name">${f.label} <span style="font-size:10px;color:var(--text3)">(standard)</span></span>
-      <label class="toggle-sw" title="Visa/dölj">
-        <input type="checkbox" ${vis?'checked':''} onchange="setFieldSetting('${f.id}','visible',this.checked)">
-        <span class="toggle-sw-track"></span>
-      </label>
-      <button class="req-badge ${req?'active':''}" onclick="setFieldSetting('${f.id}','required',${!req});renderFieldManager()">${req?'⚠ Tvingande':'Frivilligt'}</button>
-    </div>`;
-  }).join('');
+  const order=[...getFormOrder()];
+  STD_FIELDS.forEach(f=>{if(!order.includes(f.id))order.push(f.id);});
+  customFields.forEach(f=>{const k='custom:'+f.id;if(!order.includes(k))order.push(k);});
 
-  const cfHtml=customFields.length
-    ? '<div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Egna fält</div>'+
-      customFields.map((f,i)=>`<div class="std-field-row">
-        <span class="item-drag" ondragstart="cfDragStart(${i})" draggable="true">⠿</span>
-        <span class="std-field-name">${f.name} <span style="font-size:10px;color:var(--blue)">(eget, ${f.type})</span>
-          ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${i},this.value)" style="margin-left:8px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;width:180px">`:''}
-        </span>
-        <div style="display:flex;gap:4px;align-items:center">
-          <button class="field-remove" onclick="moveCF(${i},-1)" title="Upp">↑</button>
-          <button class="field-remove" onclick="moveCF(${i},1)" title="Ned">↓</button>
-          <button class="field-remove" onclick="removeCustomField(${i})">✕</button>
+  const allItems=order.map((key,idx)=>{
+    const isStd=!key.startsWith('custom:');
+    if(isStd){
+      const f=STD_FIELDS.find(sf=>sf.id===key);
+      if(!f)return'';
+      const vis=getFieldSetting(f.id,'visible');
+      const req=getFieldSetting(f.id,'required');
+      return`<div class="std-field-row">
+        <span class="item-drag" style="cursor:grab;color:var(--text3)">⠿</span>
+        <span class="std-field-name">${f.label} <span style="font-size:10px;color:var(--text3)">std</span></span>
+        <label class="toggle-sw" title="Visa/dölj">
+          <input type="checkbox" ${vis?'checked':''} onchange="setFieldSetting('${f.id}','visible',this.checked)">
+          <span class="toggle-sw-track"></span>
+        </label>
+        <button class="req-badge ${req?'active':''}" onclick="setFieldSetting('${f.id}','required',${!req});renderFieldManager()">${req?'⚠ Tvingande':'Frivilligt'}</button>
+        <div style="display:flex;gap:3px">
+          <button class="field-remove" onclick="moveFormField('${key}',-1)" title="Upp">↑</button>
+          <button class="field-remove" onclick="moveFormField('${key}',1)" title="Ned">↓</button>
         </div>
-      </div>`).join('')
-    : '<div style="font-size:12px;color:var(--text3);margin-top:10px">Inga egna fält ännu.</div>';
-
-  list.innerHTML = stdHtml + cfHtml;
+      </div>`;
+    }else{
+      const fid=key.replace('custom:','');
+      const cfIdx=customFields.findIndex(f=>String(f.id)===String(fid));
+      if(cfIdx<0)return'';
+      const f=customFields[cfIdx];
+      return`<div class="std-field-row">
+        <span class="item-drag" style="cursor:grab;color:var(--blue)">⠿</span>
+        <span class="std-field-name">${f.name} <span style="font-size:10px;color:var(--blue)">eget</span>
+          ${f.type==='select'?`<input value="${(f.options||[]).join(',')}" placeholder="val1,val2" onchange="updateFieldOptions(${cfIdx},this.value)" style="margin-left:8px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;width:140px">`:''}
+        </span>
+        <div style="display:flex;gap:3px;margin-left:auto">
+          <button class="field-remove" onclick="moveFormField('${key}',-1)" title="Upp">↑</button>
+          <button class="field-remove" onclick="moveFormField('${key}',1)" title="Ned">↓</button>
+          <button class="field-remove" onclick="removeCustomField(${cfIdx})">✕</button>
+        </div>
+      </div>`;
+    }
+  }).join('');
+  list.innerHTML=allItems||'<div style="font-size:12px;color:var(--text3)">Inga fält.</div>';
 }
 
 let cfDragIdx=null;
 function cfDragStart(i){cfDragIdx=i;}
-function moveCF(i,dir){
-  const ni=i+dir;
-  if(ni<0||ni>=customFields.length)return;
-  [customFields[i],customFields[ni]]=[customFields[ni],customFields[i]];
-  saveCustomFields();renderFieldManager();renderCustomFieldInputs();
-}
+function moveCF(i,dir){moveFormField('custom:'+customFields[i].id,dir);}
 
 let dragFieldIdx=null;
 
@@ -1639,7 +1783,12 @@ function addCustomField(){
     const raw=document.getElementById('newFieldOptions').value;
     options=raw.split(',').map(s=>s.trim()).filter(Boolean);
   }
-  customFields.push({id:Date.now(),name,type,options});
+  const nf={id:Date.now(),name,type,options};
+  customFields.push(nf);
+  // Lägg till i formOrder
+  const fo=[...getFormOrder()];
+  fo.push('custom:'+nf.id);
+  saveFormOrder(fo);
   saveCustomFields();
   document.getElementById('newFieldName').value='';
   document.getElementById('newFieldOptions').value='';
@@ -1701,8 +1850,8 @@ async function logToJournal(){
     checklist_pct:pct,
     notes:document.getElementById('f-notes').value||null,
     chart_link:media,image_url:media,
-    risk_amount:parseFloat(document.getElementById('f-risk').value)||null,
-    risk_currency:document.getElementById('f-riskcurrency').value||null,
+    risk_amount:parseFloat(document.getElementById('f-riskpct')?.value)||null,
+    risk_currency:document.getElementById('f-currency')?.value||null,
     custom_data:{...customData,...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})},
   };
   const saved=await saveTrade(trade);
@@ -1955,6 +2104,8 @@ function toggleNewsFilter(level){
   else newsFilterImpact.add(level);
   const btn=document.getElementById('nf-'+level);
   if(btn)btn.className='news-filter-btn'+(newsFilterImpact.has(level)?' active-'+level:'');
+  userSettings.newsFilterImpact=[...newsFilterImpact];
+  saveUserSettings();
   applyNewsFilter();
 }
 function toggleCountryFilter(country){
@@ -1963,12 +2114,16 @@ function toggleCountryFilter(country){
   const btn=document.getElementById('nf-'+country);
   if(btn)btn.className='news-filter-btn'+(newsFilterCountries.has(country)?' active-high':'');
   document.getElementById('nf-ALL').className='news-filter-btn';
+  userSettings.newsFilterCountries=[...newsFilterCountries];
+  saveUserSettings();
   applyNewsFilter();
 }
 function toggleAllCountries(){
   newsFilterCountries=new Set(['US','EU','GB','JP','ALL']);
   ['US','EU','GB','JP'].forEach(c=>{const b=document.getElementById('nf-'+c);if(b)b.className='news-filter-btn active-high';});
   document.getElementById('nf-ALL').className='news-filter-btn active-high';
+  userSettings.newsFilterCountries=[...newsFilterCountries];
+  saveUserSettings();
   applyNewsFilter();
 }
 function applyNewsFilter(){
@@ -2271,7 +2426,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.2.3</span></div>
+      <div class="auth-logo">TradeLog <span>v1.2.4</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
