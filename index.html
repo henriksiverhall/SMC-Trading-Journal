@@ -455,7 +455,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.5.2</span></div>
+    <div class="auth-logo">TradeLog <span>v1.5.3</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -506,7 +506,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.5.2</span></div>
+  <div class="header-logo">TradeLog <span>v1.5.3</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2768,19 +2768,19 @@ async function openAdminUserModal(userId){
   switchAdminTab('profil', document.querySelector('.admin-modal-tab'));
 
   // Ladda all data parallellt
-  const [profileRes, tradesRes, checklistsRes, settingsRes, loginsRes, delReqRes] = await Promise.all([
+  const [profileRes, tradesRes, clRes, settingsRes, loginsRes, delReqRes] = await Promise.all([
     sb.from('user_profiles').select('*').eq('user_id',userId).maybeSingle(),
     sb.from('trades').select('*').eq('user_id',userId).order('date',{ascending:false}),
-    sb.from('checklists').select('*').eq('user_id',userId),
+    sb.from('checklists').select('*').eq('user_id',userId).order('created_at'),
     sb.from('user_settings').select('*').eq('user_id',userId).maybeSingle(),
     sb.from('login_log').select('*').eq('user_id',userId).order('logged_in_at',{ascending:false}).limit(30),
     sb.from('deletion_requests').select('*').eq('user_id',userId).maybeSingle()
   ]);
 
   const profile = profileRes.data;
-  window._adminChecklists = checklists;
+  window._adminChecklists = clData;
   const trades = tradesRes.data||[];
-  const checklists = checklistsRes.data||[];
+  const clData = clRes.data||[];
   const settings = settingsRes.data?.settings||{};
   const logins = loginsRes.data||[];
   const delReq = delReqRes.data;
@@ -2830,10 +2830,10 @@ async function openAdminUserModal(userId){
 
   // ── CHECKLISTOR ──────────────────────────────────────────────────────────────
   const clEl = document.getElementById('adminUserChecklists');
-  if(!checklists.length){
+  if(!clData.length){
     clEl.innerHTML='<div class="empty">Inga egna checklistor.</div>';
   }else{
-    clEl.innerHTML=checklists.map((cl,i)=>`
+    clEl.innerHTML=clData.map((cl,i)=>`
       <div>
         <div class="cl-accordion" onclick="toggleClAccordion(${i})">
           <span style="font-weight:600;font-size:13px">${cl.name}</span>
@@ -3197,7 +3197,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.5.2</span></div>
+      <div class="auth-logo">TradeLog <span>v1.5.3</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
