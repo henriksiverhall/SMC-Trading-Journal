@@ -432,25 +432,57 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.4.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.4.6</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
-      <button class="auth-tab" onclick="switchAuthTab('signup')">Skapa konto</button>
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Skapa konto</button>
     </div>
-    <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com" autocomplete="email"></div>
-    <div class="form-group"><label>Lösenord</label><input type="password" class="auth-input" id="authPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()" autocomplete="current-password"></div>
-    <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
-    <div class="auth-err" id="authErr"></div>
-    <div class="auth-msg" id="authMsg"></div>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <div class="form-group"><label>E-post</label><input type="email" class="auth-input" id="authEmail" placeholder="din@email.com" autocomplete="email"></div>
+      <div class="form-group"><label>Lösenord</label><input type="password" class="auth-input" id="authPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()" autocomplete="current-password"></div>
+      <button class="auth-btn" onclick="doAuth()" id="authBtn">Logga in</button>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-msg" id="authMsg"></div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signupForm" style="display:none">
+      <div style="background:var(--blue-lt);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);line-height:1.5">
+        🔒 <strong>Din integritet:</strong> Förnamn och efternamn används endast för support och fakturering – visas aldrig publikt. Bara ditt visningsnamn syns för andra.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="form-group" style="margin:0"><label>Förnamn</label><input type="text" class="auth-input" id="signupFirst" placeholder="Anna" autocomplete="given-name"></div>
+        <div class="form-group" style="margin:0"><label>Efternamn</label><input type="text" class="auth-input" id="signupLast" placeholder="Svensson" autocomplete="family-name"></div>
+      </div>
+      <div class="form-group"><label>Visningsnamn <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-weight:400;font-size:10px">syns i appen</span></label>
+        <input type="text" class="auth-input" id="signupDisplay" placeholder="t.ex. Henrik S." autocomplete="nickname">
+      </div>
+      <div class="form-group"><label>E-post <span style="color:var(--red)">*</span></label>
+        <input type="email" class="auth-input" id="signupEmail" placeholder="din@email.com" autocomplete="email">
+      </div>
+      <div class="form-group"><label>Lösenord <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-weight:400;font-size:10px">minst 6 tecken</span></label>
+        <input type="password" class="auth-input" id="signupPassword" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="form-group"><label>Bekräfta lösenord <span style="color:var(--red)">*</span></label>
+        <input type="password" class="auth-input" id="signupPassword2" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">
+        Genom att skapa ett konto godkänner du att dina uppgifter lagras enligt GDPR. Du kan när som helst begära radering via profilsidan.
+      </div>
+      <button class="auth-btn" onclick="doSignup()" id="signupBtn">Skapa konto</button>
+      <div class="auth-err" id="signupErr"></div>
+      <div class="auth-msg" id="signupMsg"></div>
+    </div>
   </div>
-</div>
 
 <!-- APP -->
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.4.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.4.6</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1336,10 +1368,63 @@ const DEFAULT_STRATEGIES=[
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function switchAuthTab(m){
   authMode=m;
-  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&m==='login')||(i===1&&m==='signup')));
-  document.getElementById('authBtn').textContent=m==='login'?'Logga in':'Skapa konto';
-  ['authErr','authMsg'].forEach(id=>document.getElementById(id).textContent='');
+  document.getElementById('tabLogin').classList.toggle('active',m==='login');
+  document.getElementById('tabSignup').classList.toggle('active',m==='signup');
+  document.getElementById('loginForm').style.display=m==='login'?'block':'none';
+  document.getElementById('signupForm').style.display=m==='signup'?'block':'none';
+  ['authErr','authMsg','signupErr','signupMsg'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent='';
+  });
 }
+
+async function doSignup(){
+  const first=document.getElementById('signupFirst').value.trim();
+  const last=document.getElementById('signupLast').value.trim();
+  const display=document.getElementById('signupDisplay').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const pw1=document.getElementById('signupPassword').value;
+  const pw2=document.getElementById('signupPassword2').value;
+  const errEl=document.getElementById('signupErr');
+  const msgEl=document.getElementById('signupMsg');
+  errEl.textContent='';msgEl.textContent='';
+
+  if(!display){errEl.textContent='Visningsnamn är obligatoriskt.';return;}
+  if(!email){errEl.textContent='E-post är obligatoriskt.';return;}
+  if(!pw1||pw1.length<6){errEl.textContent='Lösenordet måste vara minst 6 tecken.';return;}
+  if(pw1!==pw2){errEl.textContent='Lösenorden matchar inte.';return;}
+
+  document.getElementById('signupBtn').textContent='Skapar konto…';
+  document.getElementById('signupBtn').disabled=true;
+
+  const{data,error}=await sb.auth.signUp({
+    email,
+    password:pw1,
+    options:{
+      data:{display_name:display},
+      emailRedirectTo:'https://journal.smctrading.se'
+    }
+  });
+
+  if(error){
+    errEl.textContent=error.message;
+  }else{
+    // Spara profil i user_profiles
+    if(data.user){
+      try{
+        await sb.from('user_profiles').insert([{
+          user_id:data.user.id,
+          display_name:display,
+          first_name:first||null,
+          last_name:last||null
+        }]);
+      }catch(e){console.warn('user_profiles insert:',e);}
+    }
+    msgEl.textContent='Konto skapat! Kolla din e-post ('+email+') och klicka på bekräftelselänken för att aktivera ditt konto.';
+    document.getElementById('signupBtn').textContent='Konto skapat ✓';
+  }
+  document.getElementById('signupBtn').disabled=false;
+}
+
 async function doAuth(){
   const email=document.getElementById('authEmail').value.trim();
   const pw=document.getElementById('authPassword').value;
@@ -2564,7 +2649,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.4.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.4.6</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
