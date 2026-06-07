@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.8</span></div>
+    <div class="auth-logo">TradeLog <span>v1.3.9</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -450,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.8</span></div>
+  <div class="header-logo">TradeLog <span>v1.3.9</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -734,8 +734,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <div id="journalBody" style="overflow-x:auto"></div>
   </div>
 </div>
-</div>
-</div>
+
+
 
 
 
@@ -745,6 +745,23 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:20px;font-weight:700;color:var(--text)">⚙️ Administration</div>
       <span style="font-size:12px;color:var(--text3)">Synlig bara för administratörer</span>
+    </div>
+
+    <!-- Användare -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <div class="dash-card-title">👥 Användare</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="userSearch" placeholder="Sök e-post…" class="form-control" style="width:200px;padding:5px 8px;font-size:12px" oninput="filterUsers()">
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminData()">↺ Uppdatera</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Admin</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Raderingsförfrågningar -->
@@ -1364,6 +1381,7 @@ async function onLogin(user){
   initThemeBtn();
   // Ladda data parallellt
   await Promise.all([fetchJournal(),fetchChecklists()]);
+  logLogin(); // Logga inloggning en gång
   // Ladda användarinställningar (display_name, admin, fältordning etc.)
   try{ await loadUserSettings(); }catch(e){ console.warn('loadUserSettings:',e); }
   // Sätt avatar efter att user_settings laddats (display_name kan ha uppdaterats)
@@ -2024,7 +2042,6 @@ async function loadDashboard(){
   renderDashGrades();
   renderDashMonth();
   await loadNews();
-  logLogin();
   // Admin-knapp - kolla user_settings i DB
   try{
     const{data:us}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
@@ -2280,7 +2297,98 @@ async function logLogin(){
 }
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
+let allUsers=[];
+let allLogs=[];
+
+function filterUsers(){
+  const q=(document.getElementById('userSearch')?.value||'').toLowerCase();
+  const filtered=q?allUsers.filter(u=>u.email.toLowerCase().includes(q)):allUsers;
+  renderUsersTable(filtered);
+}
+
+function filterLogs(){
+  const q=(document.getElementById('logSearch')?.value||'').toLowerCase();
+  const filtered=q?allLogs.filter(l=>(l.email||'').toLowerCase().includes(q)):allLogs;
+  renderLogsTable(filtered);
+}
+
+function renderUsersTable(users){
+  const body=document.getElementById('usersBody');
+  if(!body)return;
+  if(!users.length){
+    body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px">Inga användare</td></tr>';
+    return;
+  }
+  body.innerHTML=users.map(u=>`<tr>
+    <td style="font-size:12px">${u.email||'—'}</td>
+    <td style="font-family:var(--mono);font-size:11px">${u.created?new Date(u.created).toLocaleDateString('sv-SE'):'—'}</td>
+    <td style="font-family:var(--mono);font-size:11px">${u.last_login||'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px;text-align:center">${u.trade_count}</td>
+    <td><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓ Admin':'—'}</span></td>
+    <td style="font-size:11px;color:var(--text3)">${u.user_id===currentUser?.id?'<span style="color:var(--blue)">Du</span>':''}</td>
+  </tr>`).join('');
+}
+
+function renderLogsTable(logs){
+  const body=document.getElementById('loginLogBody');
+  if(!body)return;
+  if(!logs.length){
+    body.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px">Inga inloggningar</td></tr>';
+    return;
+  }
+  body.innerHTML=logs.map(l=>{
+    const ua=l.user_agent||'';
+    const browser=ua.includes('Chrome')?'Chrome':ua.includes('Firefox')?'Firefox':ua.includes('Safari')?'Safari':ua.includes('Edge')?'Edge':'Okänd';
+    const device=ua.includes('Mobile')?'📱':'💻';
+    return`<tr>
+      <td style="font-size:11px">${l.email||'—'}</td>
+      <td style="font-family:var(--mono);font-size:11px">${new Date(l.logged_in_at).toLocaleString('sv-SE')}</td>
+      <td style="font-size:11px">${device} ${browser}</td>
+      <td style="font-family:var(--mono);font-size:11px">${l.ip_hint||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
 async function loadAdminData(){
+  // Hämta användare via user_settings + login_log
+  const{data:settings}=await sb.from('user_settings').select('*');
+  const{data:loginLogs}=await sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(200);
+  allLogs=loginLogs||[];
+
+  // Bygg användarlista från user_settings
+  if(settings){
+    // Hämta senaste inloggning och antal trades per user
+    const tradeCountMap={};
+    const lastLoginMap={};
+    (loginLogs||[]).forEach(l=>{
+      if(!lastLoginMap[l.user_id])lastLoginMap[l.user_id]=l.logged_in_at;
+    });
+    const{data:tradeCounts}=await sb.from('trades').select('user_id');
+    (tradeCounts||[]).forEach(t=>{
+      tradeCountMap[t.user_id]=(tradeCountMap[t.user_id]||0)+1;
+    });
+    allUsers=settings.map(s=>({
+      user_id:s.user_id,
+      email:allLogs.find(l=>l.user_id===s.user_id)?.email||s.user_id,
+      created:null,
+      last_login:lastLoginMap[s.user_id]?new Date(lastLoginMap[s.user_id]).toLocaleString('sv-SE'):'—',
+      trade_count:tradeCountMap[s.user_id]||0,
+      is_admin:s.settings?.is_admin===true
+    }));
+    renderUsersTable(allUsers);
+  }
+
+  // Uppdatera login-logg header med sökfält
+  const logHeader=document.querySelector('#page-admin .dash-card:last-child .dash-card-header');
+  if(logHeader&&!document.getElementById('logSearch')){
+    logHeader.innerHTML=`<div class="dash-card-title">🔐 Senaste inloggningar</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="logSearch" placeholder="Filtrera på e-post…" class="form-control" style="width:200px;padding:5px 8px;font-size:12px" oninput="filterLogs()">
+        <button class="btn btn-ghost btn-sm" onclick="loadAdminData()">↺ Uppdatera</button>
+      </div>`;
+  }
+  renderLogsTable(allLogs);
+
   // Raderingsförfrågningar
   const{data:delReqs}=await sb.from('deletion_requests').select('*').order('requested_at',{ascending:false}).limit(100);
   const delBody=document.getElementById('deletionBody');
@@ -2296,24 +2404,6 @@ async function loadAdminData(){
         ${r.status==='pending'?`<button class="btn btn-success btn-sm" onclick="markDeletionDone('${r.id}')">✓ Markera klar</button>`:''}
       </td>
     </tr>`).join('');
-  }
-  // Inloggningslogg - använd service_role via RLS om admin
-  const{data:logs}=await sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(50);
-  const logBody=document.getElementById('loginLogBody');
-  if(!logs||!logs.length){
-    logBody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px">Inga inloggningar loggade</td></tr>';
-  }else{
-    logBody.innerHTML=logs.map(l=>{
-      const ua=l.user_agent||'';
-      const browser=ua.includes('Chrome')?'Chrome':ua.includes('Firefox')?'Firefox':ua.includes('Safari')?'Safari':ua.includes('Edge')?'Edge':'Okänd';
-      const device=ua.includes('Mobile')?'📱 Mobil':'💻 Dator';
-      return`<tr>
-        <td style="font-size:11px">${l.email||'—'}</td>
-        <td style="font-family:var(--mono);font-size:11px">${new Date(l.logged_in_at).toLocaleString('sv-SE')}</td>
-        <td style="font-size:11px">${device} ${browser}</td>
-        <td style="font-family:var(--mono);font-size:11px">${l.ip_hint||'—'}</td>
-      </tr>`;
-    }).join('');
   }
 }
 
@@ -2460,7 +2550,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.8</span></div>
+      <div class="auth-logo">TradeLog <span>v1.3.9</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
