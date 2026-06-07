@@ -388,6 +388,12 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .admin-edit-bar.active{display:flex;}
 [data-theme="dark"] .admin-edit-bar{background:#451a03;border-color:#92400e;}
 .admin-field{width:100%;padding:6px 8px;border:1.5px solid var(--blue);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);}
+.cl-accordion{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px;transition:background .1s;}
+.cl-accordion:hover{background:var(--gray-lt);}
+.cl-accordion-body{display:none;padding:8px 12px;background:var(--bg2);border-radius:0 0 var(--r) var(--r);border:1px solid var(--border);border-top:none;margin-top:-6px;margin-bottom:8px;}
+.cl-accordion-body.open{display:block;}
+.cl-chevron{font-size:11px;color:var(--text3);transition:transform .2s;}
+.cl-chevron.open{transform:rotate(180deg);}
 
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
@@ -449,7 +455,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.5.1</span></div>
+    <div class="auth-logo">TradeLog <span>v1.5.2</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -500,7 +506,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.5.1</span></div>
+  <div class="header-logo">TradeLog <span>v1.5.2</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2717,26 +2723,35 @@ function renderAdminEditSettings(){
   </div>`;
 }
 
+function toggleClAccordion(i){
+  const body=document.getElementById('cl-body-'+i);
+  const chev=document.getElementById('cl-chev-'+i);
+  if(!body)return;
+  body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open');
+}
+
 function renderAdminEditChecklists(){
   const clEl=document.getElementById('adminUserChecklists');
-  adminEditData.checklists=[];
-  // Lägg till redigerbara namnfält per checklista
-  clEl.querySelectorAll('[data-cl-id]').forEach(el=>{
-    const id=el.dataset.clId;
-    const nameEl=el.querySelector('.cl-name');
-    if(nameEl){
-      const input=document.createElement('input');
-      input.className='admin-field';
-      input.value=nameEl.textContent;
-      input.style.marginBottom='6px';
-      input.oninput=e=>{
-        let cl=adminEditData.checklists.find(c=>c.id===id);
-        if(!cl){cl={id,name:e.target.value,phases:[]};adminEditData.checklists.push(cl);}
-        else cl.name=e.target.value;
-      };
-      nameEl.replaceWith(input);
-    }
-  });
+  const checklists=window._adminChecklists||[];
+  // Kopiera för redigering
+  adminEditData.checklists=checklists.map(cl=>({...cl,phases:[...cl.phases]}));
+  // Rita om med redigerbara fält
+  clEl.innerHTML=adminEditData.checklists.map((cl,i)=>`
+    <div style="margin-bottom:12px;padding:12px;background:var(--bg2);border-radius:var(--r);border:1.5px solid var(--blue)">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Strategi ${i+1}</div>
+      <input class="admin-field" style="margin-bottom:10px" value="${cl.name}" 
+        oninput="adminEditData.checklists[${i}].name=this.value" placeholder="Strateginamn">
+      ${(cl.phases||[]).map((ph,pi)=>`
+        <div style="margin-left:8px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <span style="color:${ph.color};font-size:12px">●</span>
+            <input class="admin-field" style="font-size:12px" value="${ph.title}"
+              oninput="adminEditData.checklists[${i}].phases[${pi}].title=this.value" placeholder="Fasnamn">
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-left:20px">${(ph.items||[]).length} steg</div>
+        </div>`).join('')}
+    </div>`).join('');
 }
 
 
@@ -2763,6 +2778,7 @@ async function openAdminUserModal(userId){
   ]);
 
   const profile = profileRes.data;
+  window._adminChecklists = checklists;
   const trades = tradesRes.data||[];
   const checklists = checklistsRes.data||[];
   const settings = settingsRes.data?.settings||{};
@@ -2817,14 +2833,25 @@ async function openAdminUserModal(userId){
   if(!checklists.length){
     clEl.innerHTML='<div class="empty">Inga egna checklistor.</div>';
   }else{
-    clEl.innerHTML=checklists.map(cl=>`
-      <div data-cl-id="${cl.id}" style="margin-bottom:12px;padding:12px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)">
-        <div class="cl-name" style="font-weight:600;font-size:13px;margin-bottom:8px">${cl.name}</div>
-        ${(cl.phases||[]).map(ph=>`
-          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">
-            <span style="color:${ph.color};font-weight:500">● ${ph.title}</span>
-            – ${(ph.items||[]).length} steg
-          </div>`).join('')}
+    clEl.innerHTML=checklists.map((cl,i)=>`
+      <div>
+        <div class="cl-accordion" onclick="toggleClAccordion(${i})">
+          <span style="font-weight:600;font-size:13px">${cl.name}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text3)">${(cl.phases||[]).length} faser · ${(cl.phases||[]).reduce((a,p)=>a+(p.items||[]).length,0)} steg</span>
+            <span class="cl-chevron" id="cl-chev-${i}">▾</span>
+          </div>
+        </div>
+        <div class="cl-accordion-body" id="cl-body-${i}">
+          ${(cl.phases||[]).map(ph=>`
+            <div style="font-size:12px;margin-bottom:6px">
+              <span style="color:${ph.color};font-weight:500">● ${ph.title}</span>
+              <span style="color:var(--text3)"> – ${(ph.items||[]).length} steg</span>
+              <div style="margin-left:14px;margin-top:3px">
+                ${(ph.items||[]).map(it=>`<div style="font-size:11px;color:var(--text3);padding:1px 0">· ${it.label}</div>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
       </div>`).join('');
   }
 
@@ -3170,7 +3197,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.5.1</span></div>
+      <div class="auth-logo">TradeLog <span>v1.5.2</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
