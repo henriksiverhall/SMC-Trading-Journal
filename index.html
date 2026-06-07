@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.9</span></div>
+    <div class="auth-logo">TradeLog <span>v1.4.0</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -450,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.9</span></div>
+  <div class="header-logo">TradeLog <span>v1.4.0</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -758,7 +758,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
       <div style="overflow-x:auto">
         <table class="admin-table">
-          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Admin</th><th></th></tr></thead>
+          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th></tr></thead>
           <tbody id="usersBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
         </table>
       </div>
@@ -1405,8 +1405,12 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
-  // Ladda dashboard sist (behöver journal-data)
-  await loadDashboard();
+  // Återställ senast besökta sida
+  const savedPage=sessionStorage.getItem('activePage')||'dashboard';
+  const tabMap={'dashboard':0,'checklist':1,'journal':2};
+  const tabIdx=tabMap[savedPage]??0;
+  const tabs=document.querySelectorAll('.htab');
+  showPage(savedPage, tabs[tabIdx]||null);
 }
 async function doLogout(){
   await sb.auth.signOut();
@@ -2320,12 +2324,12 @@ function renderUsersTable(users){
     return;
   }
   body.innerHTML=users.map(u=>`<tr>
-    <td style="font-size:12px">${u.email||'—'}</td>
+    <td style="font-size:12px">${u.email||'—'} ${u.user_id===currentUser?.id?'<span style="color:var(--blue);font-size:10px">(du)</span>':''}</td>
     <td style="font-family:var(--mono);font-size:11px">${u.created?new Date(u.created).toLocaleDateString('sv-SE'):'—'}</td>
-    <td style="font-family:var(--mono);font-size:11px">${u.last_login||'—'}</td>
+    <td style="font-family:var(--mono);font-size:11px">${u.last_login||'Aldrig'}</td>
     <td style="font-family:var(--mono);font-size:12px;text-align:center">${u.trade_count}</td>
+    <td><span class="status-pill ${u.confirmed?'done':''}">${u.confirmed?'✓':'Ej bekräftad'}</span></td>
     <td><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓ Admin':'—'}</span></td>
-    <td style="font-size:11px;color:var(--text3)">${u.user_id===currentUser?.id?'<span style="color:var(--blue)">Du</span>':''}</td>
   </tr>`).join('');
 }
 
@@ -2350,9 +2354,12 @@ function renderLogsTable(logs){
 }
 
 async function loadAdminData(){
-  // Hämta användare via user_settings + login_log
-  const{data:settings}=await sb.from('user_settings').select('*');
-  const{data:loginLogs}=await sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(200);
+  // Hämta användare via admin_users-vy + user_settings + login_log
+  const[{data:adminUsers},{data:settings},{data:loginLogs}]=await Promise.all([
+    sb.from('admin_users').select('*'),
+    sb.from('user_settings').select('*'),
+    sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(200)
+  ]);
   allLogs=loginLogs||[];
 
   // Bygg användarlista från user_settings
@@ -2369,19 +2376,18 @@ async function loadAdminData(){
     (tradeCounts||[]).forEach(t=>{
       tradeCountMap[t.user_id]=(tradeCountMap[t.user_id]||0)+1;
     });
-    // Samla alla unika user_ids från login_log + user_settings
-    const allUserIds=new Set([
-      ...(loginLogs||[]).map(l=>l.user_id),
-      ...(settings||[]).map(s=>s.user_id)
-    ]);
     const settingsMap={};
     (settings||[]).forEach(s=>settingsMap[s.user_id]=s);
-    allUsers=[...allUserIds].map(uid=>({
-      user_id:uid,
-      email:emailMap[uid]||uid.substring(0,8)+'…',
-      last_login:lastLoginMap[uid]?new Date(lastLoginMap[uid]).toLocaleString('sv-SE'):'Aldrig',
-      trade_count:tradeCountMap[uid]||0,
-      is_admin:settingsMap[uid]?.settings?.is_admin===true
+    // Använd admin_users-vy för komplett lista
+    const sourceUsers=adminUsers||[];
+    allUsers=sourceUsers.map(u=>({
+      user_id:u.user_id,
+      email:u.email||'—',
+      created:u.created_at,
+      last_login:u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString('sv-SE'):'Aldrig',
+      confirmed:!!u.confirmed_at,
+      trade_count:tradeCountMap[u.user_id]||0,
+      is_admin:settingsMap[u.user_id]?.settings?.is_admin===true
     })).sort((a,b)=>a.email.localeCompare(b.email));
     renderUsersTable(allUsers);
   }
@@ -2558,7 +2564,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.9</span></div>
+      <div class="auth-logo">TradeLog <span>v1.4.0</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
