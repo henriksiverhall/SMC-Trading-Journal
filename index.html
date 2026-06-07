@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.6</span></div>
+    <div class="auth-logo">TradeLog <span>v1.3.7</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -450,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.6</span></div>
+  <div class="header-logo">TradeLog <span>v1.3.7</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -741,7 +741,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 <!-- ADMIN PAGE -->
 <div id="page-admin" class="page" style="padding:0">
-  <div class="app" style="padding:0">
   <div class="admin-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:20px;font-weight:700;color:var(--text)">⚙️ Administration</div>
@@ -775,7 +774,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         </table>
       </div>
     </div>
-  </div>
   </div>
 </div>
 
@@ -2462,7 +2460,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.6</span></div>
+      <div class="auth-logo">TradeLog <span>v1.3.7</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -2515,7 +2513,7 @@ function showPage(p,btn){
   });
   document.querySelectorAll('.htab').forEach(x=>x.classList.remove('active'));
   const target=document.getElementById('page-'+p);
-  if(target){target.classList.add('active');target.style.display='';}
+  if(target){target.classList.add('active');target.style.display='block';}
   if(btn)btn.classList.add('active');
   if(p==='journal'){updateStats();renderJournal();}
   if(p==='profil'){loadProfil();}
