@@ -2356,25 +2356,33 @@ async function loadAdminData(){
   allLogs=loginLogs||[];
 
   // Bygg användarlista från user_settings
-  if(settings){
-    // Hämta senaste inloggning och antal trades per user
+  // Bygg användarlista från login_log (alla unika users) + user_settings
+  {
     const tradeCountMap={};
     const lastLoginMap={};
+    const emailMap={};
     (loginLogs||[]).forEach(l=>{
-      if(!lastLoginMap[l.user_id])lastLoginMap[l.user_id]=l.logged_in_at;
+      if(!lastLoginMap[l.user_id]){lastLoginMap[l.user_id]=l.logged_in_at;}
+      if(l.email)emailMap[l.user_id]=l.email;
     });
     const{data:tradeCounts}=await sb.from('trades').select('user_id');
     (tradeCounts||[]).forEach(t=>{
       tradeCountMap[t.user_id]=(tradeCountMap[t.user_id]||0)+1;
     });
-    allUsers=settings.map(s=>({
-      user_id:s.user_id,
-      email:allLogs.find(l=>l.user_id===s.user_id)?.email||s.user_id,
-      created:null,
-      last_login:lastLoginMap[s.user_id]?new Date(lastLoginMap[s.user_id]).toLocaleString('sv-SE'):'—',
-      trade_count:tradeCountMap[s.user_id]||0,
-      is_admin:s.settings?.is_admin===true
-    }));
+    // Samla alla unika user_ids från login_log + user_settings
+    const allUserIds=new Set([
+      ...(loginLogs||[]).map(l=>l.user_id),
+      ...(settings||[]).map(s=>s.user_id)
+    ]);
+    const settingsMap={};
+    (settings||[]).forEach(s=>settingsMap[s.user_id]=s);
+    allUsers=[...allUserIds].map(uid=>({
+      user_id:uid,
+      email:emailMap[uid]||uid.substring(0,8)+'…',
+      last_login:lastLoginMap[uid]?new Date(lastLoginMap[uid]).toLocaleString('sv-SE'):'Aldrig',
+      trade_count:tradeCountMap[uid]||0,
+      is_admin:settingsMap[uid]?.settings?.is_admin===true
+    })).sort((a,b)=>a.email.localeCompare(b.email));
     renderUsersTable(allUsers);
   }
 
