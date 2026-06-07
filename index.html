@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.4.7</span></div>
+    <div class="auth-logo">TradeLog <span>v1.4.8</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -483,7 +483,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.4.7</span></div>
+  <div class="header-logo">TradeLog <span>v1.4.8</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -547,23 +547,41 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <!-- Ekonomisk kalender -->
       <div class="dash-card">
         <div class="dash-card-header">
-          <div class="dash-card-title">📰 Ekonomisk kalender <span style="font-size:10px;color:var(--text3);font-weight:400">idag (ET)</span></div>
+          <div class="dash-card-title">📰 Ekonomisk kalender</div>
           <div style="display:flex;gap:6px;align-items:center">
             <div id="newsLastUpdated" style="font-size:10px;color:var(--text3)"></div>
             <button class="expand-btn" onclick="openNewsModal('news')" title="Expandera">⤢</button>
           </div>
         </div>
-        <div class="news-filter-bar">
-          <span style="font-size:11px;color:var(--text3);font-weight:600;padding-top:3px">Filter:</span>
-          <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
-          <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
-          <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
-          <span style="font-size:11px;color:var(--text3);font-weight:600;padding-top:3px;margin-left:4px">Land:</span>
-          <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
-          <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
-          <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
-          <button class="news-filter-btn active-high" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
-          <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla länder</button>
+        <!-- Datumväljare och snabbknappar -->
+        <div class="news-filter-bar" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text3);font-weight:600">Period:</span>
+            <button class="news-filter-btn active-high" id="np-today" onclick="setNewsDateRange('today')">Idag</button>
+            <button class="news-filter-btn" id="np-week" onclick="setNewsDateRange('week')">Denna vecka</button>
+            <button class="news-filter-btn" id="np-nextweek" onclick="setNewsDateRange('nextweek')">Nästa vecka</button>
+            <button class="news-filter-btn" id="np-month" onclick="setNewsDateRange('month')">Denna månad</button>
+            <div style="display:flex;align-items:center;gap:4px;margin-left:4px">
+              <input type="date" id="newsFromDate" class="form-control" style="padding:3px 6px;font-size:11px;width:120px" onchange="setNewsDateRange('custom')">
+              <span style="font-size:11px;color:var(--text3)">–</span>
+              <input type="date" id="newsToDate" class="form-control" style="padding:3px 6px;font-size:11px;width:120px" onchange="setNewsDateRange('custom')">
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text3);font-weight:600">Impact:</span>
+            <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
+            <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
+            <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
+            <span style="font-size:11px;color:var(--text3);font-weight:600;margin-left:4px">Land:</span>
+            <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
+            <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
+            <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
+            <button class="news-filter-btn active-high" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
+            <button class="news-filter-btn" id="nf-CA" onclick="toggleCountryFilter('CA')">🇨🇦 CA</button>
+            <button class="news-filter-btn" id="nf-AU" onclick="toggleCountryFilter('AU')">🇦🇺 AU</button>
+            <button class="news-filter-btn" id="nf-CH" onclick="toggleCountryFilter('CH')">🇨🇭 CH</button>
+            <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla</button>
+          </div>
         </div>
         <div class="dash-card-scroll" id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
       </div>
@@ -572,7 +590,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <!-- Streak + Grade-fördelning -->
     <div class="dash-row three">
       <div class="dash-card">
-        <div class="dash-card-header"><div class="dash-card-title">🔥 Streak & Konsistens</div></div>
+        <div class="dash-card-header"><div class="dash-card-title">🔥 Streak & Historik</div></div>
         <div class="dash-card-body" id="dashStreak"></div>
       </div>
       <div class="dash-card">
@@ -669,7 +687,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="form-group" id="riskGroup">
           <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings();calcMonetary()">
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings()">
             <span style="font-size:13px;color:var(--text3);white-space:nowrap">%</span>
           </div>
           <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
@@ -677,7 +695,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="form-group" id="accountSizeGroup">
           <label>Kontostorlek <span style="color:var(--text3);font-weight:400;font-size:10px">valfri, sparas</span></label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="50000" style="flex:1" oninput="saveRiskSettings();calcMonetary()">
+            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="50000" style="flex:1" oninput="saveRiskSettings()">
             <select class="form-control" id="f-currency" style="width:70px" onchange="saveRiskSettings();calcMonetary()">
               <option value="SEK">SEK</option>
               <option value="USD">USD</option>
@@ -1122,6 +1140,9 @@ async function saveUserSettings(){
 }
 
 function applyUserSettings(){
+  // News-datum
+  if(userSettings.newsFromDate)newsFromDate=userSettings.newsFromDate;
+  if(userSettings.newsToDate)newsToDate=userSettings.newsToDate;
   // Nyhetsfilter
   if(userSettings.newsFilterImpact){
     newsFilterImpact=new Set(userSettings.newsFilterImpact);
@@ -1173,6 +1194,10 @@ function saveRiskSettings(){
   userSettings.currency=curr||'SEK';
   saveUserSettings();
   calcMonetary();
+  // Uppdatera monetärt resultat i alla synliga fält
+  document.querySelectorAll('[id^="monetaryResult"]').forEach(el=>{
+    if(el)calcMonetary();
+  });
 }
 
 
@@ -2180,11 +2205,23 @@ function renderDashRecentTrades(){
 
 function renderDashStreak(){
   const el=document.getElementById('dashStreak');
-  const sorted=[...journal].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  let streak=0,best=0,cur=0;
-  sorted.forEach(t=>{if(t.outcome==='W'){cur++;best=Math.max(best,cur);}else{cur=0;}});
-  // Nuvarande streak (från senaste)
-  for(let t of sorted){if(t.outcome==='W')streak++;else break;}
+  const sorted=[...journal].filter(t=>t.outcome).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  // Nuvarande streak – räkna från senaste trade bakåt
+  let streak=0;
+  for(const t of sorted){
+    if(t.outcome==='W')streak++;
+    else break;
+  }
+  // Bästa streak
+  let best=0,cur=0;
+  // Räkna i kronologisk ordning för bästa streak
+  [...sorted].reverse().forEach(t=>{
+    if(t.outcome==='W'){cur++;best=Math.max(best,cur);}
+    else{cur=0;}
+  });
+  const totalDays=new Set(journal.map(t=>t.date).filter(Boolean)).size;
+  const wins=journal.filter(t=>t.outcome==='W').length;
+  const losses=journal.filter(t=>t.outcome==='L').length;
   el.innerHTML=`
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;align-items:center;gap:10px">
@@ -2192,7 +2229,11 @@ function renderDashStreak(){
         <span style="font-size:12px;color:var(--text3)">nuvarande vinst-streak</span>
       </div>
       <div style="font-size:12px;color:var(--text2)">Bästa streak: <strong>${best} vinster i rad</strong></div>
-      <div style="font-size:12px;color:var(--text2)">Totalt loggade dagar: <strong>${new Set(journal.map(t=>t.date).filter(Boolean)).size}</strong></div>
+      <div style="font-size:12px;color:var(--text2)">Totalt loggade dagar: <strong>${totalDays}</strong></div>
+      <div style="display:flex;gap:12px;font-size:12px;margin-top:2px">
+        <span style="color:var(--green)">✓ ${wins} vinster</span>
+        <span style="color:var(--red)">✗ ${losses} förluster</span>
+      </div>
     </div>`;
 }
 
@@ -2288,8 +2329,10 @@ function renderNewsItems(events,el){
   el.innerHTML=events.map(e=>{
     const impact=getImpactLevel(e);
     const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
+    const showDate=newsFromDate!==newsToDate;
+    const dateStr=e.date?e.date.substring(5):'';
     return`<div class="news-item">
-      <span class="news-time">${time}</span>
+      <span class="news-time">${showDate&&dateStr?dateStr+'<br>':''}<span style="font-size:${showDate?'10':'11'}px">${time}</span></span>
       <span class="news-impact ${impact}"></span>
       <div>
         <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
@@ -2340,29 +2383,108 @@ function openNewsModal(type){
 
 
 // ── NYHETER (FINNHUB) ─────────────────────────────────────────────────────────
-async function loadNews(){
-  const today=new Date().toISOString().split('T')[0];
-  const cacheKey='finnhub_news_'+today;
-  const cached=localStorage.getItem(cacheKey);
+
+// ── NEWS DATUMHANTERING ────────────────────────────────────────────────────────
+let newsFromDate='';
+let newsToDate='';
+
+function getDateStr(d){return d.toISOString().split('T')[0];}
+
+function setNewsDateRange(preset){
+  const now=new Date();
+  // Återställ alla period-knappar
+  ['today','week','nextweek','month'].forEach(p=>{
+    const b=document.getElementById('np-'+p);
+    if(b)b.className='news-filter-btn'+(preset===p?' active-high':'');
+  });
+  if(preset==='today'){
+    newsFromDate=getDateStr(now);
+    newsToDate=getDateStr(now);
+  }else if(preset==='week'){
+    const day=now.getDay()||7;
+    const mon=new Date(now);mon.setDate(now.getDate()-day+1);
+    const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+    newsFromDate=getDateStr(mon);newsToDate=getDateStr(fri);
+  }else if(preset==='nextweek'){
+    const day=now.getDay()||7;
+    const mon=new Date(now);mon.setDate(now.getDate()-day+8);
+    const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+    newsFromDate=getDateStr(mon);newsToDate=getDateStr(fri);
+  }else if(preset==='month'){
+    const first=new Date(now.getFullYear(),now.getMonth(),1);
+    const last=new Date(now.getFullYear(),now.getMonth()+1,0);
+    newsFromDate=getDateStr(first);newsToDate=getDateStr(last);
+  }else if(preset==='custom'){
+    newsFromDate=document.getElementById('newsFromDate')?.value||getDateStr(now);
+    newsToDate=document.getElementById('newsToDate')?.value||getDateStr(now);
+  }
+  // Uppdatera datumfält
+  const fromEl=document.getElementById('newsFromDate');
+  const toEl=document.getElementById('newsToDate');
+  if(fromEl)fromEl.value=newsFromDate;
+  if(toEl)toEl.value=newsToDate;
+  // Spara i userSettings
+  userSettings.newsFromDate=newsFromDate;
+  userSettings.newsToDate=newsToDate;
+  userSettings.newsPreset=preset;
+  saveUserSettings();
+  // Hämta nyheter för nytt intervall
+  loadNewsForRange(newsFromDate,newsToDate);
+}
+
+async function loadNewsForRange(from,to){
   const el=document.getElementById('dashNews');
   const lastUpdEl=document.getElementById('newsLastUpdated');
-
-  if(cached){
-    renderNews(JSON.parse(cached));
-    lastUpdEl.textContent='Cachad – '+today;
+  if(!el)return;
+  const cacheKey='finnhub_news_'+from+'_'+to;
+  const cached=localStorage.getItem(cacheKey);
+  // Använd cache om den är från idag
+  const cacheDate=localStorage.getItem(cacheKey+'_date');
+  const today=getDateStr(new Date());
+  if(cached&&cacheDate===today){
+    allNewsEvents=JSON.parse(cached);
+    applyNewsFilter();
+    lastUpdEl.textContent='Cachad '+from+(from!==to?' – '+to:'');
     return;
   }
+  el.innerHTML='<div class="news-empty">Hämtar nyheter…</div>';
   try{
-    const url=`https://finnhub.io/api/v1/calendar/economic?from=${today}&to=${today}&token=${FINNHUB_KEY}`;
+    const url=`https://finnhub.io/api/v1/calendar/economic?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
     const res=await fetch(url);
     const data=await res.json();
-    const events=(data.economicCalendar||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const events=(data.economicCalendar||[]).sort((a,b)=>{
+      // Sortera på datum + tid
+      const da=(a.time||a.date||'');
+      const db=(b.time||b.date||'');
+      return da.localeCompare(db);
+    });
     localStorage.setItem(cacheKey,JSON.stringify(events));
-    renderNews(events);
+    localStorage.setItem(cacheKey+'_date',today);
+    allNewsEvents=events;
+    applyNewsFilter();
     lastUpdEl.textContent='Uppdaterad '+new Date().toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
     el.innerHTML='<div class="news-empty">Kunde inte hämta nyheter.</div>';
   }
+}
+
+
+async function loadNews(){
+  const today=getDateStr(new Date());
+  newsFromDate=userSettings.newsFromDate||today;
+  newsToDate=userSettings.newsToDate||today;
+  const preset=userSettings.newsPreset||'today';
+  // Initiera datumfält
+  const fromEl=document.getElementById('newsFromDate');
+  const toEl=document.getElementById('newsToDate');
+  if(fromEl)fromEl.value=newsFromDate;
+  if(toEl)toEl.value=newsToDate;
+  // Sätt aktiv preset-knapp
+  ['today','week','nextweek','month'].forEach(p=>{
+    const b=document.getElementById('np-'+p);
+    if(b)b.className='news-filter-btn'+(preset===p?' active-high':'');
+  });
+  await loadNewsForRange(newsFromDate,newsToDate);
 }
 
 function renderNews(events){
@@ -2650,7 +2772,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.4.7</span></div>
+      <div class="auth-logo">TradeLog <span>v1.4.8</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
