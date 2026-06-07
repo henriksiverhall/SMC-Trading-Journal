@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.3.6</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -450,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.3.6</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2284,7 +2284,7 @@ async function logLogin(){
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 async function loadAdminData(){
   // Raderingsförfrågningar
-  const{data:delReqs}=await sb.from('deletion_requests').select('*').order('requested_at',{ascending:false});
+  const{data:delReqs}=await sb.from('deletion_requests').select('*').order('requested_at',{ascending:false}).limit(100);
   const delBody=document.getElementById('deletionBody');
   if(!delReqs||!delReqs.length){
     delBody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:16px">Inga förfrågningar</td></tr>';
@@ -2462,7 +2462,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.3.6</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -2486,7 +2486,7 @@ async function verifyLoginMfa(factorId){
 
 // ── GDPR ──────────────────────────────────────────────────────────────────────
 async function checkDeletionRequest(){
-  const{data}=await sb.from('deletion_requests').select('*').eq('user_id',currentUser.id).single();
+  const{data}=await sb.from('deletion_requests').select('*').eq('user_id',currentUser.id).maybeSingle();
   const el=document.getElementById('deletionRequestStatus');
   if(data){
     el.textContent=`En begäran om radering skickades ${new Date(data.requested_at).toLocaleDateString('sv-SE')}. Status: ${data.status==='pending'?'Väntar på behandling':'Behandlad'}.`;
