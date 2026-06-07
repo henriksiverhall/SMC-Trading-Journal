@@ -432,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.4.0</span></div>
+    <div class="auth-logo">TradeLog <span>v1.4.1</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -450,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.4.0</span></div>
+  <div class="header-logo">TradeLog <span>v1.4.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1405,8 +1405,8 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
-  // Återställ senast besökta sida
-  const savedPage=sessionStorage.getItem('activePage')||'dashboard';
+  // Återställ senast besökta sida från URL hash
+  const savedPage=(window.location.hash.replace('#','')||'dashboard');
   const tabMap={'dashboard':0,'checklist':1,'journal':2};
   const tabIdx=tabMap[savedPage]??0;
   const tabs=document.querySelectorAll('.htab');
@@ -2564,7 +2564,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.4.0</span></div>
+      <div class="auth-logo">TradeLog <span>v1.4.1</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
