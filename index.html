@@ -22,27 +22,29 @@
   --border:#2d3f55;--text:#f1f5f9;--text2:#cbd5e1;--text3:#94a3b8;
   --bg:#172032;--bg2:#1e2d42;--shadow:0 2px 8px rgba(0,0,0,.5);
 }
-[data-theme="dark"] body{background:#0d1b2e;}
-[data-theme="dark"] .header{background:linear-gradient(135deg,#0d1b2e 0%,#172032 100%);}
-[data-theme="dark"] .dash-stat{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .dash-card{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .trade-form{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .recent-panel{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .sidebar{background:var(--bg);}
+[data-theme="dark"] body{background:#080f1a;}
+[data-theme="dark"] .header{background:linear-gradient(135deg,#0a1628 0%,#0f2040 100%);border-bottom:1px solid rgba(255,255,255,.07);}
+[data-theme="dark"] .dash-stat{background:#1a2d45;border-color:#1e3455;}
+[data-theme="dark"] .dash-card{background:#1a2d45;border-color:#1e3455;}
+[data-theme="dark"] .trade-form{background:#1a2d45;border-color:#1e3455;}
+[data-theme="dark"] .recent-panel{background:#1a2d45;border-color:#1e3455;}
+[data-theme="dark"] .sidebar{background:#152238;border-right-color:#1e3251;}
 [data-theme="dark"] .phase-header{background:var(--bg);}
 [data-theme="dark"] .phase-header:hover{background:var(--bg2);}
 [data-theme="dark"] .check-item.checked{background:rgba(74,222,128,.08);}
-[data-theme="dark"] .jtable th{background:var(--bg2);}
+[data-theme="dark"] .jtable th{background:#152238;}
+[data-theme="dark"] .content{background:#111d2e;}
 [data-theme="dark"] .avatar-menu{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .modal{background:var(--bg);}
-[data-theme="dark"] .profil-card{background:var(--bg);border-color:var(--border);}
-[data-theme="dark"] .auth-card{background:var(--bg);border-color:var(--border);}
+[data-theme="dark"] .modal{background:#1a2d45;border:1px solid #1e3455;}
+[data-theme="dark"] .profil-card{background:#1a2d45;border-color:#1e3455;}
+[data-theme="dark"] .auth-card{background:#1a2d45;border-color:#1e3455;box-shadow:0 8px 32px rgba(0,0,0,.4);}
 [data-theme="dark"] .field-manager{background:var(--bg2);border-color:var(--border);}
 [data-theme="dark"] .news-filter-bar{background:var(--bg2);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100vh;transition:background .2s,color .2s;}
 [data-theme="dark"] body{background:#0d1117;}
 .app{max-width:1360px;margin:0 auto;}
+[data-theme="dark"] .app{background:#0d1b2e;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 4px 32px rgba(0,0,0,.5);min-height:100vh;}
 
 /* AUTH */
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;}
@@ -430,7 +432,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.3.3</span></div>
+    <div class="auth-logo">TradeLog <span>v1.3.4</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Logga in</button>
@@ -448,7 +450,7 @@ body{font-family:var(--font);color:var(--text);background:#f0f2f5;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.3.3</span></div>
+  <div class="header-logo">TradeLog <span>v1.3.4</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2460,7 +2462,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.3.3</span></div>
+      <div class="auth-logo">TradeLog <span>v1.3.4</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
