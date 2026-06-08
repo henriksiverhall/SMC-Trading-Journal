@@ -622,7 +622,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.9</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.0</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -673,7 +673,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.9</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.0</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -4199,19 +4199,13 @@ function renderLogsTable(logs){
 async function loadAdminData(){
   if(!currentUser)return;
 
-  // ── Säkerhetskontroll – verifiera admin mot DB, inte bara frontend ──────────
-  try{
-    const{data:selfSettings,error:selfErr}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
-    if(selfErr||!selfSettings?.settings?.is_admin){
-      // Inte admin – dölj sidan och gå till dashboard
-      showPage('dashboard',null);
-      document.getElementById('adminMenuBtn').style.display='none';
-      document.getElementById('roadmapMenuBtn').style.display='none';
-      return;
-    }
-  }catch(e){showPage('dashboard',null);return;}
+  // Säkerhetsguard – userSettings laddas vid inloggning från DB
+  if(userSettings?.is_admin!==true){
+    showPage('dashboard',null);
+    return;
+  }
 
-  // Hämta via säker RPC (kräver admin) + user_settings + login_log
+  // Hämta via säker RPC + user_settings + login_log
   const[{data:adminUsers},{data:settings},{data:loginLogs}]=await Promise.all([
     sb.rpc('get_admin_users'),
     sb.from('user_settings').select('*'),
@@ -4427,7 +4421,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.9</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.0</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
