@@ -603,7 +603,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.0</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.1</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -654,7 +654,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.0</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1346,6 +1346,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         </div>
         <div class="form-group"><label>Resultat (R)</label>
           <div class="rr-display" id="mRrDisplay">—</div>
+          <div id="mMonetaryResult" style="font-size:11px;margin-top:3px;font-family:var(--mono)"></div>
         </div>
         <div class="form-group"><label>Setup-kvalitet</label>
           <div class="grade-btns" id="modalGradeBtns">
@@ -1761,6 +1762,32 @@ function applyUserSettings(){
     // Rendera bara om appen redan är initialiserad
     if(document.querySelector('.form-grid'))renderCustomFieldInputs();
   }
+  // Uppdatera monetärt värde
+  try{calcMonetary();}catch(e){}
+}
+
+function calcMonetary(){
+  const pct=parseFloat(userSettings.riskPct)||0;
+  const size=parseFloat(userSettings.accountSize)||0;
+  const curr=userSettings.currency||'USD';
+  const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+  // Räkna ut dollarvärde per 1R
+  const riskAmount=size&&pct?size*(pct/100):0;
+  // Uppdatera alla monetaryResult-element
+  document.querySelectorAll('[id="monetaryResult"]').forEach(el=>{
+    if(!riskAmount){el.textContent='';return;}
+    // Hitta aktuellt R-värde från närmaste rrDisplay
+    const r=calculatedR;
+    if(r!=null){
+      const monetary=riskAmount*Math.abs(r);
+      const sign=r>0?'+':r<0?'-':'';
+      el.textContent=`${sign}${currSymbol}${monetary.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})} (${currSymbol}${riskAmount.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})}/R)`;
+      el.style.color=r>0?'var(--green)':r<0?'var(--red)':'var(--text3)';
+    }else{
+      el.textContent=`${currSymbol}${riskAmount.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})}/R`;
+      el.style.color='var(--text3)';
+    }
+  });
 }
 
 function saveRiskSettings(){
@@ -1769,13 +1796,9 @@ function saveRiskSettings(){
   const curr=document.getElementById('f-currency')?.value;
   userSettings.riskPct=pct||'';
   userSettings.accountSize=size||'';
-  userSettings.currency=curr||'SEK';
+  userSettings.currency=curr||'USD';
   saveUserSettings();
   calcMonetary();
-  // Uppdatera monetärt resultat i alla synliga fält
-  document.querySelectorAll('[id^="monetaryResult"]').forEach(el=>{
-    if(el)calcMonetary();
-  });
 }
 
 
@@ -2424,6 +2447,21 @@ function calcRR(isModal){
     if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
   if(!isModal)calcMonetary();
+  else{
+    // Modal: uppdatera monetärt i modal om det finns
+    const pct=parseFloat(userSettings.riskPct)||0;
+    const size=parseFloat(userSettings.accountSize)||0;
+    const curr=userSettings.currency||'USD';
+    const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+    const riskAmount=size&&pct?size*(pct/100):0;
+    const mMonetary=document.getElementById('mMonetaryResult');
+    if(mMonetary&&riskAmount&&modalCalculatedR!=null){
+      const monetary=riskAmount*Math.abs(modalCalculatedR);
+      const sign=modalCalculatedR>0?'+':modalCalculatedR<0?'-':'';
+      mMonetary.textContent=`${sign}${currSymbol}${monetary.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+      mMonetary.style.color=modalCalculatedR>0?'var(--green)':modalCalculatedR<0?'var(--red)':'var(--text3)';
+    }else if(mMonetary){mMonetary.textContent='';}
+  }
 }
 
 function setGrade(g,ctx){
@@ -4262,7 +4300,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.0</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.1</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4811,24 +4849,37 @@ function renderAnalytics(){
     }).join('');
   }else if(cfContainer){cfContainer.innerHTML='';}
 
-  // ── Kumulativ R-kurva ────────────────────────────────────────────────────────
+  // ── Kumulativ R-kurva + kapitalutveckling ───────────────────────────────────
   const rCurve=document.getElementById('analyticsRCurve');
   if(rCurve&&withR.length){
     const sortedR=[...withR].sort((a,b)=>(a.date||'').localeCompare(b.date||'')+(a.time||'').localeCompare(b.time||''));
-    let cum=0;
-    const points=sortedR.map((t,i)=>{cum+=t.result||0;return{x:i,y:parseFloat(cum.toFixed(2)),date:t.date,r:t.result};});
+    const riskPct=parseFloat(userSettings.riskPct)||0;
+    const accountSize=parseFloat(userSettings.accountSize)||0;
+    const curr=userSettings.currency||'USD';
+    const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+    const riskAmt=accountSize&&riskPct?accountSize*(riskPct/100):0;
+    let cumR=0,cumUSD=accountSize||0;
+    const points=sortedR.map((t,i)=>{
+      cumR+=t.result||0;
+      if(accountSize&&riskPct) cumUSD+=riskAmt*(t.result||0);
+      return{x:i,y:parseFloat(cumR.toFixed(2)),usd:parseFloat(cumUSD.toFixed(0)),date:t.date,r:t.result};
+    });
     const maxY=Math.max(...points.map(p=>p.y),0.1);
     const minY=Math.min(...points.map(p=>p.y),0);
     const range=maxY-minY||1;
-    const w=700,h=140,pad=20;
+    const w=700,h=150,pad=20;
     const toX=x=>pad+(x/(points.length-1||1))*(w-pad*2);
     const toY=y=>h-pad-(y-minY)/range*(h-pad*2);
     const pathD=points.map((p,i)=>`${i===0?'M':'L'}${toX(p.x).toFixed(1)},${toY(p.y).toFixed(1)}`).join(' ');
     const lastP=points[points.length-1];
     const color=lastP.y>=0?'var(--green)':'var(--red)';
+    const usdLine=accountSize&&riskPct?`<div style="font-size:12px;color:var(--text3);margin-top:4px">Kapital: <span style="font-family:var(--mono);font-weight:600;color:${lastP.usd>=accountSize?'var(--green)':'var(--red)'}">
+      ${currSymbol}${lastP.usd.toLocaleString('sv-SE')}
+    </span> (start: ${currSymbol}${accountSize.toLocaleString('sv-SE')}, risk/R: ${currSymbol}${riskAmt.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})})</div>`:'<div style="font-size:11px;color:var(--amber);margin-top:4px">💡 Ange kontostorlek och risk% för att se kapitalutveckling i '+currSymbol+'</div>';
     rCurve.innerHTML=`
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Kumulativ R: <span class="${lastP.y>=0?'r-pos':'r-neg'}" style="font-family:var(--mono);font-weight:600">${lastP.y>=0?'+':''}${lastP.y.toFixed(2)}R</span> över ${points.length} trades</div>
-      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Kumulativ R: <span class="${lastP.y>=0?'r-pos':'r-neg'}" style="font-family:var(--mono);font-weight:600">${lastP.y>=0?'+':''}${lastP.y.toFixed(2)}R</span> över ${points.length} trades</div>
+      ${usdLine}
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;margin-top:8px">
         <defs><linearGradient id="rGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${color}" stop-opacity=".2"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
@@ -4837,8 +4888,9 @@ function renderAnalytics(){
         <path d="${pathD}" stroke="${color}" stroke-width="2" fill="none" stroke-linejoin="round"/>
         <line x1="${pad}" y1="${toY(0).toFixed(1)}" x2="${w-pad}" y2="${toY(0).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>
         ${points.filter((_,i)=>i===0||i===points.length-1||(i+1)%Math.max(1,Math.floor(points.length/8))===0).map(p=>`
-          <circle cx="${toX(p.x).toFixed(1)}" cy="${toY(p.y).toFixed(1)}" r="3" fill="${p.y>=0?'var(--green)':'var(--red)'}"/>
-        `).join('')}
+          <circle cx="${toX(p.x).toFixed(1)}" cy="${toY(p.y).toFixed(1)}" r="3" fill="${p.y>=0?'var(--green)':'var(--red)'}">
+            <title>${p.date}: ${p.y>=0?'+':''}${p.y}R${accountSize&&riskPct?' ('+currSymbol+p.usd.toLocaleString('sv-SE')+')':''}</title>
+          </circle>`).join('')}
       </svg>`;
   }else if(rCurve){rCurve.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Logga trades för att se R-kurvan</div>';}
 
