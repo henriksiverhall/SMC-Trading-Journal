@@ -342,13 +342,20 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .journal-modal-grid .half{grid-column:span 2;}
 
 /* DASHBOARD */
-.dashboard-wrap{padding:28px 32px;display:flex;flex-direction:column;gap:22px;max-width:1320px;margin:0 auto;}
-.dash-greeting{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
+.dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;max-width:1360px;margin:0 auto;}
+.dash-greeting{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1.2;}
 .dash-greeting span{color:var(--blue);}
-.dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:3px;}
+.dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:4px;}
+.dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.quick-action-btn{padding:10px 20px;border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.quick-action-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.25);}
+.quick-action-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(37,99,235,.3);}
+.quick-action-btn.primary:hover{background:#1d4ed8;box-shadow:0 4px 14px rgba(37,99,235,.4);}
+
+/* STAT CARDS */
 .dash-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
 .dash-stat{background:var(--bg);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:transform .15s,box-shadow .15s;border-top:3px solid transparent;position:relative;overflow:hidden;}
-.dash-stat:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.1);}
+.dash-stat:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);}
 .dash-stat.c-blue{border-top-color:var(--blue);}
 .dash-stat.c-green{border-top-color:var(--green);}
 .dash-stat.c-teal{border-top-color:var(--teal);}
@@ -361,109 +368,57 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .dash-stat-value.red{color:var(--red);}
 .dash-stat-value.blue{color:var(--blue);}
 .dash-stat-value.amber{color:var(--amber);}
-.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
-.dash-row.three{grid-template-columns:1fr 1fr 1fr;}
+
+/* MAIN GRID */
+.dash-main{display:grid;grid-template-columns:1fr 400px;gap:16px;align-items:start;}
+.dash-side{display:flex;flex-direction:column;gap:16px;}
+.dash-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+/* CARDS */
 .dash-card{background:var(--bg);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .dash-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg);}
 .dash-card-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
 .dash-card-body{padding:16px 18px;}
-.dash-card-scroll{max-height:340px;overflow-y:auto;}
+.dash-card-scroll{max-height:320px;overflow-y:auto;}
 .dash-card-scroll::-webkit-scrollbar{width:4px;}
 .dash-card-scroll::-webkit-scrollbar-track{background:transparent;}
 .dash-card-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-.dash-trade-row{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background .1s;}
+
+/* TRADES TABLE */
+.dash-trade-cols{display:grid;grid-template-columns:82px 52px 42px 58px 52px 1fr;gap:6px;padding:6px 18px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg2);}
+.dash-trade-row{display:grid;grid-template-columns:82px 52px 42px 58px 52px 1fr;gap:6px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background .1s;}
 .dash-trade-row:last-child{border-bottom:none;}
 .dash-trade-row:hover{background:var(--gray-lt);}
-.dash-trade-cols{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;padding:6px 18px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg2);}
-.news-item{padding:9px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;transition:background .1s;}
+
+/* NEWS */
+.news-item{padding:9px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;transition:background .1s;}
 .news-item:last-child{border-bottom:none;}
 .news-item:hover{background:var(--gray-lt);}
-.news-time{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;min-width:44px;padding-top:2px;}
+.news-time{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;min-width:44px;padding-top:2px;line-height:1.4;}
 .news-impact{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
 .news-impact.high{background:var(--red);}
 .news-impact.medium{background:var(--amber);}
 .news-impact.low{background:#94a3b8;}
 .news-title{font-size:12px;color:var(--text2);line-height:1.4;flex:1;font-weight:500;}
 .news-country{font-size:10px;color:var(--text3);margin-top:2px;}
-.news-empty{padding:24px 18px;font-size:12px;color:var(--text3);text-align:center;}
-.news-filter-bar{padding:8px 18px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;background:var(--bg2);}
-.news-filter-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3);transition:all .15s;font-family:var(--font);font-weight:500;}
+.news-empty{padding:20px 18px;font-size:12px;color:var(--text3);text-align:center;}
+.news-filter-bar{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;background:var(--bg2);align-items:center;}
+.news-filter-btn{padding:3px 9px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3);transition:all .15s;font-family:var(--font);font-weight:500;}
 .news-filter-btn.active-high{background:var(--red-lt);color:var(--red);border-color:#fca5a5;}
 .news-filter-btn.active-medium{background:var(--amber-lt);color:var(--amber);border-color:#fcd34d;}
 .news-filter-btn.active-low{background:var(--gray-lt);color:var(--gray);border-color:var(--border);}
-.expand-btn{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px 4px;border-radius:4px;line-height:1;transition:all .15s;}
+.expand-btn{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:2px 4px;border-radius:4px;line-height:1;transition:all .15s;}
 .expand-btn:hover{background:var(--gray-lt);color:var(--text2);}
-.dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
-.quick-action-btn{padding:10px 20px;border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-.quick-action-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.25);}
-.quick-action-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 8px rgba(37,99,235,.3);}
-.quick-action-btn.primary:hover{background:#1d4ed8;box-shadow:0 4px 14px rgba(37,99,235,.4);}
+
+/* STREAK */
 .streak-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--amber-lt),#fef9c3);color:var(--amber);border:1px solid #fcd34d;}
 
+/* INSIGHT CARD */
+.insight-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.insight-item:last-child{border-bottom:none;}
+.insight-label{color:var(--text3);font-size:12px;}
+.insight-value{font-weight:600;font-family:var(--mono);}
 
-
-.dash-greeting span{color:var(--blue);}
-.dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:4px;}
-.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;}
-.dash-stat{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;}
-.dash-stat:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
-.dash-stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
-.dash-stat-value{font-size:26px;font-weight:700;font-family:var(--mono);color:var(--text);}
-.dash-stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
-.dash-stat-value.green{color:var(--green);}
-.dash-stat-value.red{color:var(--red);}
-.dash-stat-value.blue{color:var(--blue);}
-.dash-stat-value.amber{color:var(--amber);}
-.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.dash-row.three{grid-template-columns:1fr 1fr 1fr;}
-.dash-card{background:var(--bg);border-radius:10px;border:1px solid var(--border);padding:0;box-shadow:var(--shadow);overflow:hidden;}
-.dash-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.dash-card-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px;}
-.dash-card-body{padding:14px 18px;}
-.dash-trade-row{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;align-items:center;padding:7px 18px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background .1s;}
-.dash-trade-row:last-child{border-bottom:none;}
-.dash-trade-row:hover{background:var(--gray-lt);}
-.dash-trade-cols{display:grid;grid-template-columns:88px 56px 46px 64px 54px 1fr;gap:8px;padding:6px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
-.news-item{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .1s;}
-.news-item:last-child{border-bottom:none;}
-.news-item:hover{background:var(--gray-lt);}
-.news-time{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;min-width:48px;}
-.news-impact{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
-.news-impact.high{background:var(--red);}
-.news-impact.medium{background:var(--amber);}
-.news-impact.low{background:var(--green);}
-.news-title{font-size:12px;color:var(--text2);line-height:1.4;flex:1;}
-.news-country{font-size:10px;color:var(--text3);margin-top:2px;}
-.news-empty{padding:20px 18px;font-size:12px;color:var(--text3);text-align:center;}
-.dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
-.quick-action-btn{padding:10px 18px;border-radius:var(--r);border:1px solid var(--border);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:7px;}
-.quick-action-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
-.quick-action-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
-.quick-action-btn.primary:hover{background:#1d4ed8;}
-.streak-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--amber-lt);color:var(--amber);}
-
-
-/* ADMIN USER MODAL */
-.admin-modal-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto;}
-.admin-modal-tab{padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text3);border-bottom:2px solid transparent;white-space:nowrap;font-family:var(--font);transition:all .15s;}
-.admin-modal-tab:hover{color:var(--text2);background:var(--gray-lt);}
-.admin-modal-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
-.admin-tab-content{display:none;padding:16px 20px;}
-.admin-tab-content.active{display:block;}
-.admin-info-grid{display:grid;grid-template-columns:160px 1fr;gap:6px 16px;font-size:13px;margin-bottom:16px;}
-.admin-info-label{color:var(--text3);font-size:12px;font-weight:500;}
-.admin-info-value{color:var(--text2);}
-.admin-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-.admin-edit-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--amber-lt);border-bottom:1px solid #fcd34d;}
-.admin-edit-bar.active{display:flex;}
-[data-theme="dark"] .admin-edit-bar{background:#451a03;border-color:#92400e;}
-.admin-field{width:100%;padding:6px 8px;border:1.5px solid var(--blue);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);}
-.cl-accordion{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px;transition:background .1s;}
-.cl-accordion:hover{background:var(--gray-lt);}
-.cl-accordion-body{display:none;padding:8px 12px;background:var(--bg2);border-radius:0 0 var(--r) var(--r);border:1px solid var(--border);border-top:none;margin-top:-6px;margin-bottom:8px;}
-.cl-accordion-body.open{display:block;}
-.cl-chevron{font-size:11px;color:var(--text3);transition:transform .2s;}
-.cl-chevron.open{transform:rotate(180deg);}
 
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
@@ -525,7 +480,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.10</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.0</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -576,7 +531,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.10</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.0</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -602,33 +557,32 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- DASHBOARD PAGE -->
 <div id="page-dashboard" class="page active">
   <div class="dashboard-wrap">
+
+    <!-- Hälsning -->
     <div>
       <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
       <div class="dash-greeting-sub" id="dashDate">—</div>
     </div>
 
-    <!-- Snabbåtgärder -->
+    <!-- Snabbknappar -->
     <div class="dash-quick-actions">
-      <button class="quick-action-btn primary" onclick="showPage('checklist',document.querySelectorAll('.htab')[1])">
-        ✚ Logga trade
-      </button>
-      <button class="quick-action-btn" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">
-        📋 Se journal
-      </button>
+      <button class="quick-action-btn primary" onclick="showPage('journal',document.querySelectorAll('.htab')[1])">✚ Logga trade</button>
+      <button class="quick-action-btn" onclick="showPage('journal',document.querySelectorAll('.htab')[1])">📋 Se journal</button>
     </div>
 
-    <!-- Statistik-rad -->
+    <!-- Stat-kort -->
     <div class="dash-grid" id="dashStats"></div>
 
-    <!-- Trades + Nyheter -->
-    <div class="dash-row">
+    <!-- Huvud: Trades + Kalender -->
+    <div class="dash-main">
+
       <!-- Senaste trades -->
       <div class="dash-card">
         <div class="dash-card-header">
           <div class="dash-card-title">📈 Senaste trades</div>
           <div style="display:flex;gap:6px;align-items:center">
             <button class="expand-btn" onclick="openNewsModal('trades')" title="Expandera">⤢</button>
-            <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">Se alla →</button>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[1])">Se alla →</button>
           </div>
         </div>
         <div class="dash-trade-cols">
@@ -637,7 +591,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="dash-card-scroll" id="dashRecentTrades"></div>
       </div>
 
-      <!-- Ekonomisk kalender -->
+      <!-- Ekonomisk kalender (sida) -->
       <div class="dash-card">
         <div class="dash-card-header">
           <div class="dash-card-title">📰 Ekonomisk kalender</div>
@@ -646,54 +600,61 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
             <button class="expand-btn" onclick="openNewsModal('news')" title="Expandera">⤢</button>
           </div>
         </div>
-        <!-- Datumväljare och snabbknappar -->
-        <div class="news-filter-bar" style="flex-direction:column;align-items:flex-start;gap:8px">
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span style="font-size:11px;color:var(--text3);font-weight:600">Period:</span>
-            <button class="news-filter-btn active-high" id="np-today" onclick="setNewsDateRange('today')">Idag</button>
-            <button class="news-filter-btn" id="np-week" onclick="setNewsDateRange('week')">Denna vecka</button>
-            <button class="news-filter-btn" id="np-nextweek" onclick="setNewsDateRange('nextweek')">Nästa vecka</button>
-            <button class="news-filter-btn" id="np-month" onclick="setNewsDateRange('month')">Denna månad</button>
-            <div style="display:flex;align-items:center;gap:4px;margin-left:4px">
-              <input type="date" id="newsFromDate" class="form-control" style="padding:3px 6px;font-size:11px;width:120px" onchange="setNewsDateRange('custom')">
-              <span style="font-size:11px;color:var(--text3)">–</span>
-              <input type="date" id="newsToDate" class="form-control" style="padding:3px 6px;font-size:11px;width:120px" onchange="setNewsDateRange('custom')">
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span style="font-size:11px;color:var(--text3);font-weight:600">Impact:</span>
-            <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
-            <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
-            <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
-            <span style="font-size:11px;color:var(--text3);font-weight:600;margin-left:4px">Land:</span>
-            <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
-            <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
-            <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
-            <button class="news-filter-btn active-high" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
-            <button class="news-filter-btn" id="nf-CA" onclick="toggleCountryFilter('CA')">🇨🇦 CA</button>
-            <button class="news-filter-btn" id="nf-AU" onclick="toggleCountryFilter('AU')">🇦🇺 AU</button>
-            <button class="news-filter-btn" id="nf-CH" onclick="toggleCountryFilter('CH')">🇨🇭 CH</button>
-            <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla</button>
-          </div>
+        <!-- Period-knappar -->
+        <div class="news-filter-bar">
+          <span style="font-size:11px;color:var(--text3);font-weight:600">Period:</span>
+          <button class="news-filter-btn active-high" id="np-today" onclick="setNewsDateRange('today')">Idag</button>
+          <button class="news-filter-btn" id="np-week" onclick="setNewsDateRange('week')">Denna vecka</button>
+          <button class="news-filter-btn" id="np-nextweek" onclick="setNewsDateRange('nextweek')">Nästa vecka</button>
+          <button class="news-filter-btn" id="np-month" onclick="setNewsDateRange('month')">Månaden</button>
+        </div>
+        <!-- Datumfält -->
+        <div class="news-filter-bar" style="gap:4px">
+          <input type="date" id="newsFromDate" class="form-control" style="padding:3px 6px;font-size:11px;width:115px" onchange="setNewsDateRange('custom')">
+          <span style="font-size:11px;color:var(--text3)">–</span>
+          <input type="date" id="newsToDate" class="form-control" style="padding:3px 6px;font-size:11px;width:115px" onchange="setNewsDateRange('custom')">
+        </div>
+        <!-- Impact-filter -->
+        <div class="news-filter-bar">
+          <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
+          <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
+          <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
+          <span style="font-size:11px;color:var(--text3);margin-left:4px">Land:</span>
+          <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
+          <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
+          <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
+          <button class="news-filter-btn" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
+          <button class="news-filter-btn" id="nf-CA" onclick="toggleCountryFilter('CA')">🇨🇦 CA</button>
+          <button class="news-filter-btn" id="nf-AU" onclick="toggleCountryFilter('AU')">🇦🇺 AU</button>
+          <button class="news-filter-btn" id="nf-CH" onclick="toggleCountryFilter('CH')">🇨🇭 CH</button>
+          <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla</button>
         </div>
         <div class="dash-card-scroll" id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
       </div>
+
     </div>
 
-    <!-- Streak + Grade-fördelning -->
-    <div class="dash-row three">
+    <!-- Botten: Streak + Grade + Månad + Insights -->
+    <div class="dash-bottom">
+
+      <!-- Streak & Historik -->
       <div class="dash-card">
         <div class="dash-card-header"><div class="dash-card-title">🔥 Streak & Historik</div></div>
         <div class="dash-card-body" id="dashStreak"></div>
       </div>
+
+      <!-- Grade-fördelning -->
       <div class="dash-card">
         <div class="dash-card-header"><div class="dash-card-title">🏅 Grade-fördelning</div></div>
         <div class="dash-card-body" id="dashGrades"></div>
       </div>
+
+      <!-- Insights -->
       <div class="dash-card">
-        <div class="dash-card-header"><div class="dash-card-title">📊 Denna månad</div></div>
-        <div class="dash-card-body" id="dashMonth"></div>
+        <div class="dash-card-header"><div class="dash-card-title">💡 Insights</div></div>
+        <div class="dash-card-body" id="dashInsights"></div>
       </div>
+
     </div>
   </div>
 </div>
@@ -2664,6 +2625,7 @@ async function loadDashboard(){
   renderDashStreak();
   renderDashGrades();
   renderDashMonth();
+  renderDashInsights();
   await loadNews();
   // Admin-knapp - kolla user_settings i DB
   try{
@@ -2763,6 +2725,67 @@ function renderDashGrades(){
       <span style="font-size:11px;color:var(--text3);width:30px;text-align:right">${counts[g]}</span>
     </div>`).join('');
 }
+
+function renderDashInsights(){
+  const el=document.getElementById('dashInsights');
+  if(!el)return;
+  if(!journal.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:10px">Logga trades för att se insights.</div>';
+    return;
+  }
+  const withR=journal.filter(t=>t.result!=null);
+  // Bästa strategi
+  const stratMap={};
+  journal.forEach(t=>{
+    if(!t.strategy)return;
+    if(!stratMap[t.strategy])stratMap[t.strategy]={wins:0,total:0};
+    stratMap[t.strategy].total++;
+    if(t.outcome==='W')stratMap[t.strategy].wins++;
+  });
+  const bestStrat=Object.entries(stratMap).sort((a,b)=>(b[1].wins/b[1].total)-(a[1].wins/a[1].total))[0];
+  // Bästa dag
+  const dayMap={0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  const dayCount={0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  journal.forEach(t=>{
+    if(!t.date)return;
+    const d=new Date(t.date).getDay();
+    dayCount[d]++;
+    if(t.outcome==='W')dayMap[d]++;
+  });
+  const days=['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
+  const bestDay=Object.entries(dayMap).filter(([d])=>dayCount[d]>0).sort((a,b)=>(b[1]/dayCount[b[0]])-(a[1]/dayCount[a[0]]))[0];
+  // Avg R per grade
+  const gradeR={'A+':[],'A':[],'B':[],'C':[]};
+  withR.forEach(t=>{if(t.grade&&gradeR[t.grade])gradeR[t.grade].push(t.result);});
+  const bestGradeR=Object.entries(gradeR).filter(([,v])=>v.length>0).map(([g,v])=>({g,avg:v.reduce((a,b)=>a+b,0)/v.length,count:v.length})).sort((a,b)=>b.avg-a.avg)[0];
+  // Denna vecka R
+  const weekStart=new Date();weekStart.setDate(weekStart.getDate()-weekStart.getDay()+1);weekStart.setHours(0,0,0,0);
+  const weekTrades=withR.filter(t=>t.date&&new Date(t.date)>=weekStart);
+  const weekR=weekTrades.reduce((a,t)=>a+(t.result||0),0);
+
+  el.innerHTML=`
+    <div class="insight-item">
+      <span class="insight-label">Denna vecka</span>
+      <span class="insight-value ${weekR>0?'r-pos':weekR<0?'r-neg':'r-neu'}">${weekTrades.length?((weekR>=0?'+':'')+weekR.toFixed(2)+'R'):'—'}</span>
+    </div>
+    <div class="insight-item">
+      <span class="insight-label">Bästa strategi</span>
+      <span class="insight-value" style="font-size:11px;max-width:120px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bestStrat?bestStrat[0].substring(0,18):'—'}</span>
+    </div>
+    <div class="insight-item">
+      <span class="insight-label">Starkaste dag</span>
+      <span class="insight-value">${bestDay?days[bestDay[0]]:'—'}</span>
+    </div>
+    <div class="insight-item">
+      <span class="insight-label">Bästa grade (avg R)</span>
+      <span class="insight-value ${bestGradeR?'r-pos':''}">${bestGradeR?bestGradeR.g+' +'+bestGradeR.avg.toFixed(2)+'R':'—'}</span>
+    </div>
+    <div class="insight-item">
+      <span class="insight-label">Trades denna månad</span>
+      <span class="insight-value blue">${journal.filter(t=>t.date&&t.date.startsWith(new Date().toISOString().slice(0,7))).length}</span>
+    </div>`;
+}
+
 
 function renderDashMonth(){
   const el=document.getElementById('dashMonth');
@@ -3657,7 +3680,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.10</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.0</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
