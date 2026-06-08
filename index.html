@@ -482,6 +482,18 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .news-impact.low{background:#94a3b8;}
 .news-title{font-size:12px;color:var(--text2);line-height:1.4;flex:1;font-weight:500;}
 .news-country{font-size:10px;color:var(--text3);margin-top:2px;}
+
+.news-table-th{padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);}
+.news-table-th:first-child,.news-table-th:nth-child(3),.news-table-th:nth-child(4){text-align:left;}
+.news-table-row{border-bottom:1px solid var(--border);transition:background .1s;}
+.news-table-row:last-child{border-bottom:none;}
+.news-table-row:hover{background:var(--gray-lt);}
+.news-table-day{padding:6px 10px;font-size:11px;line-height:1.3;white-space:nowrap;}
+.news-table-time{padding:6px 10px;font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;}
+.news-table-country{padding:6px 6px;white-space:nowrap;}
+.news-table-event{padding:6px 10px;font-size:12px;color:var(--text2);}
+.news-table-num{padding:6px 10px;font-family:var(--mono);font-size:11px;text-align:right;white-space:nowrap;}
+
 .news-empty{padding:20px 18px;font-size:12px;color:var(--text3);text-align:center;}
 .news-filter-bar{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;background:var(--bg2);align-items:center;}
 .news-filter-btn{padding:3px 9px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3);transition:all .15s;font-family:var(--font);font-weight:500;}
@@ -561,7 +573,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.2</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.3</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -612,14 +624,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.2</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.3</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
       <button class="htab" onclick="showPage('checklist',this)">Checklist</button>
+      <button class="htab" onclick="showPage('analytics',this)">Analytics</button>
     </div>
     <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
+    <button class="logout-btn" onclick="doLogout()" style="font-size:12px;padding:5px 12px">Logga ut</button>
     <div class="avatar-wrap" id="avatarWrap">
       <button class="avatar-btn" onclick="toggleAvatarMenu()" id="avatarBtn" title="Konto">H</button>
       <div class="avatar-menu" id="avatarMenu" style="display:none">
@@ -642,8 +656,9 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <!-- Hälsning -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
+        <div class="dash-greeting"><span id="dashName">—</span></div>
         <div class="dash-greeting-sub" id="dashDate">—</div>
+        <div class="dash-greeting-sub" id="dashStatusLine" style="margin-top:4px;color:var(--blue);font-weight:500"></div>
       </div>
       <button class="btn btn-ghost btn-sm" id="dashCustomizeBtn" onclick="toggleDashEdit()" style="margin-top:6px;border-color:var(--amber);color:var(--amber)">✏️ Anpassa layout</button>
     </div>
@@ -1098,6 +1113,63 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
   </div>
 </div>
+
+
+<!-- ANALYTICS PAGE -->
+<div id="page-analytics" class="page" style="padding:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--text)">📊 Analytics</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:2px">Djupanalys av dina trades</div>
+    </div>
+    <select class="filter-select" id="analyticsStratFilter" onchange="renderAnalytics()" style="min-width:200px">
+      <option value="">Alla strategier</option>
+    </select>
+  </div>
+
+  <!-- Nyckeltal rad 1 -->
+  <div class="stats-row" style="margin-bottom:16px" id="analyticsStats"></div>
+
+  <!-- Grid med analyskort -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- Win rate per dag -->
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">📅 Win rate per veckodag</div></div>
+      <div class="dash-card-body" id="analyticsByDay"></div>
+    </div>
+
+    <!-- R-fördelning per grade -->
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">🏅 Genomsnittlig R per grade</div></div>
+      <div class="dash-card-body" id="analyticsByGrade"></div>
+    </div>
+
+    <!-- Win rate per strategi -->
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">🎯 Win rate per strategi</div></div>
+      <div class="dash-card-body" id="analyticsByStrategy"></div>
+    </div>
+
+    <!-- Checklist % vs utfall -->
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">✅ Checklist % vs utfall</div></div>
+      <div class="dash-card-body" id="analyticsByChecklist"></div>
+    </div>
+
+  </div>
+
+  <!-- Egna fält-statistik -->
+  <div id="analyticsCustomFields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px"></div>
+
+  <!-- R-kurva över tid -->
+  <div class="dash-card" style="margin-bottom:16px">
+    <div class="dash-card-header"><div class="dash-card-title">📈 Kumulativ R-kurva</div></div>
+    <div class="dash-card-body" id="analyticsRCurve"></div>
+  </div>
+
+</div>
+
 
 <!-- TRADE MODAL -->
 <div class="modal-backdrop" id="tradeModal">
@@ -1880,7 +1952,7 @@ async function onLogin(user){
   updateFilterOptions();
   applyFieldSettings();
   // Återställ senast besökta sida
-  const validPages=['dashboard','journal','checklist','profil','admin'];
+  const validPages=['dashboard','journal','checklist','analytics','profil','admin'];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
   _appReady = true;
@@ -2821,12 +2893,22 @@ const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
   if(!currentUser)return;
-  // Namn – hämta från userSettings (display_name sparas där, inte i user_metadata)
   const displayName=userSettings.displayName||userSettings.display_name||
     currentUser.user_metadata?.display_name||
     (currentUser.email||'').split('@')[0];
   const nameEl=document.getElementById('dashName');
   if(nameEl)nameEl.textContent=displayName;
+  // Statusrad
+  const statusEl=document.getElementById('dashStatusLine');
+  if(statusEl){
+    const wR=journal.filter(t=>t.result!=null);
+    const totalR=wR.reduce((a,t)=>a+(t.result||0),0);
+    const wr=wR.length?Math.round(wR.filter(t=>t.outcome==='W').length/wR.length*100):null;
+    statusEl.textContent=journal.length
+      ? `${journal.length} trades loggade · ${wr!==null?wr+'% win rate · ':''}`+
+        `${totalR>=0?'+':''}${totalR.toFixed(2)}R totalt`
+      : 'Inga trades loggade ännu – logga din första trade!';
+  }
   const now=new Date();
   document.getElementById('dashDate').textContent=now.toLocaleDateString('sv-SE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   // Stats
@@ -3099,6 +3181,7 @@ function openNewsModal(type){
   const footer=document.getElementById('tradeModal').querySelector('.modal-footer');
   if(type==='news'){
     title.textContent='📰 Ekonomisk kalender – fullständig lista';
+    document.querySelector('#tradeModal .modal').style.maxWidth='860px';
     footer.style.display='none';
     let html='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
     html+=['high','medium','low'].map(l=>`<button class="news-filter-btn ${newsFilterImpact.has(l)?'active-'+l:''}" onclick="toggleNewsFilter('${l}');this.className='news-filter-btn '+(newsFilterImpact.has('${l}')?'active-${l}':'')">${l==='high'?'🔴 Hög':l==='medium'?'🟡 Medium':'⚪ Låg'}</button>`).join('');
@@ -3110,6 +3193,7 @@ function openNewsModal(type){
     }),document.getElementById('modalNewsList'));
   }else if(type==='trades'){
     title.textContent='📈 Alla senaste trades';
+    document.querySelector('#tradeModal .modal').style.maxWidth='680px';
     footer.style.display='none';
     body.innerHTML=`<div style="overflow-x:auto"><table class="jtable" style="font-size:12px">
       <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Strategi</th></tr></thead>
@@ -3893,7 +3977,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.2</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.3</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -3937,6 +4021,183 @@ async function requestAccountDeletion(){
 }
 
 
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────────
+function renderAnalytics(){
+  const stratFilter=document.getElementById('analyticsStratFilter')?.value||'';
+  const trades=stratFilter?journal.filter(t=>t.strategy===stratFilter):journal;
+  const withR=trades.filter(t=>t.result!=null);
+
+  // Uppdatera strategi-filter options
+  const sel=document.getElementById('analyticsStratFilter');
+  if(sel){
+    const current=sel.value;
+    const strats=[...new Set(journal.map(t=>t.strategy).filter(Boolean))];
+    sel.innerHTML='<option value="">Alla strategier</option>'+strats.map(s=>`<option value="${s}" ${s===current?'selected':''}>${s}</option>`).join('');
+  }
+
+  // ── Nyckeltal ───────────────────────────────────────────────────────────────
+  const wins=withR.filter(t=>t.outcome==='W').length;
+  const losses=withR.filter(t=>t.outcome==='L').length;
+  const wr=withR.length?(wins/withR.length*100).toFixed(1)+'%':'—';
+  const totalR=withR.reduce((a,t)=>a+(t.result||0),0);
+  const avgR=withR.length?(totalR/withR.length).toFixed(2):'—';
+  const winR=withR.filter(t=>t.result>0).reduce((a,t)=>a+t.result,0);
+  const lossR=Math.abs(withR.filter(t=>t.result<0).reduce((a,t)=>a+t.result,0));
+  const pf=lossR>0?(winR/lossR).toFixed(2):'—';
+  const avgWin=wins>0?(winR/wins).toFixed(2):'—';
+  const avgLoss=losses>0?(lossR/losses).toFixed(2):'—';
+  const expectancy=withR.length?((wins/withR.length)*parseFloat(avgWin||0)-(losses/withR.length)*parseFloat(avgLoss||0)).toFixed(2):'—';
+
+  const statsEl=document.getElementById('analyticsStats');
+  if(statsEl) statsEl.innerHTML=`
+    <div class="stat-card c-blue"><div class="stat-label">Trades</div><div class="stat-value blue">${trades.length}</div></div>
+    <div class="stat-card c-green"><div class="stat-label">Win Rate</div><div class="stat-value ${parseFloat(wr)>50?'green':parseFloat(wr)<45?'red':''}">${wr}</div></div>
+    <div class="stat-card c-teal"><div class="stat-label">Profit Factor</div><div class="stat-value ${parseFloat(pf)>1.5?'green':parseFloat(pf)<1?'red':''}">${pf}</div></div>
+    <div class="stat-card c-purple"><div class="stat-label">Avg Win / Loss</div><div class="stat-value" style="font-size:16px"><span class="r-pos">+${avgWin}R</span> / <span class="r-neg">-${avgLoss}R</span></div></div>
+    <div class="stat-card c-amber"><div class="stat-label">Expectancy</div><div class="stat-value ${parseFloat(expectancy)>0?'green':parseFloat(expectancy)<0?'red':''}">${expectancy}R</div></div>
+  `;
+
+  // ── Win rate per veckodag ───────────────────────────────────────────────────
+  const days=['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
+  const dayData=days.map((d,i)=>{
+    const idx=i+1===7?0:i+1; // Måndag=1..Söndag=0
+    const dt=trades.filter(t=>t.date&&new Date(t.date).getDay()===idx);
+    const dw=dt.filter(t=>t.outcome==='W').length;
+    return{day:d,total:dt.length,wins:dw,wr:dt.length?(dw/dt.length*100).toFixed(0):null};
+  });
+  const byDay=document.getElementById('analyticsByDay');
+  if(byDay) byDay.innerHTML=dayData.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="width:28px;font-size:12px;color:var(--text3);font-weight:500">${d.day}</span>
+      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${d.wr||0}%;background:${d.wr>55?'var(--green)':d.wr<40?'var(--red)':'var(--amber)'};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right;color:${d.wr>55?'var(--green)':d.wr<40?'var(--red)':'var(--text3)'}">${d.wr!==null?d.wr+'%':'—'}</span>
+      <span style="font-size:11px;color:var(--text3);min-width:30px">${d.total}st</span>
+    </div>`).join('');
+
+  // ── R per grade ─────────────────────────────────────────────────────────────
+  const gradeColors={'A+':'var(--green)','A':'var(--teal)','B':'var(--amber)','C':'var(--red)'};
+  const gradeData=['A+','A','B','C'].map(g=>{
+    const gt=withR.filter(t=>t.grade===g);
+    const avg=gt.length?(gt.reduce((a,t)=>a+t.result,0)/gt.length).toFixed(2):null;
+    const wr=gt.length?(gt.filter(t=>t.outcome==='W').length/gt.length*100).toFixed(0):null;
+    return{grade:g,count:gt.length,avg,wr,color:gradeColors[g]};
+  });
+  const byGrade=document.getElementById('analyticsByGrade');
+  if(byGrade) byGrade.innerHTML=gradeData.map(g=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="width:24px;font-size:13px;font-weight:700;color:${g.color}">${g.grade}</span>
+      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${g.avg!==null?Math.min(Math.abs(parseFloat(g.avg))/5*100,100):0}%;background:${parseFloat(g.avg)>0?'var(--green)':'var(--red)'};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:12px;min-width:56px;text-align:right;color:${parseFloat(g.avg)>0?'var(--green)':parseFloat(g.avg)<0?'var(--red)':'var(--text3)'}">${g.avg!==null?(parseFloat(g.avg)>0?'+':'')+g.avg+'R':'—'}</span>
+      <span style="font-size:11px;color:var(--text3);min-width:30px">${g.count}st</span>
+    </div>`).join('');
+
+  // ── Win rate per strategi ───────────────────────────────────────────────────
+  const stratData=Object.entries(
+    trades.reduce((acc,t)=>{
+      if(!t.strategy)return acc;
+      if(!acc[t.strategy])acc[t.strategy]={wins:0,total:0,r:0};
+      acc[t.strategy].total++;
+      if(t.outcome==='W')acc[t.strategy].wins++;
+      if(t.result!=null)acc[t.strategy].r+=t.result;
+      return acc;
+    },{})
+  ).map(([s,d])=>({strat:s,...d,wr:d.total?(d.wins/d.total*100).toFixed(0):0}))
+   .sort((a,b)=>b.total-a.total);
+  const byStrat=document.getElementById('analyticsByStrategy');
+  if(byStrat) byStrat.innerHTML=stratData.length?stratData.map(s=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.strat}">${s.strat}</span>
+      <div style="width:80px;height:16px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${s.wr}%;background:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right;color:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--text3)'}">${s.wr}%</span>
+      <span style="font-size:10px;color:var(--text3);min-width:24px">${s.total}st</span>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">Inga data</div>';
+
+  // ── Checklist % vs utfall ───────────────────────────────────────────────────
+  const clBuckets=[{label:'0–25%',min:0,max:25},{label:'26–50%',min:26,max:50},{label:'51–75%',min:51,max:75},{label:'76–100%',min:76,max:100}];
+  const clData=clBuckets.map(b=>{
+    const bt=trades.filter(t=>t.checklist_pct!=null&&t.checklist_pct>=b.min&&t.checklist_pct<=b.max);
+    const bw=bt.filter(t=>t.outcome==='W').length;
+    return{...b,total:bt.length,wins:bw,wr:bt.length?(bw/bt.length*100).toFixed(0):null};
+  });
+  const byCl=document.getElementById('analyticsByChecklist');
+  if(byCl) byCl.innerHTML=`
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Visar sambandet mellan checklist-följsamhet och win rate</div>
+    ${clData.map(b=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="width:60px;font-size:11px;color:var(--text3)">${b.label}</span>
+      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${b.wr||0}%;background:${b.wr>55?'var(--green)':b.wr<40?'var(--red)':'var(--amber)'};border-radius:4px"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right">${b.wr!==null?b.wr+'%':'—'}</span>
+      <span style="font-size:11px;color:var(--text3);min-width:30px">${b.total}st</span>
+    </div>`).join('')}`;
+
+  // ── Egna dropdown-fält ──────────────────────────────────────────────────────
+  const cfContainer=document.getElementById('analyticsCustomFields');
+  if(cfContainer&&customFields.length){
+    const dropdownFields=customFields.filter(f=>f.type==='select'&&f.options?.length);
+    cfContainer.innerHTML=dropdownFields.map(f=>{
+      const optData=(f.options||[]).map(opt=>{
+        const ot=trades.filter(t=>t.custom_data&&t.custom_data[f.name]===opt);
+        const ow=ot.filter(t=>t.outcome==='W').length;
+        return{opt,total:ot.length,wins:ow,wr:ot.length?(ow/ot.length*100).toFixed(0):null};
+      }).filter(o=>o.total>0);
+      if(!optData.length)return'';
+      return`<div class="dash-card">
+        <div class="dash-card-header"><div class="dash-card-title">🔍 ${f.name} – win rate</div></div>
+        <div class="dash-card-body">
+          ${optData.map(o=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="width:70px;font-size:12px;color:var(--text2);font-weight:500">${o.opt}</span>
+            <div style="flex:1;height:18px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${o.wr||0}%;background:${o.wr>55?'var(--green)':o.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
+            </div>
+            <span style="font-family:var(--mono);font-size:11px;min-width:40px;text-align:right">${o.wr!==null?o.wr+'%':'—'}</span>
+            <span style="font-size:10px;color:var(--text3)">${o.total}st</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }else if(cfContainer){cfContainer.innerHTML='';}
+
+  // ── Kumulativ R-kurva ───────────────────────────────────────────────────────
+  const rCurve=document.getElementById('analyticsRCurve');
+  if(rCurve&&withR.length){
+    const sorted=[...withR].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    let cum=0;
+    const points=sorted.map((t,i)=>{cum+=t.result||0;return{x:i,y:cum,date:t.date,r:t.result};});
+    const maxY=Math.max(...points.map(p=>p.y),0.1);
+    const minY=Math.min(...points.map(p=>p.y),0);
+    const range=maxY-minY||1;
+    const w=700,h=140,pad=20;
+    const toX=x=>pad+(x/(points.length-1||1))*(w-pad*2);
+    const toY=y=>h-pad-(y-minY)/range*(h-pad*2);
+    const pathD=points.map((p,i)=>`${i===0?'M':'L'}${toX(p.x).toFixed(1)},${toY(p.y).toFixed(1)}`).join(' ');
+    const lastP=points[points.length-1];
+    const color=lastP.y>=0?'var(--green)':'var(--red)';
+    rCurve.innerHTML=`
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Kumulativ R: <span class="${lastP.y>=0?'r-pos':'r-neg'}" style="font-family:var(--mono);font-weight:600">${lastP.y>=0?'+':''}${lastP.y.toFixed(2)}R</span> över ${points.length} trades</div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px">
+        <defs><linearGradient id="rGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity=".2"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="${pathD} L${toX(points.length-1)},${h-pad} L${toX(0)},${h-pad} Z" fill="url(#rGrad)"/>
+        <path d="${pathD}" stroke="${color}" stroke-width="2" fill="none" stroke-linejoin="round"/>
+        <line x1="${pad}" y1="${toY(0).toFixed(1)}" x2="${w-pad}" y2="${toY(0).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>
+        ${points.filter((_,i)=>i===0||i===points.length-1||(i+1)%Math.max(1,Math.floor(points.length/8))===0).map(p=>`
+          <circle cx="${toX(p.x).toFixed(1)}" cy="${toY(p.y).toFixed(1)}" r="3" fill="${p.y>=0?'var(--green)':'var(--red)'}"/>
+        `).join('')}
+      </svg>`;
+  }else if(rCurve){rCurve.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Logga trades för att se R-kurvan</div>';}
+}
+
+
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
   // Dölj alla sidor explicit
@@ -3954,6 +4215,7 @@ function showPage(p,btn){
   if(p==='profil'){loadProfil();}
   if(p==='dashboard'){loadDashboard();}
   if(p==='admin'){loadAdminData();}
+  if(p==='analytics'){renderAnalytics();}
 }
 function updateStats(){
   const fs=document.getElementById('filterStrategy').value;
