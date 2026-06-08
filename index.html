@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.8</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.9</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,7 +560,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.8</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.9</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1881,20 +1881,26 @@ function createNewStrategy(){
   if(!name){document.getElementById('strategyPicker').value=activeStratKey;return;}
   const key='custom_'+Date.now();
   const newStrat={key,name,phases:[
-    {id:'prep',title:'Förberedelse',color:'#6366f1',items:[{id:'p1',label:'Nytt steg',sub:'',blocker:false,stop:'',journal:false}]},
-    {id:'setup',title:'Setup',color:'#0891b2',items:[{id:'s1',label:'Nytt steg',sub:'',blocker:false,stop:'',journal:false}]},
+    {id:'prep'+Date.now(),title:'Förberedelse',color:'#6366f1',items:[{id:'p1'+Date.now(),label:'Nytt steg',sub:'',blocker:false,stop:'',journal:false}]},
+    {id:'setup'+Date.now(),title:'Setup',color:'#0891b2',items:[{id:'s1'+Date.now(),label:'Nytt steg',sub:'',blocker:false,stop:'',journal:false}]},
   ]};
-  userChecklists.push({strategy_key:key,name,phases:newStrat.phases});
   activeStratKey=key;
   activeStrat=newStrat;
-  populateStrategyPicker();
-  // Spara och vänta på DB-id innan editor öppnas
-  saveChecklistToDB(newStrat).then(()=>{
+  // Spara direkt till DB (utan att pusha till userChecklists först - saveChecklistToDB gör det)
+  sb.from('checklists').insert([{
+    user_id:currentUser.id,
+    strategy_key:key,
+    name:name,
+    phases:newStrat.phases
+  }]).select().then(({data})=>{
+    if(data&&data[0])userChecklists.push(data[0]);
+    populateStrategyPicker();
+    editorOpen=false;
     toggleEditor();
   });
 }
 
-// ── CHECKLIST RENDER ──────────────────────────────────────────────────────────
+
 function renderChecklist(){
   const strat=activeStrat||getActiveChecklist();
   const container=document.getElementById('checklistContainer');
@@ -1983,10 +1989,13 @@ function resetChecklist(){
 // ── CHECKLIST EDITOR ──────────────────────────────────────────────────────────
 function toggleEditor(){
   editorOpen=!editorOpen;
-  document.getElementById('clEditor').style.display=editorOpen?'block':'none';
-  document.getElementById('tradeFormPanel').style.display=editorOpen?'none':'block';
+  const ed=document.getElementById('clEditor');
+  const wrap=document.getElementById('clEditorWrap');
+  if(ed)ed.style.display=editorOpen?'block':'none';
+  if(wrap)wrap.style.display=editorOpen?'block':'none';
   if(editorOpen)renderEditor();
 }
+
 
 function renderEditor(){
   const strat=activeStrat||getActiveChecklist();
@@ -2072,7 +2081,6 @@ async function saveChecklist(){
   if(ind)ind.textContent='💾 sparar…';
   await saveChecklistToDB(strat);
   if(ind){ind.textContent='✓ sparat';setTimeout(()=>ind.textContent='',2000);}
-  // Stäng editor
   editorOpen=false;
   const ed=document.getElementById('clEditor');
   const wrap=document.getElementById('clEditorWrap');
@@ -2080,9 +2088,10 @@ async function saveChecklist(){
   if(wrap)wrap.style.display='none';
   renderChecklist();
   renderJournalTaggedFields();
+  populateStrategyPicker();
 }
 
-// ── RR CALC ───────────────────────────────────────────────────────────────────
+
 function calcRR(isModal){
   const p=isModal?'m-':'f-';
   const dispId=isModal?'mRrDisplay':'rrDisplay';
@@ -3631,7 +3640,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.8</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.9</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
