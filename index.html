@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.0</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.1</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,12 +560,12 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.0</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
-      <button class="htab" onclick="showPage('checklist',this)">Trading</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
+      <button class="htab" onclick="showPage('checklist',this)">Checklist</button>
     </div>
     <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
     <div class="avatar-wrap" id="avatarWrap">
@@ -766,31 +766,122 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 <!-- JOURNAL PAGE -->
 <div id="page-journal" class="page" style="padding:18px">
+
+  <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-label">Trades</div><div class="stat-value blue" id="s-total">0</div></div>
-    <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" id="s-wr">—</div></div>
-    <div class="stat-card"><div class="stat-label">Avg R</div><div class="stat-value" id="s-avgr">—</div></div>
-    <div class="stat-card"><div class="stat-label">Total R</div><div class="stat-value" id="s-totalr">—</div></div>
-    <div class="stat-card"><div class="stat-label">Profit Factor</div><div class="stat-value" id="s-pf">—</div></div>
+    <div class="stat-card c-blue"><div class="stat-label">Trades</div><div class="stat-value blue" id="s-total">0</div></div>
+    <div class="stat-card c-green"><div class="stat-label">Win Rate</div><div class="stat-value" id="s-wr">—</div></div>
+    <div class="stat-card c-teal"><div class="stat-label">Avg R</div><div class="stat-value" id="s-avgr">—</div></div>
+    <div class="stat-card c-purple"><div class="stat-label">Total R</div><div class="stat-value" id="s-totalr">—</div></div>
+    <div class="stat-card c-amber"><div class="stat-label">Profit Factor</div><div class="stat-value" id="s-pf">—</div></div>
   </div>
-  <div class="journal-section">
-    <div class="journal-header">
-      <div class="journal-title">Trade Journal</div>
-      <div class="journal-filters">
-        <select class="filter-select" id="filterStrategy" onchange="renderJournal()"><option value="">Alla strategier</option></select>
-        <select class="filter-select" id="filterOutcome" onchange="renderJournal()">
-          <option value="">Alla utfall</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">BE</option>
-        </select>
-        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">↓ CSV</button>
+
+  <!-- JOURNAL FORM + TABLE layout -->
+  <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+
+    <!-- VÄNSTER: Journalformulär -->
+    <div class="trade-form">
+      <div class="form-header">
+        <div class="form-header-title">📋 Journalför trade</div>
+        <div class="form-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="toggleFieldManager()">⚙ Anpassa</button>
+          <button class="btn btn-primary btn-sm" onclick="logToJournal()">💾 Spara</button>
+        </div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr">
+        <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
+        <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
+        <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="NQ, ES, XAU…"></div>
+        <div class="form-group"><label>Riktning</label>
+          <select class="form-control" id="f-direction">
+            <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Utfall</label>
+          <select class="form-control" id="f-outcome" onchange="calcRR(false)">
+            <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
+          </select>
+        </div>
+        <div class="form-group" id="rrDisplayGroup"><label>R <span style="color:var(--text3);font-size:10px">auto</span></label>
+          <div class="rr-display" id="rrDisplay">—</div>
+        </div>
+        <div class="form-group" id="gradeGroup"><label>Grade</label>
+          <div class="grade-btns" id="mainGradeBtns">
+            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','main')">A+</button>
+            <button class="grade-btn" data-grade="A" onclick="setGrade('A','main')">A</button>
+            <button class="grade-btn" data-grade="B" onclick="setGrade('B','main')">B</button>
+            <button class="grade-btn" data-grade="C" onclick="setGrade('C','main')">C</button>
+          </div>
+        </div>
+        <div class="form-group" id="riskGroup" style="grid-column:1/-1">
+          <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings()">
+            <span style="font-size:12px;color:var(--text3)">%</span>
+            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="Konto" style="flex:1" oninput="saveRiskSettings()">
+            <select class="form-control" id="f-currency" style="width:64px" onchange="saveRiskSettings()">
+              <option value="SEK">SEK</option><option value="USD">USD</option><option value="EUR">EUR</option>
+            </select>
+          </div>
+          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
+        </div>
+        <div class="form-group" id="accountSizeGroup" style="display:none"></div>
+        <div class="form-group" id="mediaGroup" style="grid-column:1/-1"><label>Chart / Skärmbild</label>
+          <div class="media-input-wrap">
+            <input type="text" class="form-control" id="f-media" placeholder="URL eller ladda upp →" oninput="previewMedia('f-media','mediaPreview')">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'f-media','mediaPreview')"></label>
+          </div>
+          <img id="mediaPreview" class="media-preview" src="" alt="" onclick="openImgModal(this.src)">
+        </div>
+        <div class="form-group wide" style="grid-column:1/-1"><label>Noteringar</label>
+          <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre?"></textarea>
+        </div>
+      </div>
+      <div id="customFieldsSection" style="display:none"><div id="customFieldInputs" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"></div></div>
+      <div class="field-manager" id="fieldManager" style="display:none;margin-top:12px">
+        <div class="field-manager-title">⚙ Fält – visa/dölj & tvingande</div>
+        <div id="stdFieldList" style="margin-bottom:12px"></div>
+        <div class="field-manager-title" style="margin-top:12px">➕ Egna fält</div>
+        <div id="fieldList"></div>
+        <div class="add-field-row">
+          <input type="text" id="newFieldName" placeholder="Fältnamn">
+          <select id="newFieldType" onchange="toggleDropdownOptions(this.value)">
+            <option value="text">Text</option><option value="number">Nummer</option><option value="select">Dropdown</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="addCustomField()">+ Lägg till</button>
+        </div>
+        <div id="dropdownOptionsRow" style="display:none;margin-top:6px">
+          <input type="text" id="newFieldOptions" placeholder="val1,val2,val3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font)">
+        </div>
+      </div>
+      <span id="savingIndicator" style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:8px;display:block"></span>
+    </div>
+
+    <!-- HÖGER: Journal-tabell -->
+    <div>
+      <div class="journal-section">
+        <div class="journal-header">
+          <div class="journal-title">Trade Journal</div>
+          <div class="journal-filters">
+            <select class="filter-select" id="filterStrategy" onchange="renderJournal()">
+              <option value="">Alla strategier</option>
+            </select>
+            <select class="filter-select" id="filterOutcome" onchange="renderJournal()">
+              <option value="">Alla utfall</option>
+              <option value="W">Win</option><option value="L">Loss</option><option value="BE">BE</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="exportCSV()">↓ CSV</button>
+          </div>
+        </div>
+        <div id="journalBody" style="overflow-x:auto"></div>
       </div>
     </div>
-    <div id="journalBody" style="overflow-x:auto"></div>
+
   </div>
 </div>
-
-
-
-
 
 <!-- ADMIN PAGE -->
 <div id="page-admin" class="page" style="padding:0">
@@ -1700,7 +1791,7 @@ async function onLogin(user){
   updateFilterOptions();
   applyFieldSettings();
   // Återställ senast besökta sida
-  const validPages=['dashboard','checklist','journal','profil','admin'];
+  const validPages=['dashboard','journal','checklist','profil','admin'];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
   showPage(startPage,null);
@@ -2383,7 +2474,14 @@ async function logToJournal(){
     custom_data:{...customData,...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})},
   };
   const saved=await saveTrade(trade);
-  if(saved){resetChecklist();renderRecentTrades();updateFilterOptions();closeJournalModal();}
+  if(saved){
+    const onJournal=document.getElementById('page-journal').style.display==='block';
+    resetChecklist();
+    renderRecentTrades();
+    updateFilterOptions();
+    if(document.getElementById('journalModal').classList.contains('open'))closeJournalModal();
+    if(onJournal){updateStats();renderJournal();}
+  }
 }
 
 // ── RECENT TRADES ─────────────────────────────────────────────────────────────
@@ -3507,7 +3605,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.0</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.1</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
