@@ -622,7 +622,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.7</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.8</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -673,7 +673,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.7</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.8</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -3984,12 +3984,13 @@ async function openAdminUserModal(userId){
     <span class="admin-info-label">Senast inloggad</span><span class="admin-info-value">${user.last_login||'Aldrig'}</span>
     <span class="admin-info-label">E-post bekräftad</span><span class="admin-info-value">${user.confirmed?'✅ Ja':'⚠️ Nej'}</span>
     <span class="admin-info-label">Admin</span><span class="admin-info-value">${user.is_admin?'✅ Ja':'—'}</span>
+    <span class="admin-info-label">AI-analys</span><span class="admin-info-value">${settings?.ai_enabled===true||user.settings?.ai_enabled===true?'✅ Aktiverad':'—'}</span>
     <span class="admin-info-label">Antal trades</span><span class="admin-info-value">${trades.length}</span>
     ${delReq?`<span class="admin-info-label">Raderingsförfrågan</span><span class="admin-info-value" style="color:var(--amber)">⚠ ${new Date(delReq.requested_at).toLocaleDateString('sv-SE')} – ${delReq.status}</span>`:''}
   `;
 
   const actEl = document.getElementById('adminUserActions');
-  const aiEnabled=settings?.ai_enabled===true;
+  const aiEnabled=settings?.ai_enabled===true||user.settings?.ai_enabled===true;
   actEl.innerHTML = `
     <button class="btn btn-sm ${user.is_admin?'btn-danger':'btn-primary'}" onclick="toggleAdminFlag('${userId}',${!user.is_admin})">
       ${user.is_admin?'Ta bort admin':'Gör till admin'}
@@ -3999,6 +4000,7 @@ async function openAdminUserModal(userId){
     </button>
     <button class="btn btn-ghost btn-sm" onclick="adminResetPassword('${user.email}')">🔑 Skicka lösenordsåterställning</button>
     ${delReq&&delReq.status==='pending'?`<button class="btn btn-success btn-sm" onclick="markDeletionDone('${delReq.id}');closeAdminUserModal()">✓ Markera raderingsförfrågan klar</button>`:''}
+    <div style="font-size:10px;color:var(--text3);width:100%;margin-top:4px">⚠ AI-aktivering kräver att användaren loggar ut och in igen för att träda i kraft.</div>
   `;
 
   // ── TRADES ──────────────────────────────────────────────────────────────────
@@ -4224,7 +4226,8 @@ async function loadAdminData(){
       last_login:u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString('sv-SE'):'Aldrig',
       confirmed:!!u.confirmed_at,
       trade_count:tradeCountMap[u.user_id]||0,
-      is_admin:settingsMap[u.user_id]?.settings?.is_admin===true
+      is_admin:settingsMap[u.user_id]?.settings?.is_admin===true,
+      settings:settingsMap[u.user_id]?.settings||{}
     })).sort((a,b)=>a.email.localeCompare(b.email));
     renderUsersTable(allUsers);
   }
@@ -4406,7 +4409,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.7</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.8</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
