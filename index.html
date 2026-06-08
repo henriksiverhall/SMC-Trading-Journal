@@ -521,6 +521,22 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .admin-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
 .admin-table tr:last-child td{border-bottom:none;}
 .admin-table tr:hover td{background:var(--gray-lt);}
+/* Admin user modal */
+.admin-modal-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);padding:0 20px;background:var(--bg2);}
+.admin-modal-tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font-size:13px;color:var(--text3);cursor:pointer;margin-bottom:-1px;transition:color .15s,border-color .15s;}
+.admin-modal-tab:hover{color:var(--text);}
+.admin-modal-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600;}
+.admin-tab-content{display:none;padding:20px;}
+.admin-tab-content.active{display:block;}
+.admin-info-grid{display:grid;grid-template-columns:180px 1fr;gap:6px 12px;align-items:baseline;}
+.admin-info-label{font-size:12px;color:var(--text3);font-weight:500;}
+.admin-info-value{font-size:13px;color:var(--text);}
+.admin-edit-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 20px;background:rgba(245,166,35,.08);border-bottom:1px solid var(--amber);}
+.admin-action-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+.cl-accordion{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg2);border-radius:var(--r);cursor:pointer;margin-bottom:4px;}
+.cl-accordion:hover{background:var(--gray-lt);}
+.cl-accordion-body{display:none;padding:8px 12px 12px;border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);margin-bottom:8px;}
+.cl-accordion-body.open{display:block;}
 .status-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
 .status-pill.pending{background:var(--amber-lt);color:var(--amber);}
 .status-pill.done{background:var(--green-lt);color:var(--green);}
@@ -573,7 +589,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.7</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.8</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -624,7 +640,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.7</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.8</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1167,8 +1183,11 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   <div class="dash-card" style="margin-bottom:16px">
     <div class="dash-card-header">
       <div class="dash-card-title">🎯 MFE / MAE – Marknadsdata-analys</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span style="font-size:11px;color:var(--text3)">Via TwelveData · max 20 senaste trades</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select class="filter-select" id="mfeSymbolFilter" onchange="loadMarketDataAnalysis(false)" style="min-width:120px;font-size:12px">
+          <option value="">Alla instrument</option>
+        </select>
+        <span style="font-size:11px;color:var(--text3)">Via TwelveData · max 20 trades</span>
         <button class="btn btn-primary btn-sm" id="loadMDBtn" onclick="loadMarketDataAnalysis(true)">▶ Hämta data</button>
       </div>
       <div id="mfeFetchedAt" style="font-size:11px;margin-top:4px;min-height:16px"></div>
@@ -4142,7 +4161,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.7</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.8</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4195,39 +4214,54 @@ async function loadMarketDataAnalysis(forceRefresh=false){
   if(!el)return;
 
   const stratFilter=document.getElementById('analyticsStratFilter')?.value||'';
-  const trades=(stratFilter?journal.filter(t=>t.strategy===stratFilter):journal)
+  const symbolFilter=document.getElementById('mfeSymbolFilter')?.value||'';
+
+  // Bygg kandidatlista (strategi + instrument-filter, exkl. sådana utan TwelveData-mappning)
+  let candidates=(stratFilter?journal.filter(t=>t.strategy===stratFilter):journal)
     .filter(t=>t.entry&&t.sl&&t.date&&t.direction&&getTwelveSymbol(t.symbol));
 
-  if(!trades.length){
+  // Populera instrument-dropdown med unika symboler från kandidaterna
+  const symSel=document.getElementById('mfeSymbolFilter');
+  if(symSel){
+    const syms=[...new Set(candidates.map(t=>(t.symbol||'').toUpperCase()).filter(Boolean))].sort();
+    const cur=symSel.value;
+    symSel.innerHTML='<option value="">Alla instrument</option>'+syms.map(s=>`<option value="${s}"${s===cur?' selected':''}>${s}</option>`).join('');
+  }
+
+  // Applicera instrument-filter
+  if(symbolFilter) candidates=candidates.filter(t=>(t.symbol||'').toUpperCase()===symbolFilter.toUpperCase());
+
+  if(!candidates.length){
     el.innerHTML='<div style="font-size:12px;color:var(--text3)">Inga trades med matchande instrument hittades. Kontrollera att instrument är angivet (ex. NQ, EURUSD).</div>';
+    if(btn){btn.textContent='▶ Hämta data';btn.disabled=false;}
     return;
   }
 
   // Försök med cachad data först (om inte forceRefresh)
   if(!forceRefresh){
-    const cached=getCachedMFE(trades);
+    const cached=getCachedMFE(candidates);
     if(cached.length>0){
       renderMFETable(cached,tsEl);
-      btn.textContent='↺ Uppdatera';btn.disabled=false;
+      if(btn){btn.textContent='↺ Uppdatera';btn.disabled=false;}
       return;
     }
   }
 
-  // Hämta från TwelveData
-  btn.textContent='Hämtar…';btn.disabled=true;
+  // Hämta från TwelveData (max 20)
+  if(btn){btn.textContent='Hämtar…';btn.disabled=true;}
   el.innerHTML='<div style="font-size:12px;color:var(--text3)">Hämtar marknadsdata – kan ta några sekunder…</div>';
 
-  const enriched=await enrichTradesWithMD(trades);
+  const enriched=await enrichTradesWithMD(candidates);
   const valid=enriched.filter(t=>t._mfe!=null);
 
   if(!valid.length){
     el.innerHTML='<div style="font-size:12px;color:var(--amber)">⚠ Ingen data returnerades. Möjliga orsaker: instrumentet stöds inte på gratisplanen, marknaden stängd under trade-tidpunkten, eller API-limit nådd.</div>';
-    btn.textContent='▶ Hämta data';btn.disabled=false;
+    if(btn){btn.textContent='▶ Hämta data';btn.disabled=false;}
     return;
   }
 
   renderMFETable(valid,tsEl);
-  btn.textContent='↺ Uppdatera';btn.disabled=false;
+  if(btn){btn.textContent='↺ Uppdatera';btn.disabled=false;}
 }
 
 function renderMFETable(valid,tsEl){
