@@ -603,7 +603,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.4</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.5</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -654,7 +654,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.4</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.5</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1154,7 +1154,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <div style="font-size:20px;font-weight:700;color:var(--text)">📊 Analytics</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px">Djupanalys av din trading · <span style="color:var(--amber)">⚡ Bästa resultat med exakta klockslag på alla trades</span></div>
     </div>
-    <button class="btn btn-primary" id="aiAnalysisBtn" onclick="runAIAnalysis()" style="display:flex;align-items:center;gap:6px;font-weight:600">
+    <button class="btn btn-primary" id="aiAnalysisBtn" onclick="runAIAnalysis()" style="display:none;align-items:center;gap:6px;font-weight:600">
       🤖 AI-analys
     </button>
   </div>
@@ -1764,6 +1764,12 @@ function applyUserSettings(){
   }
   // Uppdatera monetärt värde
   try{calcMonetary();}catch(e){}
+  // AI-knapp – visa om ai_enabled eller admin
+  const aiBtn=document.getElementById('aiAnalysisBtn');
+  if(aiBtn){
+    const show=userSettings?.ai_enabled===true||userSettings?.is_admin===true;
+    aiBtn.style.display=show?'flex':'none';
+  }
 }
 
 function calcMonetary(){
@@ -3899,9 +3905,13 @@ async function openAdminUserModal(userId){
   `;
 
   const actEl = document.getElementById('adminUserActions');
+  const aiEnabled=settings?.ai_enabled===true;
   actEl.innerHTML = `
     <button class="btn btn-sm ${user.is_admin?'btn-danger':'btn-primary'}" onclick="toggleAdminFlag('${userId}',${!user.is_admin})">
       ${user.is_admin?'Ta bort admin':'Gör till admin'}
+    </button>
+    <button class="btn btn-sm ${aiEnabled?'btn-danger':'btn-success'}" onclick="toggleAIAccess('${userId}',${!aiEnabled})">
+      ${aiEnabled?'🤖 Inaktivera AI':'🤖 Aktivera AI'}
     </button>
     <button class="btn btn-ghost btn-sm" onclick="adminResetPassword('${user.email}')">🔑 Skicka lösenordsåterställning</button>
     ${delReq&&delReq.status==='pending'?`<button class="btn btn-success btn-sm" onclick="markDeletionDone('${delReq.id}');closeAdminUserModal()">✓ Markera raderingsförfrågan klar</button>`:''}
@@ -4020,6 +4030,20 @@ async function toggleAdminFlag(userId, makeAdmin){
     renderUsersTable(allUsers);
     closeAdminUserModal();
   }
+}
+
+async function toggleAIAccess(userId, enable){
+  const existing=await sb.from('user_settings').select('settings').eq('user_id',userId).maybeSingle();
+  const current=existing.data?.settings||{};
+  const{error}=await sb.from('user_settings').upsert({
+    user_id:userId,
+    settings:{...current, ai_enabled:enable},
+    updated_at:new Date().toISOString()
+  });
+  if(!error){
+    alert(`AI-analys ${enable?'aktiverad':'inaktiverad'} för användaren.`);
+    openAdminUserModal(userId);
+  }else{alert('Fel: '+error.message);}
 }
 
 async function adminResetPassword(email){
@@ -4300,7 +4324,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.4</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.5</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4904,6 +4928,15 @@ async function runAIAnalysis(){
   const btn=document.getElementById('aiAnalysisBtn');
   const out=document.getElementById('aiAnalysisOutput');
   if(!out)return;
+
+  // Kontrollera AI-tillstånd
+  const aiEnabled=userSettings?.ai_enabled===true||userSettings?.is_admin===true;
+  if(!aiEnabled){
+    out.style.display='block';
+    out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--text3)">🔒 AI-analys är inte aktiverat för ditt konto. Kontakta administratören.</div></div>';
+    return;
+  }
+
   if(journal.length<5){
     out.style.display='block';
     out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--text3)">Logga minst 5 trades för att få en meningsfull AI-analys.</div></div>';
@@ -4919,50 +4952,95 @@ async function runAIAnalysis(){
   const losses=withR.filter(t=>t.outcome==='L');
   const winR=wins.reduce((a,t)=>a+t.result,0);
   const lossR=Math.abs(losses.reduce((a,t)=>a+t.result,0));
+  const tradesWithTime=trades.filter(t=>t.time);
+  const riskPct=parseFloat(userSettings.riskPct)||0;
+  const accountSize=parseFloat(userSettings.accountSize)||0;
+  const riskAmt=accountSize&&riskPct?accountSize*(riskPct/100):0;
 
-  // Bygg statistik-sammanfattning
-  const stats={
-    total:trades.length,
-    winRate:withR.length?(wins.length/withR.length*100).toFixed(1):null,
-    profitFactor:lossR>0?(winR/lossR).toFixed(2):null,
-    totalR:withR.reduce((a,t)=>a+t.result,0).toFixed(2),
-    avgWin:wins.length?(winR/wins.length).toFixed(2):null,
-    avgLoss:losses.length?(lossR/losses.length).toFixed(2):null,
-    expectancy:withR.length?((wins.length/withR.length)*parseFloat(wins.length?(winR/wins.length):0)-(losses.length/withR.length)*parseFloat(losses.length?(lossR/losses.length):0)).toFixed(2):null,
-  };
+  // ── Aggregerad statistik ────────────────────────────────────────────────────
+  // Grundnyckeltal
+  const totalR=withR.reduce((a,t)=>a+t.result,0);
+  const avgWin=wins.length?(winR/wins.length):0;
+  const avgLoss=losses.length?(lossR/losses.length):0;
+  const expectancy=withR.length?((wins.length/withR.length)*avgWin-(losses.length/withR.length)*avgLoss):0;
+
+  // Streak
+  const sortedTrades=[...withR].sort((a,b)=>(a.date+' '+(a.time||'')).localeCompare(b.date+' '+(b.time||'')));
+  let maxW=0,maxL=0,cw=0,cl=0;
+  sortedTrades.forEach(t=>{if(t.outcome==='W'){cw++;cl=0;maxW=Math.max(maxW,cw);}else{cl++;cw=0;maxL=Math.max(maxL,cl);}});
+
+  // Grade-fördelning
+  const gradeStats=['A+','A','B','C'].map(g=>{
+    const gt=withR.filter(t=>t.grade===g);
+    const gw=gt.filter(t=>t.outcome==='W').length;
+    const gr=gt.reduce((a,t)=>a+(t.result||0),0);
+    return gt.length?`${g}: ${gt.length}st WR ${(gw/gt.length*100).toFixed(0)}% avgR ${(gr/gt.length).toFixed(2)}`:null;
+  }).filter(Boolean);
+
+  // Checklist-korrelation
+  const clHigh=withR.filter(t=>t.checklist_pct>=75);
+  const clLow=withR.filter(t=>t.checklist_pct!=null&&t.checklist_pct<50);
+  const clStats=clHigh.length&&clLow.length?
+    `Checklist ≥75%: WR ${(clHigh.filter(t=>t.outcome==='W').length/clHigh.length*100).toFixed(0)}% (${clHigh.length}st) | <50%: WR ${(clLow.filter(t=>t.outcome==='W').length/clLow.length*100).toFixed(0)}% (${clLow.length}st)`:null;
+
   // Per session
   const sessStats=['london','nyam','nypm','asia'].map(s=>{
-    const st=trades.filter(t=>t.time&&getTradeSession(t)===s);
+    const st=tradesWithTime.filter(t=>getTradeSession(t)===s);
+    if(!st.length)return null;
     const sw=st.filter(t=>t.outcome==='W').length;
-    return`${SESSION_LABELS[s]}: ${st.length} trades, WR ${st.length?(sw/st.length*100).toFixed(0):0}%`;
-  }).filter((_,i)=>trades.filter(t=>t.time&&getTradeSession(t)===['london','nyam','nypm','asia'][i]).length>0);
-  // Per strategi
+    const sr=st.filter(t=>t.result!=null).reduce((a,t)=>a+t.result,0);
+    return`${SESSION_LABELS[s]}: ${st.length}st WR ${(sw/st.length*100).toFixed(0)}% totalR ${sr.toFixed(2)}`;
+  }).filter(Boolean);
+
+  // Per strategi med avgR
   const stratStats=Object.entries(trades.reduce((acc,t)=>{
     if(!t.strategy)return acc;
-    if(!acc[t.strategy])acc[t.strategy]={w:0,l:0};
+    if(!acc[t.strategy])acc[t.strategy]={w:0,l:0,r:0,n:0};
     if(t.outcome==='W')acc[t.strategy].w++;else if(t.outcome==='L')acc[t.strategy].l++;
+    if(t.result!=null){acc[t.strategy].r+=t.result;acc[t.strategy].n++;}
     return acc;
-  },{})).map(([s,d])=>`${s}: ${d.w}W/${d.l}L`);
+  },{})).map(([s,d])=>`${s}: ${d.w}W/${d.l}L avgR ${d.n?(d.r/d.n).toFixed(2):'—'}`);
+
   // Long vs Short
-  const longT=trades.filter(t=>t.direction==='Long');
-  const shortT=trades.filter(t=>t.direction==='Short');
-  const dirStats=`Long ${longT.length}st WR ${longT.length?(longT.filter(t=>t.outcome==='W').length/longT.length*100).toFixed(0):0}%, Short ${shortT.length}st WR ${shortT.length?(shortT.filter(t=>t.outcome==='W').length/shortT.length*100).toFixed(0):0}%`;
+  const dirData=['Long','Short'].map(dir=>{
+    const dt=trades.filter(t=>t.direction===dir);
+    const dw=dt.filter(t=>t.outcome==='W').length;
+    const dr=dt.filter(t=>t.result!=null).reduce((a,t)=>a+t.result,0);
+    return dt.length?`${dir}: ${dt.length}st WR ${(dw/dt.length*100).toFixed(0)}% totalR ${dr.toFixed(2)}`:null;
+  }).filter(Boolean);
 
-  const prompt=`Du är en erfaren prop firm-trader och trading coach specialiserad på ICT/SMC NQ futures. Analysera nedanstående tradingstatistik och ge 4-6 konkreta, specifika insikter och förbättringsförslag. Var rak och ärlig – om något är svagt, säg det. Fokusera på det som verkligen kan flytta nålen för en TopStep $50K-utmanare.
+  // Veckodag-top/bottom
+  const dayNames=['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
+  const dayStats=Array.from({length:7},(_,i)=>{
+    const dt=trades.filter(t=>t.date&&new Date(t.date).getDay()===i);
+    const dw=dt.filter(t=>t.outcome==='W').length;
+    return dt.length>=2?{day:dayNames[i],wr:dw/dt.length,n:dt.length}:null;
+  }).filter(Boolean).sort((a,b)=>b.wr-a.wr);
+  const bestDay=dayStats[0]?`Bästa dag: ${dayStats[0].day} ${(dayStats[0].wr*100).toFixed(0)}%`:'';
+  const worstDay=dayStats[dayStats.length-1]&&dayStats.length>1?`Sämsta dag: ${dayStats[dayStats.length-1].day} ${(dayStats[dayStats.length-1].wr*100).toFixed(0)}%`:'';
 
-TRADINGSTATISTIK:
-- Trades analyserade: ${stats.total} (filtrerade)
-- Win rate: ${stats.winRate||'—'}%
-- Profit Factor: ${stats.profitFactor||'—'}
-- Total R: ${stats.totalR}R
-- Avg win: +${stats.avgWin||'—'}R | Avg loss: -${stats.avgLoss||'—'}R
-- Expectancy: ${stats.expectancy||'—'}R/trade
-${sessStats.length?'- Sessions: '+sessStats.join(', '):''}
-${stratStats.length?'- Strategier: '+stratStats.join(', '):''}
-- Riktning: ${dirStats}
+  // Tidsperiod
+  const dates=trades.map(t=>t.date).filter(Boolean).sort();
+  const period=dates.length?`${dates[0]} → ${dates[dates.length-1]}`:'okänd period';
+
+  const prompt=`Du är en erfaren prop firm-trader och trading coach specialiserad på ICT/SMC NQ futures. Analysera nedanstående tradingstatistik och ge 4-6 konkreta, specifika insikter och förbättringsförslag. Var rak och ärlig – om något är svagt, säg det. Fokusera på det som verkligen kan flytta nålen för en TopStep $50K-utmanare (trailing max DD $2000, profit target $3000).
+
+TRADINGSTATISTIK (${period}):
+Trades: ${trades.length} totalt (${withR.length} med R-data, ${tradesWithTime.length} med klockslag)
+Win rate: ${withR.length?(wins.length/withR.length*100).toFixed(1):'—'}% | Profit Factor: ${lossR>0?(winR/lossR).toFixed(2):'—'}
+Total R: ${totalR.toFixed(2)}R | Expectancy: ${expectancy.toFixed(2)}R/trade
+Avg win: +${avgWin.toFixed(2)}R | Avg loss: -${avgLoss.toFixed(2)}R
+${riskAmt?`Risk per trade: $${riskAmt} (${riskPct}% av $${accountSize})`:'Risk ej angiven'}
+Max W-streak: ${maxW} | Max L-streak: ${maxL}
+${gradeStats.length?'Grade: '+gradeStats.join(' | '):''}
+${clStats?'Checklist: '+clStats:''}
+${sessStats.length?'Sessions: '+sessStats.join(' | '):'Inga klockslag loggade'}
+${stratStats.length?'Strategier: '+stratStats.join(' | '):''}
+${dirData.length?'Riktning: '+dirData.join(' | '):''}
+${bestDay||worstDay?'Dagar: '+[bestDay,worstDay].filter(Boolean).join(', '):''}
 
 Svara ENBART i detta JSON-format utan markdown-backticks:
-{"insights":[{"type":"positive|warning|critical","title":"kort rubrik","text":"konkret insikt och åtgärd"}]}`;
+{"insights":[{"type":"positive|warning|critical","title":"kort rubrik max 5 ord","text":"konkret insikt och specifik åtgärd, max 3 meningar"}]}`;
 
   try{
     const resp=await fetch('https://tradelog-claude-api.henrik-siverhall.workers.dev',{
