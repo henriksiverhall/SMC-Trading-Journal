@@ -573,7 +573,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.4</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.5</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -624,7 +624,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.4</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.5</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1161,6 +1161,28 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
   <!-- Egna fält-statistik -->
   <div id="analyticsCustomFields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px"></div>
+
+
+  <!-- MFE/MAE Analys -->
+  <div class="dash-card" style="margin-bottom:16px">
+    <div class="dash-card-header">
+      <div class="dash-card-title">🎯 MFE / MAE – Marknadsdata-analys</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">Via TwelveData · max 20 senaste trades</span>
+        <button class="btn btn-primary btn-sm" id="loadMDBtn" onclick="loadMarketDataAnalysis()">▶ Hämta data</button>
+      </div>
+    </div>
+    <div class="dash-card-body" id="analyticsMFE">
+      <div style="font-size:12px;color:var(--text3)">
+        Klicka "Hämta data" för att beräkna MFE (Maximum Favorable Excursion) och MAE (Maximum Adverse Excursion) för dina senaste trades.
+        <br><br>
+        <strong>MFE</strong> = hur långt priset gick i din riktning efter entry (i R)<br>
+        <strong>MAE</strong> = hur långt priset gick mot dig (i R)<br>
+        <strong>Lämnat på bordet</strong> = skillnad mellan MFE och faktiskt utfall
+      </div>
+    </div>
+  </div>
+
 
   <!-- R-kurva över tid -->
   <div class="dash-card" style="margin-bottom:16px">
@@ -2888,7 +2910,103 @@ document.addEventListener('drop',e=>{
 });
 
 
+
+// ── MARKET DATA (TwelveData) ──────────────────────────────────────────────────
+const TWELVE_SYMBOL_MAP = {
+  // Futures (via ETF-proxy på gratisplan)
+  'NQ':'QQQ','NQ1!':'QQQ','MNQ':'QQQ',
+  'ES':'SPY','ES1!':'SPY','MES':'SPY',
+  'YM':'DIA','RTY':'IWM',
+  'GC':'GLD','GC1!':'GLD','XAU':'GLD','XAUUSD':'GLD',
+  'CL':'USO','SI':'SLV',
+  // FX
+  'EURUSD':'EUR/USD','EUR/USD':'EUR/USD',
+  'GBPUSD':'GBP/USD','GBP/USD':'GBP/USD',
+  'USDJPY':'USD/JPY','USD/JPY':'USD/JPY',
+  'AUDUSD':'AUD/USD','AUD/USD':'AUD/USD',
+  'USDCAD':'USD/CAD','USD/CAD':'USD/CAD',
+  'USDCHF':'USD/CHF','USD/CHF':'USD/CHF',
+  'NZDUSD':'NZD/USD','NZD/USD':'NZD/USD',
+  'EURGBP':'EUR/GBP','EUR/GBP':'EUR/GBP',
+  'EURJPY':'EUR/JPY','EUR/JPY':'EUR/JPY',
+  'GBPJPY':'GBP/JPY','GBP/JPY':'GBP/JPY',
+};
+
+function getTwelveSymbol(instrument){
+  if(!instrument)return null;
+  const upper=(instrument||'').toUpperCase().trim();
+  return TWELVE_SYMBOL_MAP[upper]||null;
+}
+
+// Cache för market data
+const _mdCache={};
+
+async function fetchOHLC(symbol, datetime, interval='1min'){
+  const key=symbol+'_'+datetime+'_'+interval;
+  if(_mdCache[key])return _mdCache[key];
+  try{
+    // Hämta 60 bars runt trade-tidpunkten
+    const startDt=datetime.replace('T',' ').substring(0,16);
+    const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&start_date=${encodeURIComponent(startDt)}&outputsize=120&apikey=${TWELVE_KEY}`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.status==='error'||!data.values){return null;}
+    _mdCache[key]=data.values;
+    return data.values;
+  }catch(e){return null;}
+}
+
+// Beräkna MFE/MAE för en trade
+async function calcMFE_MAE(trade){
+  if(!trade.entry||!trade.sl||!trade.date)return null;
+  const sym=getTwelveSymbol(trade.symbol);
+  if(!sym)return null;
+  const dt=trade.date+'T'+(trade.time||'09:30')+':00';
+  const bars=await fetchOHLC(sym,dt,'5min');
+  if(!bars||!bars.length)return null;
+  
+  // Hitta bars efter entry
+  const entryTime=new Date(dt).getTime();
+  const afterEntry=bars
+    .filter(b=>new Date(b.datetime).getTime()>=entryTime)
+    .sort((a,b)=>new Date(a.datetime)-new Date(b.datetime));
+  
+  if(!afterEntry.length)return null;
+  
+  const isLong=trade.direction==='Long';
+  const risk=Math.abs(trade.entry-trade.sl);
+  if(risk===0)return null;
+  
+  let mfe=0,mae=0;
+  afterEntry.forEach(b=>{
+    const high=parseFloat(b.high);
+    const low=parseFloat(b.low);
+    if(isLong){
+      mfe=Math.max(mfe,(high-trade.entry)/risk);
+      mae=Math.min(mae,(low-trade.entry)/risk);
+    }else{
+      mfe=Math.max(mfe,(trade.entry-low)/risk);
+      mae=Math.min(mae,(trade.entry-high)/risk);
+    }
+  });
+  
+  return{mfe:parseFloat(mfe.toFixed(2)),mae:parseFloat(mae.toFixed(2))};
+}
+
+async function enrichTradesWithMD(trades){
+  const results=[];
+  // Begränsa till 10 trades åt gången pga API-limit
+  const sample=trades.slice(0,20);
+  for(const t of sample){
+    const md=await calcMFE_MAE(t);
+    results.push({...t,_mfe:md?.mfe,_mae:md?.mae});
+  }
+  return results;
+}
+
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
+const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
@@ -4002,7 +4120,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.4</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.5</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4045,6 +4163,90 @@ async function requestAccountDeletion(){
   }
 }
 
+
+
+
+async function loadMarketDataAnalysis(){
+  const btn=document.getElementById('loadMDBtn');
+  const el=document.getElementById('analyticsMFE');
+  if(!el)return;
+  btn.textContent='Hämtar…';btn.disabled=true;
+  el.innerHTML='<div style="font-size:12px;color:var(--text3)">Hämtar marknadsdata – kan ta några sekunder…</div>';
+  
+  const stratFilter=document.getElementById('analyticsStratFilter')?.value||'';
+  const trades=(stratFilter?journal.filter(t=>t.strategy===stratFilter):journal)
+    .filter(t=>t.entry&&t.sl&&t.date&&t.direction&&getTwelveSymbol(t.symbol));
+  
+  if(!trades.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3)">Inga trades med matchande instrument hittades. Kontrollera att instrument är angivet (ex. NQ, EURUSD).</div>';
+    btn.textContent='▶ Hämta data';btn.disabled=false;
+    return;
+  }
+  
+  const enriched=await enrichTradesWithMD(trades);
+  const valid=enriched.filter(t=>t._mfe!=null);
+  
+  if(!valid.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--amber)">⚠ Ingen data returnerades. Möjliga orsaker: instrumentet stöds inte på gratisplanen, marknaden stängd under trade-tidpunkten, eller API-limit nådd.</div>';
+    btn.textContent='▶ Hämta data';btn.disabled=false;
+    return;
+  }
+  
+  const avgMFE=(valid.reduce((a,t)=>a+(t._mfe||0),0)/valid.length).toFixed(2);
+  const avgMAE=(Math.abs(valid.reduce((a,t)=>a+(t._mae||0),0)/valid.length)).toFixed(2);
+  const avgResult=(valid.filter(t=>t.result!=null).reduce((a,t)=>a+(t.result||0),0)/valid.filter(t=>t.result!=null).length||0).toFixed(2);
+  const leftOnTable=(parseFloat(avgMFE)-parseFloat(avgResult)).toFixed(2);
+  
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Avg MFE</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--green)">+${avgMFE}R</div>
+        <div style="font-size:10px;color:var(--text3)">max möjlig vinst</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Avg MAE</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--red)">-${avgMAE}R</div>
+        <div style="font-size:10px;color:var(--text3)">max drawdown</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Avg Utfall</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--blue)">${avgResult>=0?'+':''}${avgResult}R</div>
+        <div style="font-size:10px;color:var(--text3)">faktiskt resultat</div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Lämnat på bordet</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--amber)">+${leftOnTable}R</div>
+        <div style="font-size:10px;color:var(--text3)">MFE − utfall</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Per trade (${valid.length} trades analyserade, instrument: ${[...new Set(valid.map(t=>t.symbol))].join(', ')})</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--bg2)">
+        <th style="padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border)">Datum</th>
+        <th style="padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border)">Symbol</th>
+        <th style="padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border)">Dir</th>
+        <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border)">Utfall</th>
+        <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--green);border-bottom:1px solid var(--border)">MFE</th>
+        <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--red);border-bottom:1px solid var(--border)">MAE</th>
+        <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);border-bottom:1px solid var(--border)">På bordet</th>
+      </tr></thead>
+      <tbody>${valid.map(t=>{
+        const left=t._mfe!=null&&t.result!=null?(t._mfe-t.result).toFixed(2):null;
+        return`<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px">${t.date||'—'}</td>
+          <td style="padding:7px 10px;font-weight:600">${t.symbol||'—'}</td>
+          <td style="padding:7px 10px">${t.direction?`<span class="badge badge-${t.direction}">${t.direction}</span>`:'—'}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono)" class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}">${t.result!=null?(t.result>0?'+':'')+t.result.toFixed(2)+'R':'—'}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--green)">${t._mfe!=null?'+'+t._mfe+'R':'—'}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--red)">${t._mae!=null?t._mae+'R':'—'}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--amber)">${left!==null&&left>0?'+'+left+'R':left!==null?left+'R':'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  `;
+  btn.textContent='↺ Uppdatera';btn.disabled=false;
+}
 
 
 // ── ANALYTICS ─────────────────────────────────────────────────────────────────
