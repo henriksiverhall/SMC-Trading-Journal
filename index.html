@@ -622,7 +622,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.8</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.9</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -673,7 +673,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.8</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.9</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2208,8 +2208,9 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
-  // Återställ senast besökta sida
-  const validPages=['dashboard','journal','checklist','analytics','profil','admin','roadmap'];
+  // Återställ senast besökta sida – admin/roadmap bara om is_admin
+  const isAdminUser=userSettings?.is_admin===true;
+  const validPages=['dashboard','journal','checklist','analytics','profil',...(isAdminUser?['admin','roadmap']:[])];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
   _appReady = true;
@@ -3947,6 +3948,7 @@ function renderAdminEditChecklists(){
 let adminSelectedUser = null;
 
 async function openAdminUserModal(userId){
+  if(userSettings?.is_admin!==true)return; // Säkerhetsguard
   adminSelectedUser = userId;
   const user = allUsers.find(u=>u.user_id===userId);
   if(!user)return;
@@ -4105,6 +4107,7 @@ function closeAdminUserModal(){
 }
 
 async function toggleAdminFlag(userId, makeAdmin){
+  if(userSettings?.is_admin!==true)return;
   const{error}=await sb.rpc('admin_set_user_setting',{
     target_user_id:userId,
     setting_key:'is_admin',
@@ -4119,6 +4122,7 @@ async function toggleAdminFlag(userId, makeAdmin){
 }
 
 async function toggleAIAccess(userId, enable){
+  if(userSettings?.is_admin!==true)return;
   const{error}=await sb.rpc('admin_set_user_setting',{
     target_user_id:userId,
     setting_key:'ai_enabled',
@@ -4193,9 +4197,23 @@ function renderLogsTable(logs){
 }
 
 async function loadAdminData(){
-  // Hämta användare via admin_users-vy + user_settings + login_log
+  if(!currentUser)return;
+
+  // ── Säkerhetskontroll – verifiera admin mot DB, inte bara frontend ──────────
+  try{
+    const{data:selfSettings,error:selfErr}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).single();
+    if(selfErr||!selfSettings?.settings?.is_admin){
+      // Inte admin – dölj sidan och gå till dashboard
+      showPage('dashboard',null);
+      document.getElementById('adminMenuBtn').style.display='none';
+      document.getElementById('roadmapMenuBtn').style.display='none';
+      return;
+    }
+  }catch(e){showPage('dashboard',null);return;}
+
+  // Hämta via säker RPC (kräver admin) + user_settings + login_log
   const[{data:adminUsers},{data:settings},{data:loginLogs}]=await Promise.all([
-    sb.from('admin_users').select('*'),
+    sb.rpc('get_admin_users'),
     sb.from('user_settings').select('*'),
     sb.from('login_log').select('*').order('logged_in_at',{ascending:false}).limit(200)
   ]);
@@ -4409,7 +4427,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.8</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.9</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5203,7 +5221,7 @@ let roadmapTasks=[];
 let editingTaskId=null;
 
 async function loadRoadmap(){
-  if(!currentUser)return;
+  if(!currentUser||userSettings?.is_admin!==true)return;
   // Ladda från Supabase user_settings som jsonb-fält
   try{
     const{data}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).maybeSingle();
@@ -5326,6 +5344,10 @@ function closeTaskModal(){
 
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
+  // Admin-sidor kräver is_admin – avvisa direkt i frontend också
+  if((p==='admin'||p==='roadmap')&&userSettings?.is_admin!==true){
+    p='dashboard';btn=null;
+  }
   // Spara aktiv sida för refresh-återställning
   try{sessionStorage.setItem('currentPage',p);}catch(e){}
   // Dölj alla sidor explicit
@@ -5334,7 +5356,6 @@ function showPage(p,btn){
     if(el){el.classList.remove('active');el.style.display='none';el.style.visibility='hidden';el.style.position='absolute';}
   });
   // Visa aktiv sida
-
   document.querySelectorAll('.htab').forEach(x=>x.classList.remove('active'));
   const target=document.getElementById('page-'+p);
   if(target){target.classList.add('active');target.style.display='block';target.style.visibility='visible';target.style.position='relative';}
