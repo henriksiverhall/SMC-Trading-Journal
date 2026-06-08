@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.7</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,7 +560,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.7</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -750,6 +750,18 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <button class="btn btn-ghost btn-sm" onclick="openQuickLog()">⚡ Snabblogg</button>
       <button class="btn btn-primary" onclick="openJournalModal()">📋 Logga trade</button>
     </div>
+  <!-- SENASTE TRADES -->
+  <div style="padding:0 24px 8px">
+    <div class="recent-panel">
+      <div class="recent-header">
+        <div class="recent-title">Senaste trades</div>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[1])">Se alla →</button>
+      </div>
+      <div class="recent-cols"><span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span><span>Strategi</span></div>
+      <div id="recentTradesList"></div>
+    </div>
+  </div>
+
   </div>
 
 </div>
@@ -1755,9 +1767,10 @@ async function onLogin(user){
   try{ await loadUserSettings(); }catch(e){ console.warn('loadUserSettings:',e); }
   // Sätt avatar efter att user_settings laddats (display_name kan ha uppdaterats)
   const meta=currentUser.user_metadata||{};
-  const savedName=(typeof userSettings!=='undefined'&&userSettings.displayName)||meta.display_name||'';
+  const savedName=userSettings?.displayName||userSettings?.display_name||meta.display_name||'';
   const initial=(savedName?savedName[0]:user.email[0]).toUpperCase();
-  document.getElementById('avatarBtn').textContent=initial;
+  const avatarBtn=document.getElementById('avatarBtn');
+  if(avatarBtn)avatarBtn.textContent=initial;
   document.getElementById('avatarEmail').textContent=user.email;
   // Admin-knapp
   try{
@@ -1774,11 +1787,11 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
-  _appReady = true;
   // Återställ senast besökta sida
   const validPages=['dashboard','journal','checklist','profil','admin'];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
+  _appReady = true;
   // Visa sida utan att ladda data (skipLoad=true)
   showPage(startPage,null,true);
   // Ladda data explicit med await
@@ -2478,6 +2491,7 @@ async function logToJournal(){
 // ── RECENT TRADES ─────────────────────────────────────────────────────────────
 function renderRecentTrades(){
   const list=document.getElementById('recentTradesList');
+  if(!list)return; // Element finns inte på nuvarande sida
   const recent=journal.slice(0,8);
   if(!recent.length){list.innerHTML='<div class="recent-empty">Inga trades loggade ännu.</div>';return;}
   list.innerHTML=recent.map(t=>`<div class="recent-row" onclick="openTradeModal('${t.id}')">
@@ -2601,10 +2615,12 @@ const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
   if(!currentUser)return;
-  // Namn & datum
-  const meta=currentUser.user_metadata||{};
-  const name=meta.display_name||(currentUser.email||'').split('@')[0];
-  document.getElementById('dashName').textContent=name;
+  // Namn – hämta från userSettings (display_name sparas där, inte i user_metadata)
+  const displayName=userSettings.displayName||userSettings.display_name||
+    currentUser.user_metadata?.display_name||
+    (currentUser.email||'').split('@')[0];
+  const nameEl=document.getElementById('dashName');
+  if(nameEl)nameEl.textContent=displayName;
   const now=new Date();
   document.getElementById('dashDate').textContent=now.toLocaleDateString('sv-SE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   // Stats
@@ -3474,7 +3490,7 @@ async function loadProfil(){
   if(!currentUser)return;
   document.getElementById('profil-email').textContent=currentUser.email||'—';
   const meta=currentUser.user_metadata||{};
-  document.getElementById('profil-displayname').value=meta.display_name||'';
+  document.getElementById('profil-displayname').value=userSettings.displayName||userSettings.display_name||meta.display_name||'';
   const created=new Date(currentUser.created_at).toLocaleDateString('sv-SE');
   document.getElementById('profil-created').textContent=created;
   document.getElementById('profil-tradecount').textContent=journal.length+' trades';
@@ -3485,9 +3501,14 @@ async function loadProfil(){
 
 async function saveDisplayName(){
   const name=document.getElementById('profil-displayname').value.trim();
-  const{error}=await sb.auth.updateUser({data:{display_name:name}});
-  if(!error){alert('Visningsnamn sparat!');}
-  else{alert('Kunde inte spara: '+error.message);}
+  if(!name){alert('Ange ett visningsnamn.');return;}
+  // Spara i userSettings (primär källa)
+  userSettings.displayName=name;
+  await saveUserSettings();
+  // Uppdatera avatar
+  const btn=document.getElementById('avatarBtn');
+  if(btn)btn.textContent=name[0].toUpperCase();
+  alert('Visningsnamn sparat!');
 }
 
 function showChangePassword(){
@@ -3601,7 +3622,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.7</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
