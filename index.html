@@ -1827,7 +1827,7 @@ async function fetchChecklists(){
 }
 async function saveChecklistToDB(strat){
   const existing=userChecklists.find(c=>c.strategy_key===strat.key);
-  if(existing){
+  if(existing&&existing.id){
     const{data}=await sb.from('checklists').update({name:strat.name,phases:strat.phases,updated_at:new Date().toISOString()}).eq('id',existing.id).select();
     if(data&&data[0]){const idx=userChecklists.findIndex(c=>c.id===existing.id);userChecklists[idx]=data[0];}
   }else{
@@ -1888,8 +1888,10 @@ function createNewStrategy(){
   activeStratKey=key;
   activeStrat=newStrat;
   populateStrategyPicker();
-  saveChecklistToDB(newStrat);
-  toggleEditor();
+  // Spara och vänta på DB-id innan editor öppnas
+  saveChecklistToDB(newStrat).then(()=>{
+    toggleEditor();
+  });
 }
 
 // ── CHECKLIST RENDER ──────────────────────────────────────────────────────────
@@ -2067,10 +2069,15 @@ function addPhase(){
 async function saveChecklist(){
   const strat=activeStrat||getActiveChecklist();
   const ind=document.getElementById('savingIndicator');
-  ind.textContent='💾 sparar…';
+  if(ind)ind.textContent='💾 sparar…';
   await saveChecklistToDB(strat);
-  ind.textContent='✓ sparat';setTimeout(()=>ind.textContent='',2000);
-  toggleEditor();
+  if(ind){ind.textContent='✓ sparat';setTimeout(()=>ind.textContent='',2000);}
+  // Stäng editor
+  editorOpen=false;
+  const ed=document.getElementById('clEditor');
+  const wrap=document.getElementById('clEditorWrap');
+  if(ed)ed.style.display='none';
+  if(wrap)wrap.style.display='none';
   renderChecklist();
   renderJournalTaggedFields();
 }
