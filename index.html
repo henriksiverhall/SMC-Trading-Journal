@@ -515,6 +515,20 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
+/* Analytics */
+.analytics-filters{display:flex;flex-wrap:wrap;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:8px;}
+.af-group{display:flex;flex-direction:column;gap:3px;}
+.af-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;}
+.af-select{min-width:110px;}
+.analytics-section-title{font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--border);}
+.analytics-section-note{font-size:10px;color:var(--amber);font-weight:400;text-transform:none;letter-spacing:0;}
+/* AI analysis output */
+.ai-analysis-card{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(59,130,246,.06));border:1px solid rgba(99,102,241,.3);border-radius:var(--r);padding:20px;}
+.ai-analysis-card h3{font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.ai-insight{background:var(--bg2);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.6;color:var(--text2);}
+.ai-insight.positive{border-left-color:var(--green);}
+.ai-insight.warning{border-left-color:var(--amber);}
+.ai-insight.critical{border-left-color:var(--red);}
 .admin-section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;gap:8px;}
 .admin-table{width:100%;border-collapse:collapse;font-size:12px;}
 .admin-table th{padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);background:var(--bg2);}
@@ -589,7 +603,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.9</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.0</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -640,7 +654,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.9</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.0</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1133,82 +1147,170 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 <!-- ANALYTICS PAGE -->
 <div id="page-analytics" class="page" style="padding:18px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
     <div>
       <div style="font-size:20px;font-weight:700;color:var(--text)">📊 Analytics</div>
-      <div style="font-size:13px;color:var(--text3);margin-top:2px">Djupanalys av dina trades</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">Djupanalys av din trading · <span style="color:var(--amber)">⚡ Bästa resultat med exakta klockslag på alla trades</span></div>
     </div>
-    <select class="filter-select" id="analyticsStratFilter" onchange="renderAnalytics()" style="min-width:200px">
-      <option value="">Alla strategier</option>
-    </select>
+    <button class="btn btn-primary" id="aiAnalysisBtn" onclick="runAIAnalysis()" style="display:flex;align-items:center;gap:6px;font-weight:600">
+      🤖 AI-analys
+    </button>
   </div>
 
+  <!-- Filterrad -->
+  <div class="analytics-filters" id="analyticsFilterBar">
+    <div class="af-group">
+      <label class="af-label">Strategi</label>
+      <select class="filter-select af-select" id="analyticsStratFilter" onchange="renderAnalytics()">
+        <option value="">Alla</option>
+      </select>
+    </div>
+    <div class="af-group">
+      <label class="af-label">Instrument</label>
+      <select class="filter-select af-select" id="analyticsSymbolFilter" onchange="renderAnalytics()">
+        <option value="">Alla</option>
+      </select>
+    </div>
+    <div class="af-group">
+      <label class="af-label">Riktning</label>
+      <select class="filter-select af-select" id="analyticsDirectionFilter" onchange="renderAnalytics()">
+        <option value="">Alla</option>
+        <option value="Long">Long</option>
+        <option value="Short">Short</option>
+      </select>
+    </div>
+    <div class="af-group">
+      <label class="af-label">Utfall</label>
+      <select class="filter-select af-select" id="analyticsOutcomeFilter" onchange="renderAnalytics()">
+        <option value="">Alla</option>
+        <option value="W">Win</option>
+        <option value="L">Loss</option>
+        <option value="BE">Breakeven</option>
+      </select>
+    </div>
+    <div class="af-group">
+      <label class="af-label">Session</label>
+      <select class="filter-select af-select" id="analyticsSessionFilter" onchange="renderAnalytics()">
+        <option value="">Alla</option>
+        <option value="london">London (2–5 ET)</option>
+        <option value="nyam">NY AM (7–10 ET)</option>
+        <option value="nypm">NY PM (13–16 ET)</option>
+        <option value="asia">Asia (20–0 ET)</option>
+      </select>
+    </div>
+    <div class="af-group">
+      <label class="af-label">Från</label>
+      <input type="date" class="form-control af-select" id="analyticsDateFrom" onchange="renderAnalytics()" style="font-size:12px">
+    </div>
+    <div class="af-group">
+      <label class="af-label">Till</label>
+      <input type="date" class="form-control af-select" id="analyticsDateTo" onchange="renderAnalytics()" style="font-size:12px">
+    </div>
+    <div class="af-group" style="align-self:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="resetAnalyticsFilters()">✕ Rensa</button>
+    </div>
+  </div>
+  <div id="analyticsFilterSummary" style="font-size:11px;color:var(--text3);margin-bottom:12px;min-height:16px"></div>
+
   <!-- Nyckeltal rad 1 -->
-  <div class="stats-row" style="margin-bottom:16px" id="analyticsStats"></div>
+  <div class="stats-row" style="margin-bottom:16px;flex-wrap:wrap" id="analyticsStats"></div>
 
-  <!-- Grid med analyskort -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <!-- Nyckeltal rad 2 – extra -->
+  <div class="stats-row" style="margin-bottom:20px;flex-wrap:wrap" id="analyticsStats2"></div>
 
-    <!-- Win rate per dag -->
+  <!-- Sektion 1: Tids- & sessionsanalys -->
+  <div class="analytics-section-title">⏰ Tids- & sessionsanalys
+    <span class="analytics-section-note">⚡ Kräver loggade klockslag</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
     <div class="dash-card">
       <div class="dash-card-header"><div class="dash-card-title">📅 Win rate per veckodag</div></div>
       <div class="dash-card-body" id="analyticsByDay"></div>
     </div>
-
-    <!-- R-fördelning per grade -->
     <div class="dash-card">
-      <div class="dash-card-header"><div class="dash-card-title">🏅 Genomsnittlig R per grade</div></div>
-      <div class="dash-card-body" id="analyticsByGrade"></div>
+      <div class="dash-card-header"><div class="dash-card-title">🕐 Win rate per timme</div></div>
+      <div class="dash-card-body" id="analyticsByHour"></div>
     </div>
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">🌍 Win rate per session</div></div>
+      <div class="dash-card-body" id="analyticsBySession"></div>
+    </div>
+  </div>
 
-    <!-- Win rate per strategi -->
+  <!-- Sektion 2: Strategi & Setup -->
+  <div class="analytics-section-title">🎯 Strategi & Setup</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
     <div class="dash-card">
       <div class="dash-card-header"><div class="dash-card-title">🎯 Win rate per strategi</div></div>
       <div class="dash-card-body" id="analyticsByStrategy"></div>
     </div>
-
-    <!-- Checklist % vs utfall -->
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">↕️ Long vs Short</div></div>
+      <div class="dash-card-body" id="analyticsByDirection"></div>
+    </div>
     <div class="dash-card">
       <div class="dash-card-header"><div class="dash-card-title">✅ Checklist % vs utfall</div></div>
       <div class="dash-card-body" id="analyticsByChecklist"></div>
     </div>
+  </div>
 
+  <!-- Sektion 3: Kvalitet & Risk -->
+  <div class="analytics-section-title">🏅 Kvalitet & Risk</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">🏅 Avg R per grade</div></div>
+      <div class="dash-card-body" id="analyticsByGrade"></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">📊 R-distribution</div></div>
+      <div class="dash-card-body" id="analyticsRDist"></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-header"><div class="dash-card-title">🔥 Streak-analys</div></div>
+      <div class="dash-card-body" id="analyticsStreak"></div>
+    </div>
   </div>
 
   <!-- Egna fält-statistik -->
-  <div id="analyticsCustomFields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px"></div>
+  <div id="analyticsCustomFields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px"></div>
 
-
-  <!-- MFE/MAE Analys -->
-  <div class="dash-card" style="margin-bottom:16px">
+  <!-- Sektion 4: MFE/MAE -->
+  <div class="analytics-section-title">📐 Execution-analys (MFE / MAE)
+    <span class="analytics-section-note">⚡ Kräver loggade klockslag · Via TwelveData</span>
+  </div>
+  <div class="dash-card" style="margin-bottom:20px">
     <div class="dash-card-header">
-      <div class="dash-card-title">🎯 MFE / MAE – Marknadsdata-analys</div>
+      <div class="dash-card-title">🎯 MFE / MAE – Marknadsdata</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select class="filter-select" id="mfeSymbolFilter" onchange="loadMarketDataAnalysis(false)" style="min-width:120px;font-size:12px">
           <option value="">Alla instrument</option>
         </select>
-        <span style="font-size:11px;color:var(--text3)">Via TwelveData · max 20 trades</span>
+        <span style="font-size:11px;color:var(--text3)">max 20 trades</span>
         <button class="btn btn-primary btn-sm" id="loadMDBtn" onclick="loadMarketDataAnalysis(true)">▶ Hämta data</button>
       </div>
       <div id="mfeFetchedAt" style="font-size:11px;margin-top:4px;min-height:16px"></div>
     </div>
     <div class="dash-card-body" id="analyticsMFE">
       <div style="font-size:12px;color:var(--text3)">
-        Klicka "Hämta data" för att beräkna MFE (Maximum Favorable Excursion) och MAE (Maximum Adverse Excursion) för dina senaste trades.
-        <br><br>
-        <strong>MFE</strong> = hur långt priset gick i din riktning efter entry (i R)<br>
-        <strong>MAE</strong> = hur långt priset gick mot dig (i R)<br>
-        <strong>Lämnat på bordet</strong> = skillnad mellan MFE och faktiskt utfall
+        Klicka "Hämta data" för att beräkna MFE / MAE för dina senaste trades.<br><br>
+        <strong>MFE</strong> = hur långt priset gick i din riktning (i R) &nbsp;·&nbsp;
+        <strong>MAE</strong> = hur långt priset gick mot dig (i R) &nbsp;·&nbsp;
+        <strong>Lämnat på bordet</strong> = MFE − faktiskt utfall
       </div>
     </div>
   </div>
 
-
-  <!-- R-kurva över tid -->
-  <div class="dash-card" style="margin-bottom:16px">
+  <!-- Sektion 5: Kumulativ R-kurva -->
+  <div class="analytics-section-title">📈 Equity-kurva</div>
+  <div class="dash-card" style="margin-bottom:20px">
     <div class="dash-card-header"><div class="dash-card-title">📈 Kumulativ R-kurva</div></div>
     <div class="dash-card-body" id="analyticsRCurve"></div>
   </div>
+
+  <!-- Sektion 6: AI-analys output -->
+  <div id="aiAnalysisOutput" style="display:none;margin-bottom:20px"></div>
 
 </div>
 
@@ -4160,7 +4262,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.9</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.0</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4339,32 +4441,92 @@ function renderMFETable(valid,tsEl){
 
 
 // ── ANALYTICS ─────────────────────────────────────────────────────────────────
-function renderAnalytics(){
-  const stratFilter=document.getElementById('analyticsStratFilter')?.value||'';
-  const trades=stratFilter?journal.filter(t=>t.strategy===stratFilter):journal;
-  const withR=trades.filter(t=>t.result!=null);
+// ── Session helper (ET time) ────────────────────────────────────────────────
+function getTradeSession(trade){
+  if(!trade.time)return null;
+  const [h,m]=(trade.time||'00:00').split(':').map(Number);
+  const totalMin=h*60+(m||0);
+  // London: 02:00–05:00 ET, NY AM: 07:00–10:00 ET, NY PM: 13:00–16:00 ET, Asia: 20:00–00:00 ET
+  if(totalMin>=120&&totalMin<300)return'london';
+  if(totalMin>=420&&totalMin<600)return'nyam';
+  if(totalMin>=780&&totalMin<960)return'nypm';
+  if(totalMin>=1200||totalMin<60)return'asia';
+  return'other';
+}
+const SESSION_LABELS={london:'London',nyam:'NY AM',nypm:'NY PM',asia:'Asia',other:'Övrig'};
 
-  // Uppdatera strategi-filter options
-  const sel=document.getElementById('analyticsStratFilter');
-  if(sel){
-    const current=sel.value;
-    const strats=[...new Set(journal.map(t=>t.strategy).filter(Boolean))];
-    sel.innerHTML='<option value="">Alla strategier</option>'+strats.map(s=>`<option value="${s}" ${s===current?'selected':''}>${s}</option>`).join('');
+function resetAnalyticsFilters(){
+  ['analyticsStratFilter','analyticsSymbolFilter','analyticsDirectionFilter','analyticsOutcomeFilter','analyticsSessionFilter'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  ['analyticsDateFrom','analyticsDateTo'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderAnalytics();
+}
+
+function getFilteredTrades(){
+  const sf=document.getElementById('analyticsStratFilter')?.value||'';
+  const sym=document.getElementById('analyticsSymbolFilter')?.value||'';
+  const dir=document.getElementById('analyticsDirectionFilter')?.value||'';
+  const out=document.getElementById('analyticsOutcomeFilter')?.value||'';
+  const sess=document.getElementById('analyticsSessionFilter')?.value||'';
+  const dfrom=document.getElementById('analyticsDateFrom')?.value||'';
+  const dto=document.getElementById('analyticsDateTo')?.value||'';
+  return journal.filter(t=>{
+    if(sf&&t.strategy!==sf)return false;
+    if(sym&&(t.symbol||'').toUpperCase()!==sym.toUpperCase())return false;
+    if(dir&&t.direction!==dir)return false;
+    if(out&&t.outcome!==out)return false;
+    if(sess&&getTradeSession(t)!==sess)return false;
+    if(dfrom&&t.date<dfrom)return false;
+    if(dto&&t.date>dto)return false;
+    return true;
+  });
+}
+
+function renderAnalytics(){
+  // Uppdatera dropdown-alternativ
+  const stratSel=document.getElementById('analyticsStratFilter');
+  if(stratSel){
+    const cur=stratSel.value;
+    const strats=[...new Set(journal.map(t=>t.strategy).filter(Boolean))].sort();
+    stratSel.innerHTML='<option value="">Alla</option>'+strats.map(s=>`<option value="${s}"${s===cur?' selected':''}>${s}</option>`).join('');
+  }
+  const symSel=document.getElementById('analyticsSymbolFilter');
+  if(symSel){
+    const cur=symSel.value;
+    const syms=[...new Set(journal.map(t=>(t.symbol||'').toUpperCase()).filter(Boolean))].sort();
+    symSel.innerHTML='<option value="">Alla</option>'+syms.map(s=>`<option value="${s}"${s===cur?' selected':''}>${s}</option>`).join('');
   }
 
-  // ── Nyckeltal ───────────────────────────────────────────────────────────────
-  const wins=withR.filter(t=>t.outcome==='W').length;
-  const losses=withR.filter(t=>t.outcome==='L').length;
-  const wr=withR.length?(wins/withR.length*100).toFixed(1)+'%':'—';
+  const trades=getFilteredTrades();
+  const withR=trades.filter(t=>t.result!=null);
+  const wins=withR.filter(t=>t.outcome==='W');
+  const losses=withR.filter(t=>t.outcome==='L');
+
+  // Filter summary
+  const summary=document.getElementById('analyticsFilterSummary');
+  const activeFilters=[];
+  if(document.getElementById('analyticsStratFilter')?.value) activeFilters.push('Strategi: '+document.getElementById('analyticsStratFilter').value);
+  if(document.getElementById('analyticsSymbolFilter')?.value) activeFilters.push('Instrument: '+document.getElementById('analyticsSymbolFilter').value);
+  if(document.getElementById('analyticsDirectionFilter')?.value) activeFilters.push(document.getElementById('analyticsDirectionFilter').value);
+  if(document.getElementById('analyticsOutcomeFilter')?.value) activeFilters.push(document.getElementById('analyticsOutcomeFilter').value);
+  if(document.getElementById('analyticsSessionFilter')?.value) activeFilters.push('Session: '+SESSION_LABELS[document.getElementById('analyticsSessionFilter').value]);
+  if(document.getElementById('analyticsDateFrom')?.value||document.getElementById('analyticsDateTo')?.value)
+    activeFilters.push((document.getElementById('analyticsDateFrom')?.value||'…')+' → '+(document.getElementById('analyticsDateTo')?.value||'idag'));
+  if(summary) summary.textContent=activeFilters.length?'Filter aktiva: '+activeFilters.join(' · ')+' ('+trades.length+' trades)':'';
+
+  // ── Nyckeltal rad 1 ─────────────────────────────────────────────────────────
+  const wr=withR.length?(wins.length/withR.length*100).toFixed(1)+'%':'—';
   const totalR=withR.reduce((a,t)=>a+(t.result||0),0);
   const avgR=withR.length?(totalR/withR.length).toFixed(2):'—';
-  const winR=withR.filter(t=>t.result>0).reduce((a,t)=>a+t.result,0);
-  const lossR=Math.abs(withR.filter(t=>t.result<0).reduce((a,t)=>a+t.result,0));
+  const winR=wins.reduce((a,t)=>a+t.result,0);
+  const lossR=Math.abs(losses.reduce((a,t)=>a+t.result,0));
   const pf=lossR>0?(winR/lossR).toFixed(2):'—';
-  const avgWin=wins>0?(winR/wins).toFixed(2):'—';
-  const avgLoss=losses>0?(lossR/losses).toFixed(2):'—';
-  const expectancy=withR.length?((wins/withR.length)*parseFloat(avgWin||0)-(losses/withR.length)*parseFloat(avgLoss||0)).toFixed(2):'—';
-
+  const avgWin=wins.length?(winR/wins.length).toFixed(2):'—';
+  const avgLoss=losses.length?(lossR/losses.length).toFixed(2):'—';
+  const expectancy=withR.length?((wins.length/withR.length)*parseFloat(avgWin||0)-(losses.length/withR.length)*parseFloat(avgLoss||0)).toFixed(2):'—';
   const statsEl=document.getElementById('analyticsStats');
   if(statsEl) statsEl.innerHTML=`
     <div class="stat-card c-blue"><div class="stat-label">Trades</div><div class="stat-value blue">${trades.length}</div></div>
@@ -4374,26 +4536,169 @@ function renderAnalytics(){
     <div class="stat-card c-amber"><div class="stat-label">Expectancy</div><div class="stat-value ${parseFloat(expectancy)>0?'green':parseFloat(expectancy)<0?'red':''}">${expectancy}R</div></div>
   `;
 
-  // ── Win rate per veckodag ───────────────────────────────────────────────────
+  // ── Nyckeltal rad 2 ─────────────────────────────────────────────────────────
+  const maxWin=wins.length?Math.max(...wins.map(t=>t.result)).toFixed(2):'—';
+  const maxLoss=losses.length?Math.abs(Math.min(...losses.map(t=>t.result))).toFixed(2):'—';
+  // Streak
+  let curStreak=0,maxWStreak=0,maxLStreak=0,tmpW=0,tmpL=0;
+  const sorted=[...withR].sort((a,b)=>(a.date||'').localeCompare(b.date||'')+(a.time||'').localeCompare(b.time||''));
+  sorted.forEach(t=>{
+    if(t.outcome==='W'){tmpW++;tmpL=0;maxWStreak=Math.max(maxWStreak,tmpW);}
+    else{tmpL++;tmpW=0;maxLStreak=Math.max(maxLStreak,tmpL);}
+  });
+  if(sorted.length){const last=sorted[sorted.length-1];curStreak=last.outcome==='W'?tmpW:-tmpL;}
+  const tradesWithTime=trades.filter(t=>t.time).length;
+  const timePct=trades.length?Math.round(tradesWithTime/trades.length*100):0;
+  const stats2El=document.getElementById('analyticsStats2');
+  if(stats2El) stats2El.innerHTML=`
+    <div class="stat-card c-green"><div class="stat-label">Bästa trade</div><div class="stat-value green">+${maxWin}R</div></div>
+    <div class="stat-card c-red"><div class="stat-label">Sämsta trade</div><div class="stat-value red">-${maxLoss}R</div></div>
+    <div class="stat-card c-blue"><div class="stat-label">Total R</div><div class="stat-value ${totalR>0?'green':totalR<0?'red':''}">${totalR>0?'+':''}${totalR.toFixed(2)}R</div></div>
+    <div class="stat-card c-teal"><div class="stat-label">Max W-streak</div><div class="stat-value green">${maxWStreak}</div></div>
+    <div class="stat-card c-amber"><div class="stat-label">Max L-streak</div><div class="stat-value red">${maxLStreak}</div></div>
+    <div class="stat-card ${timePct>80?'c-green':timePct>50?'c-amber':'c-red'}"><div class="stat-label">Trades med tid</div><div class="stat-value ${timePct>80?'green':timePct>50?'':' red'}">${timePct}%</div></div>
+  `;
+
+  // ── Win rate per veckodag ────────────────────────────────────────────────────
   const days=['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
   const dayData=days.map((d,i)=>{
-    const idx=i+1===7?0:i+1; // Måndag=1..Söndag=0
+    const idx=i+1===7?0:i+1;
     const dt=trades.filter(t=>t.date&&new Date(t.date).getDay()===idx);
     const dw=dt.filter(t=>t.outcome==='W').length;
     return{day:d,total:dt.length,wins:dw,wr:dt.length?(dw/dt.length*100).toFixed(0):null};
   });
   const byDay=document.getElementById('analyticsByDay');
   if(byDay) byDay.innerHTML=dayData.map(d=>`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
       <span style="width:28px;font-size:12px;color:var(--text3);font-weight:500">${d.day}</span>
-      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden;position:relative">
+      <div style="flex:1;height:18px;background:var(--border);border-radius:4px;overflow:hidden">
         <div style="height:100%;width:${d.wr||0}%;background:${d.wr>55?'var(--green)':d.wr<40?'var(--red)':'var(--amber)'};border-radius:4px;transition:width .4s"></div>
       </div>
-      <span style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right;color:${d.wr>55?'var(--green)':d.wr<40?'var(--red)':'var(--text3)'}">${d.wr!==null?d.wr+'%':'—'}</span>
-      <span style="font-size:11px;color:var(--text3);min-width:30px">${d.total}st</span>
+      <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right;color:${d.wr>55?'var(--green)':d.wr<40?'var(--red)':'var(--text3)'}">${d.wr!==null?d.wr+'%':'—'}</span>
+      <span style="font-size:10px;color:var(--text3);min-width:28px">${d.total}st</span>
     </div>`).join('');
 
-  // ── R per grade ─────────────────────────────────────────────────────────────
+  // ── Win rate per timme ───────────────────────────────────────────────────────
+  const byHourEl=document.getElementById('analyticsByHour');
+  const tradesWithHour=trades.filter(t=>t.time);
+  if(byHourEl){
+    if(tradesWithHour.length<3){
+      byHourEl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px">⚡ Logga klockslag på fler trades för att se timmes-analys</div>';
+    }else{
+      const hourData=Array.from({length:24},(_,h)=>{
+        const ht=tradesWithHour.filter(t=>parseInt(t.time||'0')===h);
+        const hw=ht.filter(t=>t.outcome==='W').length;
+        return{h,total:ht.length,wr:ht.length?(hw/ht.length*100).toFixed(0):null};
+      }).filter(h=>h.total>0);
+      byHourEl.innerHTML=hourData.map(h=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="width:32px;font-size:11px;color:var(--text3);font-family:var(--mono)">${String(h.h).padStart(2,'0')}:xx</span>
+          <div style="flex:1;height:16px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${h.wr||0}%;background:${h.wr>55?'var(--green)':h.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
+          </div>
+          <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right">${h.wr!==null?h.wr+'%':'—'}</span>
+          <span style="font-size:10px;color:var(--text3)">${h.total}st</span>
+        </div>`).join('');
+    }
+  }
+
+  // ── Win rate per session ─────────────────────────────────────────────────────
+  const bySessionEl=document.getElementById('analyticsBySession');
+  if(bySessionEl){
+    if(tradesWithHour.length<3){
+      bySessionEl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px">⚡ Logga klockslag för sessionsanalys</div>';
+    }else{
+      const sessList=['london','nyam','nypm','asia','other'];
+      const sessData=sessList.map(s=>{
+        const st=tradesWithHour.filter(t=>getTradeSession(t)===s);
+        const sw=st.filter(t=>t.outcome==='W').length;
+        const sr=st.filter(t=>t.result!=null).reduce((a,t)=>a+t.result,0);
+        return{s,label:SESSION_LABELS[s],total:st.length,wins:sw,wr:st.length?(sw/st.length*100).toFixed(0):null,totalR:sr.toFixed(2)};
+      }).filter(s=>s.total>0);
+      bySessionEl.innerHTML=sessData.map(s=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="width:60px;font-size:11px;color:var(--text2);font-weight:500">${s.label}</span>
+          <div style="flex:1;height:18px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${s.wr||0}%;background:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--amber)'};border-radius:4px"></div>
+          </div>
+          <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right">${s.wr!==null?s.wr+'%':'—'}</span>
+          <span style="font-size:10px;color:var(--text3);min-width:28px">${s.total}st</span>
+          <span style="font-family:var(--mono);font-size:10px;color:${parseFloat(s.totalR)>0?'var(--green)':'var(--red)'};">${parseFloat(s.totalR)>0?'+':''}${s.totalR}R</span>
+        </div>`).join('');
+    }
+  }
+
+  // ── Win rate per strategi ────────────────────────────────────────────────────
+  const stratData=Object.entries(
+    trades.reduce((acc,t)=>{
+      if(!t.strategy)return acc;
+      if(!acc[t.strategy])acc[t.strategy]={wins:0,total:0,r:0,rArr:[]};
+      acc[t.strategy].total++;
+      if(t.outcome==='W')acc[t.strategy].wins++;
+      if(t.result!=null){acc[t.strategy].r+=t.result;acc[t.strategy].rArr.push(t.result);}
+      return acc;
+    },{})
+  ).map(([s,d])=>({strat:s,...d,wr:d.total?(d.wins/d.total*100).toFixed(0):0,avgR:d.rArr.length?(d.r/d.rArr.length).toFixed(2):null}))
+   .sort((a,b)=>b.total-a.total);
+  const byStrat=document.getElementById('analyticsByStrategy');
+  if(byStrat) byStrat.innerHTML=stratData.length?stratData.map(s=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:11px;color:var(--text2);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.strat}">${s.strat}</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:8px">${s.total}st · ${s.avgR!==null?(parseFloat(s.avgR)>0?'<span style=color:var(--green)>+'+s.avgR+'R</span>':'<span style=color:var(--red)>'+s.avgR+'R</span>'):'—'}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:16px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${s.wr}%;background:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right;color:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--text3)'}">${s.wr}%</span>
+      </div>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">Inga data</div>';
+
+  // ── Long vs Short ────────────────────────────────────────────────────────────
+  const byDirEl=document.getElementById('analyticsByDirection');
+  if(byDirEl){
+    const dirData=['Long','Short'].map(dir=>{
+      const dt=trades.filter(t=>t.direction===dir);
+      const dw=dt.filter(t=>t.outcome==='W').length;
+      const dr=dt.filter(t=>t.result!=null).reduce((a,t)=>a+t.result,0);
+      const dpf=()=>{const w=dt.filter(t=>t.result>0).reduce((a,t)=>a+t.result,0);const l=Math.abs(dt.filter(t=>t.result<0).reduce((a,t)=>a+t.result,0));return l>0?(w/l).toFixed(2):'—';};
+      return{dir,total:dt.length,wr:dt.length?(dw/dt.length*100).toFixed(1):null,totalR:dr.toFixed(2),pf:dpf()};
+    });
+    byDirEl.innerHTML=dirData.map(d=>`
+      <div style="background:var(--bg2);border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="badge badge-${d.dir}" style="font-size:12px">${d.dir}</span>
+          <span style="font-size:11px;color:var(--text3)">${d.total} trades</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div><div style="font-size:10px;color:var(--text3)">Win Rate</div><div style="font-family:var(--mono);font-weight:700;color:${parseFloat(d.wr)>50?'var(--green)':parseFloat(d.wr)<45?'var(--red)':'var(--text)'}">${d.wr!==null?d.wr+'%':'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">Total R</div><div style="font-family:var(--mono);font-weight:700;color:${parseFloat(d.totalR)>0?'var(--green)':'var(--red)'}">${parseFloat(d.totalR)>0?'+':''}${d.totalR}R</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">PF</div><div style="font-family:var(--mono);font-weight:700;color:${parseFloat(d.pf)>1.5?'var(--green)':parseFloat(d.pf)<1?'var(--red)':'var(--text)'}">${d.pf}</div></div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Checklist % ─────────────────────────────────────────────────────────────
+  const clBuckets=[{label:'0–25%',min:0,max:25},{label:'26–50%',min:26,max:50},{label:'51–75%',min:51,max:75},{label:'76–100%',min:76,max:100}];
+  const clData=clBuckets.map(b=>{
+    const bt=trades.filter(t=>t.checklist_pct!=null&&t.checklist_pct>=b.min&&t.checklist_pct<=b.max);
+    const bw=bt.filter(t=>t.outcome==='W').length;
+    return{...b,total:bt.length,wins:bw,wr:bt.length?(bw/bt.length*100).toFixed(0):null};
+  });
+  const byCl=document.getElementById('analyticsByChecklist');
+  if(byCl) byCl.innerHTML=`
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Checklist-följsamhet vs win rate</div>
+    ${clData.map(b=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="width:58px;font-size:11px;color:var(--text3)">${b.label}</span>
+      <div style="flex:1;height:18px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${b.wr||0}%;background:${b.wr>55?'var(--green)':b.wr<40?'var(--red)':'var(--amber)'};border-radius:4px"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right">${b.wr!==null?b.wr+'%':'—'}</span>
+      <span style="font-size:10px;color:var(--text3);min-width:26px">${b.total}st</span>
+    </div>`).join('')}`;
+
+  // ── R per grade ──────────────────────────────────────────────────────────────
   const gradeColors={'A+':'var(--green)','A':'var(--teal)','B':'var(--amber)','C':'var(--red)'};
   const gradeData=['A+','A','B','C'].map(g=>{
     const gt=withR.filter(t=>t.grade===g);
@@ -4403,58 +4708,83 @@ function renderAnalytics(){
   });
   const byGrade=document.getElementById('analyticsByGrade');
   if(byGrade) byGrade.innerHTML=gradeData.map(g=>`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="width:24px;font-size:13px;font-weight:700;color:${g.color}">${g.grade}</span>
-      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden">
-        <div style="height:100%;width:${g.avg!==null?Math.min(Math.abs(parseFloat(g.avg))/5*100,100):0}%;background:${parseFloat(g.avg)>0?'var(--green)':'var(--red)'};border-radius:4px;transition:width .4s"></div>
+      <div style="flex:1;height:18px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${g.avg!==null?Math.min(Math.abs(parseFloat(g.avg))/5*100,100):0}%;background:${parseFloat(g.avg)>0?'var(--green)':'var(--red)'};border-radius:4px"></div>
       </div>
-      <span style="font-family:var(--mono);font-size:12px;min-width:56px;text-align:right;color:${parseFloat(g.avg)>0?'var(--green)':parseFloat(g.avg)<0?'var(--red)':'var(--text3)'}">${g.avg!==null?(parseFloat(g.avg)>0?'+':'')+g.avg+'R':'—'}</span>
-      <span style="font-size:11px;color:var(--text3);min-width:30px">${g.count}st</span>
+      <span style="font-family:var(--mono);font-size:11px;min-width:52px;text-align:right;color:${parseFloat(g.avg)>0?'var(--green)':parseFloat(g.avg)<0?'var(--red)':'var(--text3)'}">${g.avg!==null?(parseFloat(g.avg)>0?'+':'')+g.avg+'R':'—'}</span>
+      <span style="font-size:10px;color:var(--text3);min-width:28px">${g.count}st</span>
     </div>`).join('');
 
-  // ── Win rate per strategi ───────────────────────────────────────────────────
-  const stratData=Object.entries(
-    trades.reduce((acc,t)=>{
-      if(!t.strategy)return acc;
-      if(!acc[t.strategy])acc[t.strategy]={wins:0,total:0,r:0};
-      acc[t.strategy].total++;
-      if(t.outcome==='W')acc[t.strategy].wins++;
-      if(t.result!=null)acc[t.strategy].r+=t.result;
-      return acc;
-    },{})
-  ).map(([s,d])=>({strat:s,...d,wr:d.total?(d.wins/d.total*100).toFixed(0):0}))
-   .sort((a,b)=>b.total-a.total);
-  const byStrat=document.getElementById('analyticsByStrategy');
-  if(byStrat) byStrat.innerHTML=stratData.length?stratData.map(s=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <span style="font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.strat}">${s.strat}</span>
-      <div style="width:80px;height:16px;background:var(--border);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${s.wr}%;background:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
-      </div>
-      <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right;color:${s.wr>55?'var(--green)':s.wr<40?'var(--red)':'var(--text3)'}">${s.wr}%</span>
-      <span style="font-size:10px;color:var(--text3);min-width:24px">${s.total}st</span>
-    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">Inga data</div>';
+  // ── R-distribution ───────────────────────────────────────────────────────────
+  const rDistEl=document.getElementById('analyticsRDist');
+  if(rDistEl&&withR.length){
+    const buckets=[
+      {label:'<-2R',min:-99,max:-2},
+      {label:'-2R',min:-2,max:-1.5},
+      {label:'-1.5R',min:-1.5,max:-1},
+      {label:'-1R',min:-1,max:-0.5},
+      {label:'-0.5R',min:-0.5,max:0},
+      {label:'BE',min:0,max:0.1},
+      {label:'+1R',min:0.1,max:1},
+      {label:'+2R',min:1,max:2},
+      {label:'+3R',min:2,max:3},
+      {label:'>+3R',min:3,max:99},
+    ];
+    const distData=buckets.map(b=>({...b,count:withR.filter(t=>t.result>=b.min&&t.result<b.max).length}));
+    const maxCount=Math.max(...distData.map(d=>d.count),1);
+    rDistEl.innerHTML=`<div style="display:flex;align-items:flex-end;gap:3px;height:80px;padding-bottom:4px">
+      ${distData.map(b=>`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span style="font-size:9px;color:var(--text3)">${b.count||''}</span>
+          <div style="width:100%;height:${b.count?Math.max(b.count/maxCount*60,4):0}px;background:${b.min>=0?'var(--green)':'var(--red)'};border-radius:2px 2px 0 0;opacity:${b.count?1:0.2}"></div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:3px;margin-top:2px">
+      ${distData.map(b=>`<div style="flex:1;font-size:8px;color:var(--text3);text-align:center;overflow:hidden">${b.label}</div>`).join('')}
+    </div>`;
+  }else if(rDistEl){rDistEl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Inga data</div>';}
 
-  // ── Checklist % vs utfall ───────────────────────────────────────────────────
-  const clBuckets=[{label:'0–25%',min:0,max:25},{label:'26–50%',min:26,max:50},{label:'51–75%',min:51,max:75},{label:'76–100%',min:76,max:100}];
-  const clData=clBuckets.map(b=>{
-    const bt=trades.filter(t=>t.checklist_pct!=null&&t.checklist_pct>=b.min&&t.checklist_pct<=b.max);
-    const bw=bt.filter(t=>t.outcome==='W').length;
-    return{...b,total:bt.length,wins:bw,wr:bt.length?(bw/bt.length*100).toFixed(0):null};
-  });
-  const byCl=document.getElementById('analyticsByChecklist');
-  if(byCl) byCl.innerHTML=`
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Visar sambandet mellan checklist-följsamhet och win rate</div>
-    ${clData.map(b=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="width:60px;font-size:11px;color:var(--text3)">${b.label}</span>
-      <div style="flex:1;height:20px;background:var(--border);border-radius:4px;overflow:hidden">
-        <div style="height:100%;width:${b.wr||0}%;background:${b.wr>55?'var(--green)':b.wr<40?'var(--red)':'var(--amber)'};border-radius:4px"></div>
+  // ── Streak-analys ────────────────────────────────────────────────────────────
+  const streakEl=document.getElementById('analyticsStreak');
+  if(streakEl&&sorted.length){
+    // Nuvarande streak
+    const curLabel=curStreak>0?`🔥 ${curStreak} W i rad`:curStreak<0?`❄️ ${Math.abs(curStreak)} L i rad`:'—';
+    const avgAfterWin=()=>{
+      const afterW=[];
+      for(let i=1;i<sorted.length;i++){if(sorted[i-1].outcome==='W'&&sorted[i].result!=null)afterW.push(sorted[i].result);}
+      return afterW.length?(afterW.reduce((a,b)=>a+b,0)/afterW.length).toFixed(2):null;
+    };
+    const avgAfterLoss=()=>{
+      const afterL=[];
+      for(let i=1;i<sorted.length;i++){if(sorted[i-1].outcome==='L'&&sorted[i].result!=null)afterL.push(sorted[i].result);}
+      return afterL.length?(afterL.reduce((a,b)=>a+b,0)/afterL.length).toFixed(2):null;
+    };
+    const aw=avgAfterWin();const al=avgAfterLoss();
+    streakEl.innerHTML=`
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:8px;text-align:center">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Nuvarande streak</div>
+        <div style="font-size:18px;font-weight:700">${curLabel}</div>
       </div>
-      <span style="font-family:var(--mono);font-size:12px;min-width:44px;text-align:right">${b.wr!==null?b.wr+'%':'—'}</span>
-      <span style="font-size:11px;color:var(--text3);min-width:30px">${b.total}st</span>
-    </div>`).join('')}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3)">Max W-streak</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green)">${maxWStreak}</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3)">Max L-streak</div>
+          <div style="font-size:20px;font-weight:700;color:var(--red)">${maxLStreak}</div>
+        </div>
+      </div>
+      ${aw!==null||al!==null?`<div style="margin-top:8px;font-size:11px;color:var(--text3)">
+        ${aw!==null?`Trade efter W: <span style="font-family:var(--mono);color:${parseFloat(aw)>0?'var(--green)':'var(--red)'}">${parseFloat(aw)>0?'+':''}${aw}R</span>`:''}
+        ${aw!==null&&al!==null?' &nbsp;·&nbsp; ':''}
+        ${al!==null?`Trade efter L: <span style="font-family:var(--mono);color:${parseFloat(al)>0?'var(--green)':'var(--red)'}">${parseFloat(al)>0?'+':''}${al}R</span>`:''}
+      </div>`:''}`;
+  }else if(streakEl){streakEl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Inga data</div>';}
 
-  // ── Egna dropdown-fält ──────────────────────────────────────────────────────
+  // ── Egna dropdown-fält ───────────────────────────────────────────────────────
   const cfContainer=document.getElementById('analyticsCustomFields');
   if(cfContainer&&customFields.length){
     const dropdownFields=customFields.filter(f=>f.type==='select'&&f.options?.length);
@@ -4466,14 +4796,14 @@ function renderAnalytics(){
       }).filter(o=>o.total>0);
       if(!optData.length)return'';
       return`<div class="dash-card">
-        <div class="dash-card-header"><div class="dash-card-title">🔍 ${f.name} – win rate</div></div>
+        <div class="dash-card-header"><div class="dash-card-title">🔍 ${f.name}</div></div>
         <div class="dash-card-body">
-          ${optData.map(o=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <span style="width:70px;font-size:12px;color:var(--text2);font-weight:500">${o.opt}</span>
-            <div style="flex:1;height:18px;background:var(--border);border-radius:3px;overflow:hidden">
+          ${optData.map(o=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+            <span style="width:70px;font-size:11px;color:var(--text2);font-weight:500">${o.opt}</span>
+            <div style="flex:1;height:16px;background:var(--border);border-radius:3px;overflow:hidden">
               <div style="height:100%;width:${o.wr||0}%;background:${o.wr>55?'var(--green)':o.wr<40?'var(--red)':'var(--amber)'};border-radius:3px"></div>
             </div>
-            <span style="font-family:var(--mono);font-size:11px;min-width:40px;text-align:right">${o.wr!==null?o.wr+'%':'—'}</span>
+            <span style="font-family:var(--mono);font-size:11px;min-width:36px;text-align:right">${o.wr!==null?o.wr+'%':'—'}</span>
             <span style="font-size:10px;color:var(--text3)">${o.total}st</span>
           </div>`).join('')}
         </div>
@@ -4481,12 +4811,12 @@ function renderAnalytics(){
     }).join('');
   }else if(cfContainer){cfContainer.innerHTML='';}
 
-  // ── Kumulativ R-kurva ───────────────────────────────────────────────────────
+  // ── Kumulativ R-kurva ────────────────────────────────────────────────────────
   const rCurve=document.getElementById('analyticsRCurve');
   if(rCurve&&withR.length){
-    const sorted=[...withR].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const sortedR=[...withR].sort((a,b)=>(a.date||'').localeCompare(b.date||'')+(a.time||'').localeCompare(b.time||''));
     let cum=0;
-    const points=sorted.map((t,i)=>{cum+=t.result||0;return{x:i,y:cum,date:t.date,r:t.result};});
+    const points=sortedR.map((t,i)=>{cum+=t.result||0;return{x:i,y:parseFloat(cum.toFixed(2)),date:t.date,r:t.result};});
     const maxY=Math.max(...points.map(p=>p.y),0.1);
     const minY=Math.min(...points.map(p=>p.y),0);
     const range=maxY-minY||1;
@@ -4516,6 +4846,98 @@ function renderAnalytics(){
   loadMarketDataAnalysis(false);
 }
 
+
+// ── AI ANALYSIS ────────────────────────────────────────────────────────────────
+async function runAIAnalysis(){
+  const btn=document.getElementById('aiAnalysisBtn');
+  const out=document.getElementById('aiAnalysisOutput');
+  if(!out)return;
+  if(journal.length<5){
+    out.style.display='block';
+    out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--text3)">Logga minst 5 trades för att få en meningsfull AI-analys.</div></div>';
+    return;
+  }
+  btn.textContent='🤖 Analyserar…';btn.disabled=true;
+  out.style.display='block';
+  out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--text3)">⏳ Hämtar analys från AI – ett ögonblick…</div></div>';
+
+  const trades=getFilteredTrades();
+  const withR=trades.filter(t=>t.result!=null);
+  const wins=withR.filter(t=>t.outcome==='W');
+  const losses=withR.filter(t=>t.outcome==='L');
+  const winR=wins.reduce((a,t)=>a+t.result,0);
+  const lossR=Math.abs(losses.reduce((a,t)=>a+t.result,0));
+
+  // Bygg statistik-sammanfattning
+  const stats={
+    total:trades.length,
+    winRate:withR.length?(wins.length/withR.length*100).toFixed(1):null,
+    profitFactor:lossR>0?(winR/lossR).toFixed(2):null,
+    totalR:withR.reduce((a,t)=>a+t.result,0).toFixed(2),
+    avgWin:wins.length?(winR/wins.length).toFixed(2):null,
+    avgLoss:losses.length?(lossR/losses.length).toFixed(2):null,
+    expectancy:withR.length?((wins.length/withR.length)*parseFloat(wins.length?(winR/wins.length):0)-(losses.length/withR.length)*parseFloat(losses.length?(lossR/losses.length):0)).toFixed(2):null,
+  };
+  // Per session
+  const sessStats=['london','nyam','nypm','asia'].map(s=>{
+    const st=trades.filter(t=>t.time&&getTradeSession(t)===s);
+    const sw=st.filter(t=>t.outcome==='W').length;
+    return`${SESSION_LABELS[s]}: ${st.length} trades, WR ${st.length?(sw/st.length*100).toFixed(0):0}%`;
+  }).filter((_,i)=>trades.filter(t=>t.time&&getTradeSession(t)===['london','nyam','nypm','asia'][i]).length>0);
+  // Per strategi
+  const stratStats=Object.entries(trades.reduce((acc,t)=>{
+    if(!t.strategy)return acc;
+    if(!acc[t.strategy])acc[t.strategy]={w:0,l:0};
+    if(t.outcome==='W')acc[t.strategy].w++;else if(t.outcome==='L')acc[t.strategy].l++;
+    return acc;
+  },{})).map(([s,d])=>`${s}: ${d.w}W/${d.l}L`);
+  // Long vs Short
+  const longT=trades.filter(t=>t.direction==='Long');
+  const shortT=trades.filter(t=>t.direction==='Short');
+  const dirStats=`Long ${longT.length}st WR ${longT.length?(longT.filter(t=>t.outcome==='W').length/longT.length*100).toFixed(0):0}%, Short ${shortT.length}st WR ${shortT.length?(shortT.filter(t=>t.outcome==='W').length/shortT.length*100).toFixed(0):0}%`;
+
+  const prompt=`Du är en erfaren prop firm-trader och trading coach specialiserad på ICT/SMC NQ futures. Analysera nedanstående tradingstatistik och ge 4-6 konkreta, specifika insikter och förbättringsförslag. Var rak och ärlig – om något är svagt, säg det. Fokusera på det som verkligen kan flytta nålen för en TopStep $50K-utmanare.
+
+TRADINGSTATISTIK:
+- Trades analyserade: ${stats.total} (filtrerade)
+- Win rate: ${stats.winRate||'—'}%
+- Profit Factor: ${stats.profitFactor||'—'}
+- Total R: ${stats.totalR}R
+- Avg win: +${stats.avgWin||'—'}R | Avg loss: -${stats.avgLoss||'—'}R
+- Expectancy: ${stats.expectancy||'—'}R/trade
+${sessStats.length?'- Sessions: '+sessStats.join(', '):''}
+${stratStats.length?'- Strategier: '+stratStats.join(', '):''}
+- Riktning: ${dirStats}
+
+Svara ENBART i detta JSON-format utan markdown-backticks:
+{"insights":[{"type":"positive|warning|critical","title":"kort rubrik","text":"konkret insikt och åtgärd"}]}`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await resp.json();
+    const raw=data.content?.find(c=>c.type==='text')?.text||'';
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    const insights=parsed.insights||[];
+    out.innerHTML=`<div class="ai-analysis-card">
+      <h3>🤖 AI-analys <span style="font-size:11px;color:var(--text3);font-weight:400">${new Date().toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}</span></h3>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Baserad på ${stats.total} trades med aktiva filter</div>
+      ${insights.map(i=>`<div class="ai-insight ${i.type}"><strong>${i.title}</strong><br>${i.text}</div>`).join('')}
+      <div style="font-size:10px;color:var(--text3);margin-top:12px">AI-analys är ett komplement, inte ett handelsråd. Verifiera alltid med din egen bedömning.</div>
+    </div>`;
+  }catch(e){
+    out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ Kunde inte hämta AI-analys. Försök igen.</div></div>';
+  }
+  btn.textContent='🤖 AI-analys';btn.disabled=false;
+}
 
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
