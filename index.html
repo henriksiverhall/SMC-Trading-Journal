@@ -308,9 +308,9 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .trading-check-journal{font-size:10px;background:var(--blue-lt);color:var(--blue);padding:1px 5px;border-radius:4px;margin-top:2px;display:inline-block;font-weight:500;margin-left:4px;}
 
 /* BOTTOM ACTION BAR */
-.trading-action-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1360px;background:var(--bg);border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
-.trading-action-bar-left{display:flex;gap:8px;align-items:center;}
-.trading-action-bar-right{display:flex;gap:8px;align-items:center;}
+.trading-action-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1360px;background:var(--bg);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
+.trading-action-bar-left{display:flex;gap:8px;align-items:center;flex:1;min-width:0;overflow:hidden;}
+.trading-action-bar-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
 
 /* RECENT TRADES MINI */
 .recent-mini{background:var(--bg);border-radius:10px;border:1px solid var(--border);margin:0 24px 12px;box-shadow:var(--shadow);overflow:hidden;}
@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.7</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.8</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,7 +560,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.7</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.8</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -740,7 +740,9 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   <div class="trading-action-bar">
     <div class="trading-action-bar-left">
       <div id="journalTaggedFieldsWrap" style="display:none">
-        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">📋 Journal-steg</div>
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+          📋 Journal-steg <span style="font-size:10px;font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0">(loggas automatiskt när du sparar trade)</span>
+        </div>
         <div id="journalTaggedFields" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px"></div>
       </div>
     </div>
@@ -3622,7 +3624,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.7</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.8</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
