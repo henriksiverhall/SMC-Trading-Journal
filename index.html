@@ -271,6 +271,60 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 /* MODAL */
 
 
+
+/* TRADING PAGE */
+.trading-wrap{display:flex;flex-direction:column;height:calc(100vh - 50px);background:var(--bg2);}
+.trading-top{padding:16px 24px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.trading-strategy-select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);min-width:200px;}
+.trading-progress-wrap{flex:1;min-width:200px;}
+.trading-progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:4px;}
+.trading-progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s;}
+.trading-progress-label{font-size:11px;color:var(--text3);display:flex;justify-content:space-between;}
+.trading-status{padding:0 24px;margin-top:8px;}
+.trading-checklist{flex:1;overflow-y:auto;padding:0 24px 100px;}
+.trading-checklist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;padding:12px 0;}
+.trading-phase{background:var(--bg);border-radius:10px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);}
+.trading-phase-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;transition:background .1s;}
+.trading-phase-header:hover{background:var(--gray-lt);}
+.trading-phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.trading-phase-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);flex:1;}
+.trading-phase-count{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.trading-phase-chevron{font-size:10px;color:var(--text3);transition:transform .2s;}
+.trading-phase.open .trading-phase-chevron{transform:rotate(180deg);}
+.trading-phase-body{display:none;border-top:1px solid var(--border);}
+.trading-phase.open .trading-phase-body{display:block;}
+.trading-check-item{padding:8px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .1s;border-left:3px solid transparent;}
+.trading-check-item:hover{background:var(--gray-lt);}
+.trading-check-item.checked{background:#f0fdf4;border-left-color:var(--green);}
+[data-theme="dark"] .trading-check-item.checked{background:rgba(74,222,128,.08);}
+.trading-check-box{width:18px;height:18px;border:2px solid #9ca3af;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--bg);}
+.trading-check-item.checked .trading-check-box{background:var(--green);border-color:var(--green);}
+.trading-check-tick{color:#fff;font-size:10px;display:none;}
+.trading-check-item.checked .trading-check-tick{display:block;}
+.trading-check-label{font-size:13px;color:var(--text2);line-height:1.4;flex:1;}
+.trading-check-label strong{font-weight:500;color:var(--text);}
+.trading-check-label .sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.trading-check-stop{font-size:10px;background:var(--red-lt);color:var(--red);padding:1px 5px;border-radius:4px;margin-top:2px;display:inline-block;font-weight:500;}
+.trading-check-journal{font-size:10px;background:var(--blue-lt);color:var(--blue);padding:1px 5px;border-radius:4px;margin-top:2px;display:inline-block;font-weight:500;margin-left:4px;}
+
+/* BOTTOM ACTION BAR */
+.trading-action-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1360px;background:var(--bg);border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
+.trading-action-bar-left{display:flex;gap:8px;align-items:center;}
+.trading-action-bar-right{display:flex;gap:8px;align-items:center;}
+
+/* RECENT TRADES MINI */
+.recent-mini{background:var(--bg);border-radius:10px;border:1px solid var(--border);margin:0 24px 12px;box-shadow:var(--shadow);overflow:hidden;}
+.recent-mini-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.recent-mini-title{font-size:12px;font-weight:600;}
+.recent-mini-row{display:grid;grid-template-columns:88px 56px 44px 60px 54px 54px 1fr;gap:6px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);font-size:11px;cursor:pointer;transition:background .1s;}
+.recent-mini-row:last-child{border-bottom:none;}
+.recent-mini-row:hover{background:var(--gray-lt);}
+
+/* JOURNAL MODAL */
+.journal-modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.journal-modal-grid .wide{grid-column:1/-1;}
+.journal-modal-grid .half{grid-column:span 2;}
+
 /* DASHBOARD */
 .dashboard-wrap{padding:28px 32px;display:flex;flex-direction:column;gap:22px;max-width:1320px;margin:0 auto;}
 .dash-greeting{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
@@ -455,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.5.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.0</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -506,11 +560,11 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.5.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.0</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
-      <button class="htab" onclick="showPage('checklist',this)">Setup & Logg</button>
+      <button class="htab" onclick="showPage('checklist',this)">Trading</button>
       <button class="htab" onclick="showPage('journal',this)">Journal</button>
     </div>
     <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Växla mörkt/ljust läge">🌙</button>
@@ -630,36 +684,31 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 <!-- CHECKLIST PAGE -->
 <div id="page-checklist" class="page">
-<div class="main">
-  <div class="sidebar">
-    <div class="sidebar-scroll">
-      <div class="strategy-bar">
-        <div class="strategy-bar-left">
-          <label>Strategi</label>
-          <select class="strategy-select" id="strategyPicker" onchange="loadStrategy()"></select>
-        </div>
-        <button class="btn btn-amber btn-sm" onclick="toggleEditor()" id="editStratBtn" title="Redigera checklista">✏️</button>
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-top">
-          <span class="progress-label" id="progressLabel">0 / 0 steg klara</span>
-          <span class="progress-pct" id="progressPct">0%</span>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      </div>
-      <div id="statusBanner" class="status-banner" style="display:none"></div>
-      <div id="checklistContainer"></div>
+<div class="trading-wrap">
+
+  <!-- TOP BAR -->
+  <div class="trading-top">
+    <div style="display:flex;align-items:center;gap:8px">
+      <select class="trading-strategy-select" id="strategyPicker" onchange="loadStrategy()"></select>
+      <button class="btn btn-amber btn-sm" onclick="toggleEditor()" title="Redigera checklista">✏️</button>
     </div>
-    <div class="sidebar-bottom">
-      <button class="btn btn-ghost btn-sm" onclick="resetChecklist()">↺ Nollställ</button>
-      <span id="savingIndicator" class="saving-indicator"></span>
+    <div class="trading-progress-wrap">
+      <div class="trading-progress-label">
+        <span id="progressLabel">0 / 0 steg klara</span>
+        <span id="progressPct" style="font-family:var(--mono);font-weight:500">0%</span>
+      </div>
+      <div class="trading-progress-bar"><div class="trading-progress-fill" id="progressFill" style="width:0%"></div></div>
     </div>
   </div>
 
-  <!-- RIGHT CONTENT -->
-  <div class="content">
-    <!-- CHECKLIST EDITOR (hidden by default) -->
-    <div class="cl-editor" id="clEditor" style="display:none">
+  <!-- STATUS BANNER -->
+  <div class="trading-status">
+    <div id="statusBanner" class="status-banner" style="display:none;margin:8px 0 0"></div>
+  </div>
+
+  <!-- CHECKLIST EDITOR (dold som default) -->
+  <div style="padding:0 24px" id="clEditorWrap" style="display:none">
+    <div class="cl-editor" id="clEditor" style="display:none;margin-top:12px">
       <div class="cl-editor-header">
         <div class="cl-editor-title">✏️ Redigera: <span id="editorStratName"></span></div>
         <div style="display:flex;gap:8px">
@@ -674,114 +723,44 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <button class="btn btn-primary btn-sm" onclick="addPhase()">+ Lägg till fas</button>
       </div>
       <div style="margin-top:12px;padding:10px;background:var(--blue-lt);border-radius:var(--r);font-size:12px;color:var(--blue)">
-        <strong>📋 Journal-tagg:</strong> Markera steg med "📋 Journal" om du vill att stegets status (ja/nej) ska loggas med varje trade.
+        <strong>📋 Journal-tagg:</strong> Markera steg med "📋 Journal" för att logga stegets status med varje trade.
+        <strong style="margin-left:8px">⚡ Snabblogg:</strong> Markera steg som ska synas i snabbloggen.
       </div>
     </div>
+  </div>
 
-    <!-- TRADE FORM -->
-    <div class="trade-form" id="tradeFormPanel">
-      <div class="form-header">
-        <div class="form-header-title">📋 Journalför trade</div>
-        <div class="form-header-actions">
-          <button class="btn btn-ghost btn-sm" onclick="toggleFieldManager()">⚙ Anpassa</button>
-          <button class="btn btn-primary btn-sm" onclick="logToJournal()">💾 Logga trade</button>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
-        <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
-        <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="NQ, ES, XAU…"></div>
-        <div class="form-group"><label>Riktning</label>
-          <select class="form-control" id="f-direction">
-            <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR(false)" placeholder="0.00"></div>
-        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR(false)" placeholder="0.00"></div>
-        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR(false)" placeholder="0.00"></div>
-        <div class="form-group"><label>Utfall</label>
-          <select class="form-control" id="f-outcome" onchange="calcRR(false)">
-            <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
-          </select>
-        </div>
-        <div class="form-group" id="rrDisplayGroup"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
-          <div class="rr-display" id="rrDisplay">—</div>
-        </div>
-        <div class="form-group" id="riskGroup">
-          <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings()">
-            <span style="font-size:13px;color:var(--text3);white-space:nowrap">%</span>
-          </div>
-          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
-        </div>
-        <div class="form-group" id="accountSizeGroup">
-          <label>Kontostorlek <span style="color:var(--text3);font-weight:400;font-size:10px">valfri, sparas</span></label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="50000" style="flex:1" oninput="saveRiskSettings()">
-            <select class="form-control" id="f-currency" style="width:70px" onchange="saveRiskSettings();calcMonetary()">
-              <option value="SEK">SEK</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" id="gradeGroup"><label>Setup-kvalitet</label>
-          <div class="grade-btns" id="mainGradeBtns">
-            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','main')">A+</button>
-            <button class="grade-btn" data-grade="A" onclick="setGrade('A','main')">A</button>
-            <button class="grade-btn" data-grade="B" onclick="setGrade('B','main')">B</button>
-            <button class="grade-btn" data-grade="C" onclick="setGrade('C','main')">C</button>
-          </div>
-        </div>
-        <div class="form-group half" id="mediaGroup"><label>Chart / Skärmbild <span style="color:var(--text3);font-weight:400;font-size:10px">URL eller ladda upp</span></label>
-          <div class="media-input-wrap">
-            <input type="text" class="form-control" id="f-media" placeholder="https://… eller ladda upp →" oninput="previewMedia('f-media','mediaPreview')">
-            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'f-media','mediaPreview')"></label>
-          </div>
-          <img id="mediaPreview" class="media-preview" src="" alt="" onclick="openImgModal(this.src)">
-        </div>
-        <div class="form-group wide"><label>Noteringar</label>
-          <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre?"></textarea>
-        </div>
-      </div>
+  <!-- CHECKLIST GRID -->
+  <div class="trading-checklist">
+    <div class="trading-checklist-grid" id="checklistContainer"></div>
 
-      <!-- Journal-taggade steg -->
-      <div id="journalTaggedFieldsWrap" style="margin-top:10px;display:none">
-        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Journal-taggade steg</div>
-        <div id="journalTaggedFields" style="display:flex;flex-direction:column;gap:4px"></div>
+    <!-- RECENT TRADES MINI -->
+    <div class="recent-mini" id="recentMini">
+      <div class="recent-mini-header">
+        <span class="recent-mini-title">📋 Senaste trades</span>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('journal',document.querySelectorAll('.htab')[2])">Se alla →</button>
       </div>
-      <div id="customFieldsSection" style="display:none">
-        <div id="customFieldInputs"></div>
+      <div style="padding:4px 14px 2px;display:grid;grid-template-columns:88px 56px 44px 60px 54px 54px 1fr;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)">
+        <span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span><span>Strategi</span>
       </div>
-      <div class="field-manager" id="fieldManager" style="display:none">
-<div class="field-manager-title">⚙ Fält – ordning, visa/dölj & tvingande</div>
-        <div id="fieldList"></div>
-        <div class="add-field-row">
-          <input type="text" id="newFieldName" placeholder="Fältnamn">
-          <select id="newFieldType" onchange="toggleDropdownOptions(this.value)">
-            <option value="text">Text</option>
-            <option value="number">Nummer</option>
-            <option value="select">Dropdown</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="addCustomField()">+ Lägg till</button>
-        </div>
-        <div id="dropdownOptionsRow" style="display:none;margin-top:6px">
-          <input type="text" id="newFieldOptions" placeholder="Ange värden separerade med komma: val1,val2,val3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font)">
-        </div>
-      </div>
-    </div>
-
-    <!-- RECENT TRADES -->
-    <div class="recent-panel">
-      <div class="recent-header">
-        <div class="recent-title">Senaste trades</div>
-        <div class="recent-subtitle">Klicka för att se eller redigera</div>
-      </div>
-      <div class="recent-cols"><span>Datum</span><span>Symbol</span><span>Dir</span><span>Utfall</span><span>R</span><span>Grade</span><span>Strategi</span></div>
       <div id="recentTradesList"></div>
     </div>
   </div>
+
+  <!-- BOTTOM ACTION BAR -->
+  <div class="trading-action-bar">
+    <div class="trading-action-bar-left">
+      <div id="journalTaggedFieldsWrap" style="display:none;font-size:12px">
+        <div id="journalTaggedFields"></div>
+      </div>
+    </div>
+    <div class="trading-action-bar-right">
+      <span id="savingIndicator" style="font-size:11px;color:var(--text3);font-family:var(--mono)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="resetChecklist()">↺ Nollställ</button>
+      <button class="btn btn-ghost btn-sm" onclick="openQuickLog()">⚡ Snabblogg</button>
+      <button class="btn btn-primary" onclick="openJournalModal()">📋 Logga trade</button>
+    </div>
+  </div>
+
 </div>
 </div>
 
@@ -1021,6 +1000,127 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   </div>
 </div>
 
+
+
+<!-- JOURNAL MODAL (full logg) -->
+<div class="modal-backdrop" id="journalModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <div class="modal-title">📋 Journalför trade</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="toggleFieldManager()">⚙ Anpassa</button>
+        <button class="modal-close" onclick="closeJournalModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <div class="form-grid" id="journalModalFields">
+        <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
+        <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
+        <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="NQ, ES, XAU…"></div>
+        <div class="form-group"><label>Riktning</label>
+          <select class="form-control" id="f-direction">
+            <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Take Profit</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR(false)" placeholder="0.00"></div>
+        <div class="form-group"><label>Utfall</label>
+          <select class="form-control" id="f-outcome" onchange="calcRR(false)">
+            <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
+          </select>
+        </div>
+        <div class="form-group" id="rrDisplayGroup"><label>Resultat (R) <span style="color:var(--text3);font-weight:400;font-size:10px">auto</span></label>
+          <div class="rr-display" id="rrDisplay">—</div>
+        </div>
+        <div class="form-group" id="riskGroup">
+          <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="f-riskpct" placeholder="1.0" style="flex:1" oninput="saveRiskSettings()">
+            <span style="font-size:13px;color:var(--text3)">%</span>
+          </div>
+          <div id="monetaryResult" style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono)"></div>
+        </div>
+        <div class="form-group" id="accountSizeGroup">
+          <label>Kontostorlek <span style="color:var(--text3);font-weight:400;font-size:10px">valfri</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" step="100" class="form-control" id="f-accountsize" placeholder="50000" style="flex:1" oninput="saveRiskSettings()">
+            <select class="form-control" id="f-currency" style="width:70px" onchange="saveRiskSettings()">
+              <option value="SEK">SEK</option><option value="USD">USD</option><option value="EUR">EUR</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" id="gradeGroup"><label>Setup-kvalitet</label>
+          <div class="grade-btns" id="mainGradeBtns">
+            <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','main')">A+</button>
+            <button class="grade-btn" data-grade="A" onclick="setGrade('A','main')">A</button>
+            <button class="grade-btn" data-grade="B" onclick="setGrade('B','main')">B</button>
+            <button class="grade-btn" data-grade="C" onclick="setGrade('C','main')">C</button>
+          </div>
+        </div>
+        <div class="form-group half" id="mediaGroup"><label>Chart / Skärmbild</label>
+          <div class="media-input-wrap">
+            <input type="text" class="form-control" id="f-media" placeholder="https://… eller ladda upp →" oninput="previewMedia('f-media','mediaPreview')">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;flex-shrink:0">📎<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(this,'f-media','mediaPreview')"></label>
+          </div>
+          <img id="mediaPreview" class="media-preview" src="" alt="" onclick="openImgModal(this.src)">
+        </div>
+        <div class="form-group wide"><label>Noteringar</label>
+          <textarea class="form-control textarea" id="f-notes" placeholder="Vad gick bra? Vad kunde gjorts bättre?"></textarea>
+        </div>
+      </div>
+      <!-- Egna fält -->
+      <div id="customFieldsSection" style="display:none"><div id="customFieldInputs"></div></div>
+      <!-- Journal-taggade steg -->
+      <div id="journalTaggedFieldsModal" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Journal-taggade steg</div>
+        <div id="journalTaggedFieldsContent" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <!-- Field manager -->
+      <div class="field-manager" id="fieldManager" style="display:none">
+        <div class="field-manager-title">⚙ Fält – ordning, visa/dölj & tvingande</div>
+        <div id="fieldList"></div>
+        <div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">➕ Lägg till eget fält</div>
+        <div class="add-field-row">
+          <input type="text" id="newFieldName" placeholder="Fältnamn">
+          <select id="newFieldType"><option value="text">Text</option><option value="number">Nummer</option><option value="select">Dropdown</option></select>
+          <button class="btn btn-primary btn-sm" onclick="addCustomField()">+ Lägg till</button>
+        </div>
+        <div id="dropdownOptionsRow" style="display:none;margin-top:6px">
+          <input type="text" id="newFieldOptions" placeholder="val1,val2,val3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeJournalModal()">Avbryt</button>
+      <button class="btn btn-primary" onclick="logToJournal()">💾 Spara trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICKLOG MODAL -->
+<div class="modal-backdrop" id="quicklogModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">⚡ Snabblogg</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="toggleQuicklogSettings()">⚙</button>
+        <button class="modal-close" onclick="closeQuickLog()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <div id="quicklogFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div id="quicklogSettings" style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Välj fält för snabblogg</div>
+        <div id="quicklogFieldPicker"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeQuickLog()">Avbryt</button>
+      <button class="btn btn-primary" onclick="saveQuickLog()">⚡ Spara snabblogg</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADMIN USER MODAL -->
 <div class="modal-backdrop" id="adminUserModal">
@@ -1613,7 +1713,7 @@ async function doLogout(){
   document.getElementById('authWrap').style.display='flex';
 }
 sb.auth.getSession().then(({data:{session}})=>{if(session&&session.user)onLogin(session.user);});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();document.getElementById('imgModal').classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
 async function fetchChecklists(){
@@ -1703,20 +1803,20 @@ function renderChecklist(){
   strat.phases.forEach(phase=>{
     const total=phase.items.length,done=phase.items.filter(it=>checked[it.id]).length;
     const div=document.createElement('div');
-    div.className='phase open';div.id='phase-'+phase.id;
-    div.innerHTML=`<div class="phase-header" onclick="togglePhase('${phase.id}')">
-        <div class="phase-dot" style="background:${phase.color}"></div>
-        <span class="phase-title">${phase.title}</span>
-        <span class="phase-count" id="pc-${phase.id}">${done}/${total}</span>
-        <span class="phase-chevron">▾</span>
+    div.className='trading-phase open';div.id='phase-'+phase.id;
+    div.innerHTML=`<div class="trading-phase-header" onclick="togglePhase('${phase.id}')">
+        <div class="trading-phase-dot" style="background:${phase.color}"></div>
+        <span class="trading-phase-title">${phase.title}</span>
+        <span class="trading-phase-count" id="pc-${phase.id}">${done}/${total}</span>
+        <span class="trading-phase-chevron">▾</span>
       </div>
-      <div class="checklist-body">
-        ${phase.items.map(item=>`<div class="check-item ${checked[item.id]?'checked':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}','${phase.id}')">
-          <div class="check-box"><span class="check-tick">✓</span></div>
-          <div class="check-label"><strong>${item.label}</strong>
+      <div class="trading-phase-body">
+        ${phase.items.map(item=>`<div class="trading-check-item ${checked[item.id]?'checked':''}" id="ci-${item.id}" onclick="toggleCheck('${item.id}','${phase.id}')">
+          <div class="trading-check-box"><span class="trading-check-tick">✓</span></div>
+          <div class="trading-check-label"><strong>${item.label}</strong>
             ${item.sub?`<div class="sub">${item.sub}</div>`:''}
-            ${item.journal?`<span class="check-journal-tag">📋 Journal</span>`:''}
-            ${item.stop&&!checked[item.id]?`<div class="check-stop">⛔ ${item.stop}</div>`:''}
+            ${item.journal?`<span class="trading-check-journal">📋</span>`:''}
+            ${item.stop&&!checked[item.id]?`<div class="trading-check-stop">⛔ ${item.stop}</div>`:''}
           </div></div>`).join('')}
       </div>`;
     container.appendChild(div);
@@ -1747,7 +1847,7 @@ function updateProgress(){
   const pct=total?Math.round(done/total*100):0;
   document.getElementById('progressLabel').textContent=`${done} / ${total} steg klara`;
   document.getElementById('progressPct').textContent=pct+'%';
-  document.getElementById('progressFill').style.width=pct+'%';
+  const pf=document.getElementById('progressFill');if(pf)pf.style.width=pct+'%';
   const banner=document.getElementById('statusBanner');
   const blockers=all.filter(it=>it.blocker&&!checked[it.id]);
   if(pct===100){banner.style.display='block';banner.className='status-banner go';banner.textContent='✅ Alla steg klara – A+ setup!';}
@@ -1910,6 +2010,7 @@ function calcRR(isModal){
 function setGrade(g,ctx){
   if(ctx==='main'){selectedGrade=g;document.querySelectorAll('#mainGradeBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===g));}
   else if(ctx==='modal'){modalGrade=g;document.querySelectorAll('#modalGradeBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===g));}
+  else if(ctx==='ql'){qlGrade=g;document.querySelectorAll('#qlGradeBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===g));}
 }
 
 // ── MEDIA ─────────────────────────────────────────────────────────────────────
@@ -2067,6 +2168,188 @@ async function deleteTrade(id){
 }
 
 // ── LOG TRADE ─────────────────────────────────────────────────────────────────
+
+// ── JOURNAL MODAL ─────────────────────────────────────────────────────────────
+function openJournalModal(){
+  // Synka journal-taggade steg
+  const strat=activeStrat||getActiveChecklist();
+  const all=strat.phases.flatMap(p=>p.items);
+  const tagged=all.filter(it=>it.journal);
+  const jWrap=document.getElementById('journalTaggedFieldsModal');
+  const jContent=document.getElementById('journalTaggedFieldsContent');
+  if(tagged.length&&jWrap&&jContent){
+    jWrap.style.display='block';
+    jContent.innerHTML=tagged.map(it=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)">
+      <span style="color:${checked[it.id]?'var(--green)':'var(--text3)'};font-size:14px;width:16px">${checked[it.id]?'✓':'○'}</span>
+      <span>${it.label}</span>
+    </div>`).join('');
+  }else if(jWrap){jWrap.style.display='none';}
+  loadRisk();
+  document.getElementById('journalModal').classList.add('open');
+}
+
+function closeJournalModal(){
+  document.getElementById('journalModal').classList.remove('open');
+}
+
+// ── QUICKLOG MODAL ────────────────────────────────────────────────────────────
+const DEFAULT_QUICKLOG_FIELDS=['f-date','f-symbol','f-direction','f-entry','f-sl','f-tp','f-outcome'];
+let quicklogEnabledFields=null;
+
+function getQuicklogFields(){
+  if(userSettings.quicklogFields)return userSettings.quicklogFields;
+  return DEFAULT_QUICKLOG_FIELDS;
+}
+
+function openQuickLog(){
+  renderQuicklogFields();
+  document.getElementById('quicklogModal').classList.add('open');
+}
+
+function closeQuickLog(){
+  document.getElementById('quicklogModal').classList.remove('open');
+}
+
+function renderQuicklogFields(){
+  const enabled=getQuicklogFields();
+  const container=document.getElementById('quicklogFields');
+
+  const allFields=[
+    {id:'f-date',label:'Datum',type:'date',wide:false},
+    {id:'f-time',label:'Tid (ET)',type:'time',wide:false},
+    {id:'f-symbol',label:'Instrument',type:'text',placeholder:'NQ, ES…',wide:false},
+    {id:'f-direction-ql',label:'Riktning',type:'select',options:['','Long','Short'],wide:false},
+    {id:'f-entry-ql',label:'Entry',type:'number',placeholder:'0.00',wide:false},
+    {id:'f-sl-ql',label:'Stop Loss',type:'number',placeholder:'0.00',wide:false},
+    {id:'f-tp-ql',label:'Take Profit',type:'number',placeholder:'0.00',wide:false},
+    {id:'f-outcome-ql',label:'Utfall',type:'select',options:['','W','L','BE'],wide:false},
+    {id:'f-grade-ql',label:'Grade',type:'grade',wide:false},
+    {id:'f-notes-ql',label:'Noteringar',type:'textarea',wide:true},
+  ];
+
+  const visibleFields=allFields.filter(f=>enabled.includes(f.id));
+  container.innerHTML=visibleFields.map(f=>{
+    const wideStyle=f.wide?'grid-column:1/-1':'';
+    if(f.type==='select'){
+      return`<div class="form-group" style="${wideStyle}"><label>${f.label}</label>
+        <select class="form-control" id="${f.id}">${f.options.map(o=>`<option value="${o}">${o||'Välj…'}</option>`).join('')}</select></div>`;
+    }else if(f.type==='grade'){
+      return`<div class="form-group" style="${wideStyle}"><label>Grade</label>
+        <div class="grade-btns" id="qlGradeBtns">
+          <button class="grade-btn" data-grade="A+" onclick="setGrade('A+','ql')">A+</button>
+          <button class="grade-btn" data-grade="A" onclick="setGrade('A','ql')">A</button>
+          <button class="grade-btn" data-grade="B" onclick="setGrade('B','ql')">B</button>
+          <button class="grade-btn" data-grade="C" onclick="setGrade('C','ql')">C</button>
+        </div></div>`;
+    }else if(f.type==='textarea'){
+      return`<div class="form-group" style="${wideStyle}"><label>${f.label}</label>
+        <textarea class="form-control textarea" id="${f.id}" placeholder="Noteringar…" style="min-height:60px"></textarea></div>`;
+    }else{
+      return`<div class="form-group" style="${wideStyle}"><label>${f.label}</label>
+        <input type="${f.type}" class="form-control" id="${f.id}" placeholder="${f.placeholder||''}"></div>`;
+    }
+  }).join('');
+
+  // Sätt datum
+  const dateEl=document.getElementById('f-date');
+  if(dateEl&&!dateEl.value)dateEl.value=new Date().toISOString().split('T')[0];
+}
+
+function toggleQuicklogSettings(){
+  const s=document.getElementById('quicklogSettings');
+  s.style.display=s.style.display==='none'?'block':'none';
+  if(s.style.display==='block')renderQuicklogPicker();
+}
+
+function renderQuicklogPicker(){
+  const enabled=getQuicklogFields();
+  const allFieldIds=[
+    {id:'f-date',label:'Datum'},
+    {id:'f-time',label:'Tid'},
+    {id:'f-symbol',label:'Instrument'},
+    {id:'f-direction-ql',label:'Riktning'},
+    {id:'f-entry-ql',label:'Entry'},
+    {id:'f-sl-ql',label:'Stop Loss'},
+    {id:'f-tp-ql',label:'Take Profit'},
+    {id:'f-outcome-ql',label:'Utfall'},
+    {id:'f-grade-ql',label:'Grade'},
+    {id:'f-notes-ql',label:'Noteringar'},
+  ];
+  const picker=document.getElementById('quicklogFieldPicker');
+  picker.innerHTML=allFieldIds.map(f=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;cursor:pointer">
+      <input type="checkbox" ${enabled.includes(f.id)?'checked':''}
+        onchange="toggleQuicklogField('${f.id}',this.checked)">
+      ${f.label}
+    </label>`).join('');
+}
+
+function toggleQuicklogField(id,enable){
+  const fields=getQuicklogFields();
+  if(enable&&!fields.includes(id))fields.push(id);
+  else if(!enable){const i=fields.indexOf(id);if(i>=0)fields.splice(i,1);}
+  userSettings.quicklogFields=fields;
+  saveUserSettings();
+  renderQuicklogFields();
+}
+
+let qlGrade='';
+// setGrade hanterar redan 'ql' via switch-case - uppdatera setGrade
+async function saveQuickLog(){
+  const strat=activeStrat||getActiveChecklist();
+  const all=strat.phases.flatMap(p=>p.items);
+  const pct=all.length?Math.round(all.filter(it=>checked[it.id]).length/all.length*100):0;
+
+  const getVal=id=>{const el=document.getElementById(id);return el?el.value:null;};
+  const entry=parseFloat(getVal('f-entry-ql'))||null;
+  const sl=parseFloat(getVal('f-sl-ql'))||null;
+  const tp=parseFloat(getVal('f-tp-ql'))||null;
+  const outcome=getVal('f-outcome-ql')||null;
+  // Enkel RR-calc
+  let result=null;
+  if(entry&&sl&&Math.abs(entry-sl)>0){
+    const risk=Math.abs(entry-sl);
+    if(outcome==='W'&&tp)result=parseFloat((Math.abs(tp-entry)/risk).toFixed(2));
+    else if(outcome==='L')result=-1;
+    else if(outcome==='BE')result=0;
+  }
+
+  const trade={
+    date:getVal('f-date')||new Date().toISOString().split('T')[0],
+    time:getVal('f-time')||null,
+    strategy:strat.name,
+    symbol:getVal('f-symbol')||null,
+    direction:getVal('f-direction-ql')||null,
+    entry,sl,tp,outcome,result,
+    grade:qlGrade||null,
+    checklist_pct:pct,
+    notes:getVal('f-notes-ql')||null,
+    chart_link:null,image_url:null,custom_data:null,
+    risk_amount:parseFloat(userSettings.riskPct)||null,
+    risk_currency:userSettings.currency||null,
+  };
+
+  const saved=await saveTrade(trade);
+  if(saved){
+    closeQuickLog();
+    renderRecentTrades();
+    // Rensa ql-fält
+    ['f-direction-ql','f-entry-ql','f-sl-ql','f-tp-ql','f-outcome-ql','f-notes-ql'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value='';
+    });
+    qlGrade='';
+    document.querySelectorAll('#qlGradeBtns .grade-btn').forEach(b=>b.classList.remove('sel'));
+  }
+}
+
+function loadRisk(){
+  const saved=userSettings;
+  if(saved.riskPct){const el=document.getElementById('f-riskpct');if(el)el.value=saved.riskPct;}
+  if(saved.accountSize){const el=document.getElementById('f-accountsize');if(el)el.value=saved.accountSize;}
+  if(saved.currency){const el=document.getElementById('f-currency');if(el)el.value=saved.currency;}
+}
+
+
 async function logToJournal(){
   const missing=validateRequiredFields();
   if(missing.length){
@@ -2100,7 +2383,7 @@ async function logToJournal(){
     custom_data:{...customData,...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})},
   };
   const saved=await saveTrade(trade);
-  if(saved){resetChecklist();renderRecentTrades();updateFilterOptions();}
+  if(saved){resetChecklist();renderRecentTrades();updateFilterOptions();closeJournalModal();}
 }
 
 // ── RECENT TRADES ─────────────────────────────────────────────────────────────
@@ -3224,7 +3507,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.5.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.0</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
