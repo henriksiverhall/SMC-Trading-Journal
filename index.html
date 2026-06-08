@@ -625,7 +625,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9a</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -676,7 +676,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9a</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -4458,7 +4458,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9a</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5210,7 +5210,7 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
     const insights=parsed.insights||[];
     out.innerHTML=`<div class="ai-analysis-card">
       <h3>🤖 AI-analys <span style="font-size:11px;color:var(--text3);font-weight:400">${new Date().toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}</span></h3>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Baserad på ${stats.total} trades med aktiva filter</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Baserad på ${trades.length} trades med aktiva filter</div>
       ${insights.map(i=>`<div class="ai-insight ${i.type}"><strong>${i.title}</strong><br>${i.text}</div>`).join('')}
       <div style="font-size:10px;color:var(--text3);margin-top:12px">AI-analys är ett komplement, inte ett handelsråd. Verifiera alltid med din egen bedömning.</div>
     </div>`;
