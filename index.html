@@ -521,8 +521,10 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .kanban-col{background:var(--bg2);border-radius:var(--r);padding:12px;min-height:200px;}
 .kanban-col-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
 .kanban-col-count{background:var(--border);color:var(--text3);border-radius:10px;padding:1px 7px;font-size:10px;}
-.kanban-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.kanban-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:grab;transition:box-shadow .15s,border-color .15s,opacity .15s;}
 .kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);border-color:var(--blue);}
+.kanban-card.dragging{opacity:.4;cursor:grabbing;}
+.kanban-col.drag-over{background:rgba(59,130,246,.08);outline:2px dashed var(--blue);outline-offset:-4px;}
 .kanban-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.3;}
 .kanban-card-desc{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:6px;}
 .kanban-card-meta{display:flex;gap:6px;flex-wrap:wrap;}
@@ -623,7 +625,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.6</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -674,7 +676,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.6</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -4415,7 +4417,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.6</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5240,13 +5242,22 @@ function renderKanban(){
   if(!board)return;
   board.innerHTML=KANBAN_COLS.map(col=>{
     const cards=roadmapTasks.filter(t=>t.status===col.id);
-    return`<div class="kanban-col">
+    return`<div class="kanban-col"
+        data-col="${col.id}"
+        ondragover="kanbanDragOver(event)"
+        ondragleave="kanbanDragLeave(event)"
+        ondrop="kanbanDrop(event,'${col.id}')">
       <div class="kanban-col-header">
         <span>${col.label}</span>
         <span class="kanban-col-count">${cards.length}</span>
       </div>
       ${cards.map(t=>`
-        <div class="kanban-card kanban-prio-${t.priority}" onclick="openEditTask('${t.id}')">
+        <div class="kanban-card kanban-prio-${t.priority}"
+          draggable="true"
+          data-id="${t.id}"
+          ondragstart="kanbanDragStart(event,'${t.id}')"
+          ondragend="kanbanDragEnd(event)"
+          onclick="openEditTask('${t.id}')">
           <div class="kanban-card-title">${t.title}</div>
           ${t.desc?`<div class="kanban-card-desc">${t.desc}</div>`:''}
           <div class="kanban-card-meta">
@@ -5256,6 +5267,50 @@ function renderKanban(){
         </div>`).join('')}
     </div>`;
   }).join('');
+}
+
+let _dragTaskId=null;
+
+function kanbanDragStart(e,id){
+  _dragTaskId=id;
+  e.dataTransfer.effectAllowed='move';
+  // Slight delay så kortet hinner renderas med opacity innan drag-ghost skapas
+  setTimeout(()=>{
+    const el=document.querySelector(`.kanban-card[data-id="${id}"]`);
+    if(el)el.classList.add('dragging');
+  },0);
+}
+
+function kanbanDragEnd(e){
+  document.querySelectorAll('.kanban-card.dragging').forEach(el=>el.classList.remove('dragging'));
+  document.querySelectorAll('.kanban-col.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  _dragTaskId=null;
+}
+
+function kanbanDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  const col=e.currentTarget;
+  if(!col.classList.contains('drag-over'))col.classList.add('drag-over');
+}
+
+function kanbanDragLeave(e){
+  // Bara ta bort highlight om vi lämnar kolumnen helt (inte ett child-element)
+  if(!e.currentTarget.contains(e.relatedTarget)){
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+
+async function kanbanDrop(e,newStatus){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(!_dragTaskId)return;
+  const task=roadmapTasks.find(t=>t.id===_dragTaskId);
+  if(!task||task.status===newStatus)return;
+  task.status=newStatus;
+  task.updated_at=new Date().toISOString();
+  renderKanban();
+  await saveRoadmap();
 }
 
 function openAddTask(){
