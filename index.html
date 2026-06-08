@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.2</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.3</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,7 +560,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.2</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.3</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1774,6 +1774,7 @@ async function onLogin(user){
   renderRecentTrades();
   updateFilterOptions();
   applyFieldSettings();
+  _appReady = true;
   // Återställ senast besökta sida
   const validPages=['dashboard','journal','checklist','profil','admin'];
   const savedPage=sessionStorage.getItem('currentPage');
@@ -2587,11 +2588,18 @@ async function doDelete(){
 
 
 
+let _appReady = false;
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
   if(!currentUser)return;
+  // Vänta om data inte är klar än (max 2s)
+  if(!_appReady){
+    await new Promise(r=>setTimeout(r,300));
+    if(!_appReady)await new Promise(r=>setTimeout(r,500));
+  }
   // Namn & datum
   const meta=currentUser.user_metadata||{};
   const name=meta.display_name||(currentUser.email||'').split('@')[0];
@@ -2780,9 +2788,12 @@ function renderNewsItems(events,el){
     const impact=getImpactLevel(e);
     const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
     const showDate=newsFromDate!==newsToDate;
-    const dateStr=e.date?e.date.substring(5):'';
+    // Extrahera datum från time-fältet (format: YYYY-MM-DDTHH:MM:SS) eller date-fältet
+    const rawDate=e.time&&e.time.length>10?e.time.substring(0,10):(e.date||'');
+    const dateStr=rawDate?rawDate.substring(5):''; // MM-DD
+    const weekday=rawDate?['Sön','Mån','Tis','Ons','Tor','Fre','Lör'][new Date(rawDate).getDay()]:'';
     return`<div class="news-item">
-      <span class="news-time">${showDate&&dateStr?dateStr+'<br>':''}<span style="font-size:${showDate?'10':'11'}px">${time}</span></span>
+      <span class="news-time" style="min-width:${showDate?'52px':'44px'}">${showDate&&dateStr?`<span style="font-size:10px;color:var(--blue);font-weight:600">${weekday}</span><span style="font-size:9px;color:var(--text3);display:block">${dateStr}</span>`:''}${time}</span>
       <span class="news-impact ${impact}"></span>
       <div>
         <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
@@ -3589,7 +3600,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.2</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.3</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
