@@ -625,7 +625,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.7</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.8</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -676,7 +676,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.7</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.8</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2145,8 +2145,22 @@ async function doSignup(){
         }]);
       }catch(e){console.warn('user_profiles insert:',e);}
     }
-    msgEl.textContent='Konto skapat! Kolla din e-post ('+email+') och klicka på bekräftelselänken för att aktivera ditt konto.';
-    document.getElementById('signupBtn').textContent='Konto skapat ✓';
+    msgEl.textContent='';
+    // Visa bekräftelseskärm
+    const signupForm=document.getElementById('signupForm');
+    if(signupForm){
+      signupForm.innerHTML=`
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:48px;margin-bottom:16px">📬</div>
+          <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Konto skapat!</div>
+          <div style="font-size:13px;color:var(--text3);line-height:1.6;margin-bottom:24px">
+            Vi har skickat ett bekräftelsemail till<br>
+            <strong style="color:var(--text)">${email}</strong><br><br>
+            Klicka på länken i mailet för att aktivera ditt konto.
+          </div>
+          <button class="auth-btn" onclick="switchAuth('login')" style="background:var(--blue)">Gå till inloggning</button>
+        </div>`;
+    }
   }
   document.getElementById('signupBtn').disabled=false;
 }
@@ -4420,7 +4434,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.7</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.8</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
