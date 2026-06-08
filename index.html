@@ -341,6 +341,109 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .journal-modal-grid .wide{grid-column:1/-1;}
 .journal-modal-grid .half{grid-column:span 2;}
 
+
+/* DASHBOARD DRAG-AND-DROP */
+.dash-layout-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:16px;
+  align-items:start;
+}
+.dash-widget{
+  background:var(--bg);
+  border-radius:12px;
+  border:1px solid var(--border);
+  overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  position:relative;
+  transition:box-shadow .15s;
+}
+.dash-widget.span-4{grid-column:span 4;}
+.dash-widget.span-6{grid-column:span 6;}
+.dash-widget.span-8{grid-column:span 8;}
+.dash-widget.span-12{grid-column:span 12;}
+.dash-widget.dragging{
+  opacity:.5;
+  box-shadow:0 8px 32px rgba(0,0,0,.2);
+}
+.dash-widget.drag-over{
+  border-color:var(--blue);
+  box-shadow:0 0 0 2px rgba(37,99,235,.3);
+}
+.dash-edit-mode .dash-widget{
+  border-style:dashed;
+  border-color:var(--amber);
+}
+.dash-edit-mode .dash-drag-handle{
+  display:flex!important;
+}
+.dash-drag-handle{
+  display:none;
+  position:absolute;
+  top:8px;
+  left:8px;
+  background:var(--amber);
+  color:#fff;
+  border-radius:6px;
+  padding:3px 6px;
+  font-size:11px;
+  cursor:grab;
+  z-index:10;
+  align-items:center;
+  gap:4px;
+  font-weight:600;
+  user-select:none;
+}
+.dash-drag-handle:active{cursor:grabbing;}
+.dash-width-picker{
+  display:none;
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:3px;
+  z-index:10;
+  gap:3px;
+}
+.dash-edit-mode .dash-width-picker{display:flex!important;}
+.dash-width-btn{
+  padding:2px 6px;
+  border-radius:4px;
+  border:1px solid var(--border);
+  font-size:10px;
+  cursor:pointer;
+  background:var(--bg2);
+  color:var(--text3);
+  font-family:var(--font);
+  transition:all .1s;
+}
+.dash-width-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.dash-customize-btn{
+  position:fixed;
+  bottom:20px;
+  right:24px;
+  background:var(--amber);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px 18px;
+  font-size:13px;
+  font-weight:600;
+  font-family:var(--font);
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(217,119,6,.4);
+  z-index:40;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  transition:all .15s;
+}
+.dash-customize-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(217,119,6,.5);}
+.dash-customize-btn.active{background:var(--green);box-shadow:0 4px 14px rgba(22,163,74,.4);}
+#page-dashboard .dash-customize-btn{display:flex;}
+
 /* DASHBOARD */
 .dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;max-width:1360px;margin:0 auto;}
 .dash-greeting{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1.2;}
@@ -480,7 +583,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.0</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.1</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -531,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.0</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.1</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -573,11 +676,18 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <!-- Stat-kort -->
     <div class="dash-grid" id="dashStats"></div>
 
-    <!-- Huvud: Trades + Kalender -->
-    <div class="dash-main">
+    <!-- DASHBOARD LAYOUT GRID -->
+    <div class="dash-layout-grid" id="dashLayoutGrid">
 
       <!-- Senaste trades -->
-      <div class="dash-card">
+      <div class="dash-widget span-8" data-widget="trades" draggable="true">
+        <div class="dash-drag-handle">⠿ Flytta</div>
+        <div class="dash-width-picker">
+          <button class="dash-width-btn" data-span="4" onclick="setWidgetSpan(this,'trades',4)">4</button>
+          <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'trades',6)">6</button>
+          <button class="dash-width-btn active" data-span="8" onclick="setWidgetSpan(this,'trades',8)">8</button>
+          <button class="dash-width-btn" data-span="12" onclick="setWidgetSpan(this,'trades',12)">12</button>
+        </div>
         <div class="dash-card-header">
           <div class="dash-card-title">📈 Senaste trades</div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -591,8 +701,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="dash-card-scroll" id="dashRecentTrades"></div>
       </div>
 
-      <!-- Ekonomisk kalender (sida) -->
-      <div class="dash-card">
+      <!-- Ekonomisk kalender -->
+      <div class="dash-widget span-4" data-widget="calendar" draggable="true">
+        <div class="dash-drag-handle">⠿ Flytta</div>
+        <div class="dash-width-picker">
+          <button class="dash-width-btn" data-span="4" onclick="setWidgetSpan(this,'calendar',4)">4</button>
+          <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'calendar',6)">6</button>
+          <button class="dash-width-btn" data-span="8" onclick="setWidgetSpan(this,'calendar',8)">8</button>
+          <button class="dash-width-btn active" data-span="12" onclick="setWidgetSpan(this,'calendar',12)">12</button>
+        </div>
+        <div class="dash-card-header">
         <div class="dash-card-header">
           <div class="dash-card-title">📰 Ekonomisk kalender</div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -634,29 +752,49 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
     </div>
 
-    <!-- Botten: Streak + Grade + Månad + Insights -->
-    <div class="dash-bottom">
-
-      <!-- Streak & Historik -->
-      <div class="dash-card">
+      <!-- Streak -->
+      <div class="dash-widget span-4" data-widget="streak" draggable="true">
+        <div class="dash-drag-handle">⠿ Flytta</div>
+        <div class="dash-width-picker">
+          <button class="dash-width-btn" data-span="4" onclick="setWidgetSpan(this,'streak',4)">4</button>
+          <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'streak',6)">6</button>
+          <button class="dash-width-btn" data-span="12" onclick="setWidgetSpan(this,'streak',12)">12</button>
+        </div>
         <div class="dash-card-header"><div class="dash-card-title">🔥 Streak & Historik</div></div>
         <div class="dash-card-body" id="dashStreak"></div>
       </div>
 
-      <!-- Grade-fördelning -->
-      <div class="dash-card">
+      <!-- Grade -->
+      <div class="dash-widget span-4" data-widget="grades" draggable="true">
+        <div class="dash-drag-handle">⠿ Flytta</div>
+        <div class="dash-width-picker">
+          <button class="dash-width-btn active" data-span="4" onclick="setWidgetSpan(this,'grades',4)">4</button>
+          <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'grades',6)">6</button>
+          <button class="dash-width-btn" data-span="12" onclick="setWidgetSpan(this,'grades',12)">12</button>
+        </div>
         <div class="dash-card-header"><div class="dash-card-title">🏅 Grade-fördelning</div></div>
         <div class="dash-card-body" id="dashGrades"></div>
       </div>
 
       <!-- Insights -->
-      <div class="dash-card">
+      <div class="dash-widget span-4" data-widget="insights" draggable="true">
+        <div class="dash-drag-handle">⠿ Flytta</div>
+        <div class="dash-width-picker">
+          <button class="dash-width-btn active" data-span="4" onclick="setWidgetSpan(this,'insights',4)">4</button>
+          <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'insights',6)">6</button>
+          <button class="dash-width-btn" data-span="12" onclick="setWidgetSpan(this,'insights',12)">12</button>
+        </div>
         <div class="dash-card-header"><div class="dash-card-title">💡 Insights</div></div>
         <div class="dash-card-body" id="dashInsights"></div>
+        <div id="dashMonth" style="display:none"></div>
       </div>
 
     </div>
   </div>
+
+  <!-- Anpassa-knapp -->
+  <button class="dash-customize-btn" id="dashCustomizeBtn" onclick="toggleDashEdit()">✏️ Anpassa layout</button>
+
 </div>
 
 <!-- CHECKLIST PAGE -->
@@ -2606,6 +2744,104 @@ async function doDelete(){
 
 let _appReady = false;
 
+
+// ── DASHBOARD DRAG & DROP ─────────────────────────────────────────────────────
+let dashEditMode=false;
+let dragWidget=null;
+
+function toggleDashEdit(){
+  dashEditMode=!dashEditMode;
+  const grid=document.getElementById('dashLayoutGrid');
+  const btn=document.getElementById('dashCustomizeBtn');
+  if(grid)grid.classList.toggle('dash-edit-mode',dashEditMode);
+  if(btn){
+    btn.textContent=dashEditMode?'✓ Spara layout':'✏️ Anpassa layout';
+    btn.classList.toggle('active',dashEditMode);
+  }
+  if(!dashEditMode)saveDashLayout();
+}
+
+function saveDashLayout(){
+  const grid=document.getElementById('dashLayoutGrid');
+  if(!grid)return;
+  const order=[...grid.querySelectorAll('.dash-widget')].map(w=>({
+    id:w.dataset.widget,
+    span:parseInt([...w.classList].find(c=>c.startsWith('span-'))?.replace('span-','')||'6')
+  }));
+  userSettings.dashLayout=order;
+  saveUserSettings();
+}
+
+function loadDashLayout(){
+  const layout=userSettings.dashLayout;
+  if(!layout||!layout.length)return;
+  const grid=document.getElementById('dashLayoutGrid');
+  if(!grid)return;
+  // Applicera ordning och bredd
+  layout.forEach(item=>{
+    const w=grid.querySelector(`[data-widget="${item.id}"]`);
+    if(w){
+      // Uppdatera span
+      w.className=w.className.replace(/span-\d+/,`span-${item.span}`);
+      // Flytta till rätt position
+      grid.appendChild(w);
+      // Markera aktiv bredd-knapp
+      w.querySelectorAll('.dash-width-btn').forEach(b=>{
+        b.classList.toggle('active',parseInt(b.dataset.span)===item.span);
+      });
+    }
+  });
+}
+
+function setWidgetSpan(btn,widgetId,span){
+  const widget=document.querySelector(`[data-widget="${widgetId}"]`);
+  if(!widget)return;
+  widget.className=widget.className.replace(/span-\d+/,`span-${span}`);
+  widget.querySelectorAll('.dash-width-btn').forEach(b=>{
+    b.classList.toggle('active',parseInt(b.dataset.span)===span);
+  });
+}
+
+// Drag events
+document.addEventListener('dragstart',e=>{
+  const w=e.target.closest('.dash-widget');
+  if(!w||!dashEditMode)return;
+  dragWidget=w;
+  w.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+});
+
+document.addEventListener('dragend',e=>{
+  const w=e.target.closest('.dash-widget');
+  if(w){w.classList.remove('dragging');}
+  document.querySelectorAll('.dash-widget.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  dragWidget=null;
+});
+
+document.addEventListener('dragover',e=>{
+  e.preventDefault();
+  const w=e.target.closest('.dash-widget');
+  if(w&&w!==dragWidget&&dashEditMode){
+    document.querySelectorAll('.dash-widget.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    w.classList.add('drag-over');
+  }
+});
+
+document.addEventListener('drop',e=>{
+  e.preventDefault();
+  const target=e.target.closest('.dash-widget');
+  if(!target||!dragWidget||target===dragWidget||!dashEditMode)return;
+  target.classList.remove('drag-over');
+  const grid=document.getElementById('dashLayoutGrid');
+  if(!grid)return;
+  const widgets=[...grid.querySelectorAll('.dash-widget')];
+  const fromIdx=widgets.indexOf(dragWidget);
+  const toIdx=widgets.indexOf(target);
+  if(fromIdx<toIdx)target.after(dragWidget);
+  else target.before(dragWidget);
+});
+
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
@@ -2626,6 +2862,7 @@ async function loadDashboard(){
   renderDashGrades();
   renderDashMonth();
   renderDashInsights();
+  loadDashLayout();
   await loadNews();
   // Admin-knapp - kolla user_settings i DB
   try{
@@ -2788,6 +3025,7 @@ function renderDashInsights(){
 
 
 function renderDashMonth(){
+  const elCheck=document.getElementById('dashMonth');if(!elCheck)return;
   const el=document.getElementById('dashMonth');
   const thisMonth=new Date().toISOString().slice(0,7);
   const mt=journal.filter(t=>(t.date||'').startsWith(thisMonth));
@@ -3680,7 +3918,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.0</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.1</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
