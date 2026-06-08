@@ -424,8 +424,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 /* DASHBOARD */
 .dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;max-width:1360px;margin:0 auto;}
-.dash-greeting{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1.2;}
-.dash-greeting span{color:var(--blue);}
+.dash-greeting{font-size:15px;font-weight:500;color:var(--text2);line-height:1.2;}
+.dash-greeting span{color:var(--text);font-weight:600;}
 .dash-greeting-sub{font-size:13px;color:var(--text3);margin-top:4px;}
 .dash-quick-actions{display:flex;gap:10px;flex-wrap:wrap;}
 .quick-action-btn{padding:10px 20px;border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;background:var(--bg);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
@@ -573,7 +573,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.3</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.4</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -624,7 +624,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.3</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.4</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -3154,23 +3154,48 @@ function getImpactLevel(e){
 }
 function renderNewsItems(events,el){
   if(!events||!events.length){el.innerHTML='<div class="news-empty">Inga händelser matchar filtret.</div>';return;}
-  el.innerHTML=events.map(e=>{
+  const showDate=newsFromDate!==newsToDate;
+  const thStyle='padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;border-bottom:2px solid var(--border);background:var(--bg2);white-space:nowrap';
+  const rows=events.map(e=>{
     const impact=getImpactLevel(e);
-    const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
-    const showDate=newsFromDate!==newsToDate;
-    // Extrahera datum från time-fältet (format: YYYY-MM-DDTHH:MM:SS) eller date-fältet
     const rawDate=e.time&&e.time.length>10?e.time.substring(0,10):(e.date||'');
-    const dateStr=rawDate?rawDate.substring(5):''; // MM-DD
+    const dateStr=rawDate?rawDate.substring(5):'';
     const weekday=rawDate?['Sön','Mån','Tis','Ons','Tor','Fre','Lör'][new Date(rawDate).getDay()]:'';
-    return`<div class="news-item">
-      <span class="news-time" style="min-width:${showDate?'52px':'44px'}">${showDate&&dateStr?`<span style="font-size:10px;color:var(--blue);font-weight:600">${weekday}</span><span style="font-size:9px;color:var(--text3);display:block">${dateStr}</span>`:''}${time}</span>
-      <span class="news-impact ${impact}"></span>
-      <div>
-        <div class="news-title">${e.event||e.name||'Okänd händelse'}</div>
-        <div class="news-country">${e.country||''}${e.actual!=null?' • Utfall: '+e.actual:''}${e.estimate!=null?' • Prognos: '+e.estimate:''}</div>
-      </div>
-    </div>`;
+    const time=e.time?(e.time.length>5?e.time.slice(11,16):e.time):'—';
+    const country=e.country||'';
+    const actual=e.actual!=null?String(e.actual):'';
+    const forecast=e.estimate!=null?String(e.estimate):'';
+    const impactColor=impact==='high'?'var(--red)':impact==='medium'?'var(--amber)':'#94a3b8';
+    const actualColor=actual&&forecast&&!isNaN(parseFloat(actual))&&!isNaN(parseFloat(forecast))
+      ?(parseFloat(actual)>parseFloat(forecast)?'var(--green)':parseFloat(actual)<parseFloat(forecast)?'var(--red)':'var(--text2)')
+      :'var(--text2)';
+    const dateCell=showDate
+      ?`<td style="padding:7px 8px;white-space:nowrap;vertical-align:middle">
+          <div style="font-size:10px;font-weight:700;color:var(--blue)">${weekday}</div>
+          <div style="font-size:10px;color:var(--text3)">${dateStr}</div>
+        </td>`:'';
+    return`<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--gray-lt)'" onmouseout="this.style.background=''">
+      ${dateCell}
+      <td style="padding:7px 8px;font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap">${time}</td>
+      <td style="padding:7px 6px;white-space:nowrap"><span style="font-size:11px;font-weight:600;color:var(--text2)">${country}</span></td>
+      <td style="padding:7px 8px;font-size:12px;color:var(--text2)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${impactColor};margin-right:6px;vertical-align:middle"></span>${e.event||e.name||'—'}
+      </td>
+      <td style="padding:7px 8px;font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right;white-space:nowrap">${forecast}</td>
+      <td style="padding:7px 8px;font-family:var(--mono);font-size:11px;color:${actualColor};text-align:right;white-space:nowrap;font-weight:${actual?600:400}">${actual||'—'}</td>
+    </tr>`;
   }).join('');
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      ${showDate?`<th style="${thStyle}">Dag</th>`:''}
+      <th style="${thStyle}">Tid</th>
+      <th style="${thStyle}">Land</th>
+      <th style="${thStyle};text-align:left">Event</th>
+      <th style="${thStyle};text-align:right">Prognos</th>
+      <th style="${thStyle};text-align:right">Utfall</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 // ── EXPAND MODAL ──────────────────────────────────────────────────────────────
@@ -3977,7 +4002,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.3</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.4</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
