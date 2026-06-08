@@ -420,29 +420,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   transition:all .1s;
 }
 .dash-width-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
-.dash-customize-btn{
-  position:fixed;
-  bottom:20px;
-  right:24px;
-  background:var(--amber);
-  color:#fff;
-  border:none;
-  border-radius:10px;
-  padding:10px 18px;
-  font-size:13px;
-  font-weight:600;
-  font-family:var(--font);
-  cursor:pointer;
-  box-shadow:0 4px 14px rgba(217,119,6,.4);
-  z-index:40;
-  display:flex;
-  align-items:center;
-  gap:7px;
-  transition:all .15s;
-}
-.dash-customize-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(217,119,6,.5);}
-.dash-customize-btn.active{background:var(--green);box-shadow:0 4px 14px rgba(22,163,74,.4);}
-#page-dashboard .dash-customize-btn{display:flex;}
+#dashCustomizeBtn.active{border-color:var(--green)!important;color:var(--green)!important;}
 
 /* DASHBOARD */
 .dashboard-wrap{padding:24px 28px;display:flex;flex-direction:column;gap:20px;max-width:1360px;margin:0 auto;}
@@ -583,7 +561,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.1</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.2</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -634,7 +612,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.1</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.2</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -662,9 +640,12 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   <div class="dashboard-wrap">
 
     <!-- Hälsning -->
-    <div>
-      <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
-      <div class="dash-greeting-sub" id="dashDate">—</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="dash-greeting">Välkommen tillbaka, <span id="dashName">—</span> 👋</div>
+        <div class="dash-greeting-sub" id="dashDate">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="dashCustomizeBtn" onclick="toggleDashEdit()" style="margin-top:6px;border-color:var(--amber);color:var(--amber)">✏️ Anpassa layout</button>
     </div>
 
     <!-- Snabbknappar -->
@@ -701,16 +682,15 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="dash-card-scroll" id="dashRecentTrades"></div>
       </div>
 
-      <!-- Ekonomisk kalender -->
+            <!-- Ekonomisk kalender -->
       <div class="dash-widget span-4" data-widget="calendar" draggable="true">
         <div class="dash-drag-handle">⠿ Flytta</div>
         <div class="dash-width-picker">
-          <button class="dash-width-btn" data-span="4" onclick="setWidgetSpan(this,'calendar',4)">4</button>
+          <button class="dash-width-btn active" data-span="4" onclick="setWidgetSpan(this,'calendar',4)">4</button>
           <button class="dash-width-btn" data-span="6" onclick="setWidgetSpan(this,'calendar',6)">6</button>
           <button class="dash-width-btn" data-span="8" onclick="setWidgetSpan(this,'calendar',8)">8</button>
-          <button class="dash-width-btn active" data-span="12" onclick="setWidgetSpan(this,'calendar',12)">12</button>
+          <button class="dash-width-btn" data-span="12" onclick="setWidgetSpan(this,'calendar',12)">12</button>
         </div>
-        <div class="dash-card-header">
         <div class="dash-card-header">
           <div class="dash-card-title">📰 Ekonomisk kalender</div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -718,39 +698,36 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
             <button class="expand-btn" onclick="openNewsModal('news')" title="Expandera">⤢</button>
           </div>
         </div>
-        <!-- Period-knappar -->
-        <div class="news-filter-bar">
-          <span style="font-size:11px;color:var(--text3);font-weight:600">Period:</span>
+        <!-- Period -->
+        <div class="news-filter-bar" style="flex-wrap:nowrap;overflow-x:auto;gap:4px">
           <button class="news-filter-btn active-high" id="np-today" onclick="setNewsDateRange('today')">Idag</button>
           <button class="news-filter-btn" id="np-week" onclick="setNewsDateRange('week')">Denna vecka</button>
           <button class="news-filter-btn" id="np-nextweek" onclick="setNewsDateRange('nextweek')">Nästa vecka</button>
           <button class="news-filter-btn" id="np-month" onclick="setNewsDateRange('month')">Månaden</button>
         </div>
-        <!-- Datumfält -->
+        <!-- Datum -->
         <div class="news-filter-bar" style="gap:4px">
-          <input type="date" id="newsFromDate" class="form-control" style="padding:3px 6px;font-size:11px;width:115px" onchange="setNewsDateRange('custom')">
+          <input type="date" id="newsFromDate" class="form-control" style="padding:3px 6px;font-size:11px;flex:1" onchange="setNewsDateRange('custom')">
           <span style="font-size:11px;color:var(--text3)">–</span>
-          <input type="date" id="newsToDate" class="form-control" style="padding:3px 6px;font-size:11px;width:115px" onchange="setNewsDateRange('custom')">
+          <input type="date" id="newsToDate" class="form-control" style="padding:3px 6px;font-size:11px;flex:1" onchange="setNewsDateRange('custom')">
         </div>
-        <!-- Impact-filter -->
-        <div class="news-filter-bar">
+        <!-- Impact + länder -->
+        <div class="news-filter-bar" style="flex-wrap:wrap;gap:4px">
           <button class="news-filter-btn active-high" id="nf-high" onclick="toggleNewsFilter('high')">🔴 Hög</button>
-          <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Medium</button>
+          <button class="news-filter-btn active-medium" id="nf-medium" onclick="toggleNewsFilter('medium')">🟡 Med</button>
           <button class="news-filter-btn" id="nf-low" onclick="toggleNewsFilter('low')">⚪ Låg</button>
-          <span style="font-size:11px;color:var(--text3);margin-left:4px">Land:</span>
-          <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸 US</button>
-          <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺 EU</button>
-          <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧 UK</button>
-          <button class="news-filter-btn" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵 JP</button>
-          <button class="news-filter-btn" id="nf-CA" onclick="toggleCountryFilter('CA')">🇨🇦 CA</button>
-          <button class="news-filter-btn" id="nf-AU" onclick="toggleCountryFilter('AU')">🇦🇺 AU</button>
-          <button class="news-filter-btn" id="nf-CH" onclick="toggleCountryFilter('CH')">🇨🇭 CH</button>
+          <button class="news-filter-btn active-high" id="nf-US" onclick="toggleCountryFilter('US')">🇺🇸</button>
+          <button class="news-filter-btn active-high" id="nf-EU" onclick="toggleCountryFilter('EU')">🇪🇺</button>
+          <button class="news-filter-btn active-high" id="nf-GB" onclick="toggleCountryFilter('GB')">🇬🇧</button>
+          <button class="news-filter-btn" id="nf-JP" onclick="toggleCountryFilter('JP')">🇯🇵</button>
+          <button class="news-filter-btn" id="nf-CA" onclick="toggleCountryFilter('CA')">🇨🇦</button>
+          <button class="news-filter-btn" id="nf-AU" onclick="toggleCountryFilter('AU')">🇦🇺</button>
+          <button class="news-filter-btn" id="nf-CH" onclick="toggleCountryFilter('CH')">🇨🇭</button>
           <button class="news-filter-btn" id="nf-ALL" onclick="toggleAllCountries()">Alla</button>
         </div>
         <div class="dash-card-scroll" id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
       </div>
 
-    </div>
 
       <!-- Streak -->
       <div class="dash-widget span-4" data-widget="streak" draggable="true">
@@ -791,9 +768,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
     </div>
   </div>
-
-  <!-- Anpassa-knapp -->
-  <button class="dash-customize-btn" id="dashCustomizeBtn" onclick="toggleDashEdit()">✏️ Anpassa layout</button>
 
 </div>
 
@@ -3025,6 +2999,7 @@ function renderDashInsights(){
 
 
 function renderDashMonth(){
+  if(!document.getElementById('dashMonth'))return;
   const elCheck=document.getElementById('dashMonth');if(!elCheck)return;
   const el=document.getElementById('dashMonth');
   const thisMonth=new Date().toISOString().slice(0,7);
@@ -3918,7 +3893,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.1</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.2</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
