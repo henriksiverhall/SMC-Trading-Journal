@@ -515,6 +515,25 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
+/* Kanban */
+.kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;}
+.kanban-col{background:var(--bg2);border-radius:var(--r);padding:12px;min-height:200px;}
+.kanban-col-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.kanban-col-count{background:var(--border);color:var(--text3);border-radius:10px;padding:1px 7px;font-size:10px;}
+.kanban-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);border-color:var(--blue);}
+.kanban-card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.3;}
+.kanban-card-desc{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:6px;}
+.kanban-card-meta{display:flex;gap:6px;flex-wrap:wrap;}
+.kanban-tag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.kanban-tag.feature{background:rgba(59,130,246,.12);color:var(--blue);}
+.kanban-tag.bug{background:rgba(239,68,68,.12);color:var(--red);}
+.kanban-tag.improvement{background:rgba(245,158,11,.12);color:var(--amber);}
+.kanban-tag.infra{background:rgba(107,114,128,.12);color:var(--text3);}
+.kanban-prio-high{border-left:3px solid var(--red);}
+.kanban-prio-medium{border-left:3px solid var(--amber);}
+.kanban-prio-low{border-left:3px solid var(--green);}
+@media(max-width:900px){.kanban-board{grid-template-columns:1fr 1fr;}}
 /* Analytics */
 .analytics-filters{display:flex;flex-wrap:wrap;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:8px;}
 .af-group{display:flex;flex-direction:column;gap:3px;}
@@ -603,7 +622,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.5</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.6</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -654,7 +673,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.5</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.6</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -671,6 +690,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="avatar-menu-divider"></div>
         <button class="avatar-menu-item" onclick="showPage('profil',null);closeAvatarMenu()">👤 Profil</button>
         <button class="avatar-menu-item" id="adminMenuBtn" style="display:none" onclick="showPage('admin',null);closeAvatarMenu()">⚙️ Administration</button>
+        <button class="avatar-menu-item" id="roadmapMenuBtn" style="display:none" onclick="showPage('roadmap',null);closeAvatarMenu()">📋 Roadmap</button>
         <div class="avatar-menu-divider"></div>
         <button class="avatar-menu-item danger" onclick="doLogout();closeAvatarMenu()">↩ Logga ut</button>
       </div>
@@ -1071,7 +1091,68 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   </div>
 </div>
 
-<!-- PROFIL PAGE -->
+<!-- ROADMAP PAGE -->
+<div id="page-roadmap" class="page" style="padding:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--text)">📋 Roadmap</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">TradeLog – utvecklingsstatus och uppgifter</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openAddTask()">+ Ny task</button>
+  </div>
+
+  <!-- Kanban board -->
+  <div class="kanban-board" id="kanbanBoard"></div>
+
+  <!-- Add/Edit task modal -->
+  <div class="modal-backdrop" id="taskModal">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <div class="modal-title" id="taskModalTitle">Ny task</div>
+        <button class="modal-close" onclick="closeTaskModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:20px">
+        <div class="form-group"><label>Titel</label>
+          <input type="text" class="form-control" id="taskTitle" placeholder="Vad ska göras?">
+        </div>
+        <div class="form-group"><label>Beskrivning</label>
+          <textarea class="form-control" id="taskDesc" rows="3" placeholder="Detaljer..." style="resize:vertical"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group"><label>Kategori</label>
+            <select class="form-control" id="taskCategory">
+              <option value="feature">✨ Feature</option>
+              <option value="bug">🐛 Bugg</option>
+              <option value="improvement">⚡ Förbättring</option>
+              <option value="infra">🏗️ Infrastruktur</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Prioritet</label>
+            <select class="form-control" id="taskPriority">
+              <option value="high">🔴 Hög</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Låg</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select class="form-control" id="taskStatus">
+            <option value="todo">📌 Att göra</option>
+            <option value="inprogress">🔄 Pågående</option>
+            <option value="waiting">⏳ Väntar</option>
+            <option value="done">✅ Klar</option>
+            <option value="parked">🅿️ Parkerad</option>
+          </select>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">Avbryt</button>
+          <button class="btn btn-danger btn-sm" id="taskDeleteBtn" style="display:none" onclick="deleteTask()">Ta bort</button>
+          <button class="btn btn-primary btn-sm" onclick="saveTask()">Spara</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="page-profil" class="page" style="padding:0">
   <div class="profil-wrap">
 
@@ -1770,6 +1851,9 @@ function applyUserSettings(){
     const show=userSettings?.ai_enabled===true||userSettings?.is_admin===true;
     aiBtn.style.display=show?'flex':'none';
   }
+  // Roadmap-knapp – bara admin
+  const rmBtn=document.getElementById('roadmapMenuBtn');
+  if(rmBtn) rmBtn.style.display=userSettings?.is_admin===true?'block':'none';
 }
 
 function calcMonetary(){
@@ -2125,7 +2209,7 @@ async function onLogin(user){
   updateFilterOptions();
   applyFieldSettings();
   // Återställ senast besökta sida
-  const validPages=['dashboard','journal','checklist','analytics','profil','admin'];
+  const validPages=['dashboard','journal','checklist','analytics','profil','admin','roadmap'];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
   _appReady = true;
@@ -2145,7 +2229,7 @@ async function doLogout(){
   document.getElementById('authWrap').style.display='flex';
 }
 sb.auth.getSession().then(({data:{session}})=>{if(session&&session.user)onLogin(session.user);});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();document.getElementById('imgModal').classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();closeTaskModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
 async function fetchChecklists(){
@@ -4324,7 +4408,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.5</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.6</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5087,12 +5171,164 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
   btn.textContent='🤖 AI-analys';btn.disabled=false;
 }
 
+// ── ROADMAP / KANBAN ──────────────────────────────────────────────────────────
+const KANBAN_COLS=[
+  {id:'todo',label:'📌 Att göra'},
+  {id:'inprogress',label:'🔄 Pågående'},
+  {id:'waiting',label:'⏳ Väntar'},
+  {id:'done',label:'✅ Klar'},
+  {id:'parked',label:'🅿️ Parkerad'},
+];
+const CATEGORY_LABELS={feature:'✨ Feature',bug:'🐛 Bugg',improvement:'⚡ Förbättring',infra:'🏗️ Infrastruktur'};
+const PRIO_LABELS={high:'🔴 Hög',medium:'🟡 Medium',low:'🟢 Låg'};
+
+const DEFAULT_TASKS=[
+  {id:'t1',title:'Bekräftelsemail – HTTPS/DNS',desc:'Länk i mailet pekar på GitHub-URL. Väntar på HTTPS-verifiering på journal.smctrading.se via GitHub Pages.',category:'infra',priority:'medium',status:'waiting'},
+  {id:'t2',title:'V2.0 hosting – Netlify/Vercel',desc:'Krävs för service_role-nyckel via serverless function, "Logga in som"-funktion och AI per användare utan Worker.',category:'infra',priority:'medium',status:'todo'},
+  {id:'t3',title:'FX vs Futures – riskhantering',desc:'Eget spår: position additions, delvinst/-förlust, annorlunda riskberäkning FX vs futures.',category:'feature',priority:'medium',status:'todo'},
+  {id:'t4',title:'Spara AI-analys i historik',desc:'Senaste AI-analysen försvinner vid navigering. Spara per session/datum i Supabase. Varna om ingen förändring skett sedan senaste analys.',category:'improvement',priority:'high',status:'todo'},
+  {id:'t5',title:'Mobilanpassning',desc:'Responsiv design för mobil och padda. Alla sidor och formulär ska fungera på små skärmar.',category:'improvement',priority:'high',status:'todo'},
+  {id:'t6',title:'Rensa tradingdata – admin',desc:'Knapp i admin-användarmodal för att rensa loggad tradingdata. Val: all data, per strategi, per period, per instrument.',category:'feature',priority:'medium',status:'todo'},
+  {id:'t7',title:'AI-analys med bilder',desc:'Skicka chart-screenshots till Claude API för entry timing-analys. Kräver Supabase Storage för bilduppladdning.',category:'feature',priority:'low',status:'parked'},
+  {id:'t8',title:'Google/Apple OAuth',desc:'Enklare inloggning via sociala konton.',category:'feature',priority:'low',status:'todo'},
+  {id:'t9',title:'TwelveData futures – exakt data',desc:'NQ/ES mappas till ETF-proxies (QQQ/SPY) på gratisplan. Uppgradera eller hitta alternativ för exakt tick-data.',category:'improvement',priority:'low',status:'waiting'},
+  {id:'t10',title:'Monte Carlo / drawdown-simulering',desc:'Simulera möjliga equity-kurvor baserat på aktuell WR och R-distribution.',category:'feature',priority:'low',status:'todo'},
+  {id:'t11',title:'TradingView webhook',desc:'Automatisk trade-loggning vid stängning via TradingView webhook.',category:'feature',priority:'low',status:'todo'},
+  {id:'t12',title:'Push-notiser ekonomisk kalender',desc:'Notis innan high-impact news events.',category:'feature',priority:'low',status:'todo'},
+  {id:'t13',title:'Refresh stannar på rätt sida',desc:'Fixad i v1.7.6. Bevakar om det fortfarande läcker i edge cases.',category:'bug',priority:'low',status:'done'},
+];
+
+let roadmapTasks=[];
+let editingTaskId=null;
+
+async function loadRoadmap(){
+  if(!currentUser)return;
+  // Ladda från Supabase user_settings som jsonb-fält
+  try{
+    const{data}=await sb.from('user_settings').select('settings').eq('user_id',currentUser.id).maybeSingle();
+    const saved=data?.settings?.roadmapTasks;
+    if(saved&&saved.length>0){
+      roadmapTasks=saved;
+    }else{
+      // Första gången – använd defaulttasks
+      roadmapTasks=DEFAULT_TASKS.map(t=>({...t,created_at:new Date().toISOString()}));
+      await saveRoadmap();
+    }
+  }catch(e){
+    roadmapTasks=DEFAULT_TASKS.map(t=>({...t,created_at:new Date().toISOString()}));
+  }
+  renderKanban();
+}
+
+async function saveRoadmap(){
+  if(!currentUser)return;
+  try{
+    userSettings.roadmapTasks=roadmapTasks;
+    await saveUserSettings();
+  }catch(e){console.warn('saveRoadmap:',e);}
+}
+
+function renderKanban(){
+  const board=document.getElementById('kanbanBoard');
+  if(!board)return;
+  board.innerHTML=KANBAN_COLS.map(col=>{
+    const cards=roadmapTasks.filter(t=>t.status===col.id);
+    return`<div class="kanban-col">
+      <div class="kanban-col-header">
+        <span>${col.label}</span>
+        <span class="kanban-col-count">${cards.length}</span>
+      </div>
+      ${cards.map(t=>`
+        <div class="kanban-card kanban-prio-${t.priority}" onclick="openEditTask('${t.id}')">
+          <div class="kanban-card-title">${t.title}</div>
+          ${t.desc?`<div class="kanban-card-desc">${t.desc}</div>`:''}
+          <div class="kanban-card-meta">
+            <span class="kanban-tag ${t.category}">${CATEGORY_LABELS[t.category]||t.category}</span>
+            <span style="font-size:10px;color:var(--text3)">${PRIO_LABELS[t.priority]||t.priority}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function openAddTask(){
+  editingTaskId=null;
+  document.getElementById('taskModalTitle').textContent='Ny task';
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskDesc').value='';
+  document.getElementById('taskCategory').value='feature';
+  document.getElementById('taskPriority').value='medium';
+  document.getElementById('taskStatus').value='todo';
+  document.getElementById('taskDeleteBtn').style.display='none';
+  document.getElementById('taskModal').classList.add('open');
+}
+
+function openEditTask(id){
+  const task=roadmapTasks.find(t=>t.id===id);
+  if(!task)return;
+  editingTaskId=id;
+  document.getElementById('taskModalTitle').textContent='Redigera task';
+  document.getElementById('taskTitle').value=task.title;
+  document.getElementById('taskDesc').value=task.desc||'';
+  document.getElementById('taskCategory').value=task.category||'feature';
+  document.getElementById('taskPriority').value=task.priority||'medium';
+  document.getElementById('taskStatus').value=task.status||'todo';
+  document.getElementById('taskDeleteBtn').style.display='inline-flex';
+  document.getElementById('taskModal').classList.add('open');
+}
+
+async function saveTask(){
+  const title=document.getElementById('taskTitle').value.trim();
+  if(!title){alert('Ange en titel.');return;}
+  if(editingTaskId){
+    const idx=roadmapTasks.findIndex(t=>t.id===editingTaskId);
+    if(idx>=0){
+      roadmapTasks[idx]={
+        ...roadmapTasks[idx],
+        title,
+        desc:document.getElementById('taskDesc').value.trim(),
+        category:document.getElementById('taskCategory').value,
+        priority:document.getElementById('taskPriority').value,
+        status:document.getElementById('taskStatus').value,
+        updated_at:new Date().toISOString(),
+      };
+    }
+  }else{
+    roadmapTasks.push({
+      id:'t'+Date.now(),
+      title,
+      desc:document.getElementById('taskDesc').value.trim(),
+      category:document.getElementById('taskCategory').value,
+      priority:document.getElementById('taskPriority').value,
+      status:document.getElementById('taskStatus').value,
+      created_at:new Date().toISOString(),
+    });
+  }
+  await saveRoadmap();
+  renderKanban();
+  closeTaskModal();
+}
+
+async function deleteTask(){
+  if(!editingTaskId)return;
+  if(!confirm('Ta bort denna task?'))return;
+  roadmapTasks=roadmapTasks.filter(t=>t.id!==editingTaskId);
+  await saveRoadmap();
+  renderKanban();
+  closeTaskModal();
+}
+
+function closeTaskModal(){
+  document.getElementById('taskModal').classList.remove('open');
+  editingTaskId=null;
+}
+
 // ── JOURNAL ───────────────────────────────────────────────────────────────────
 function showPage(p,btn){
   // Spara aktiv sida för refresh-återställning
   try{sessionStorage.setItem('currentPage',p);}catch(e){}
   // Dölj alla sidor explicit
-  ['dashboard','checklist','journal','analytics','profil','admin'].forEach(id=>{
+  ['dashboard','checklist','journal','analytics','profil','admin','roadmap'].forEach(id=>{
     const el=document.getElementById('page-'+id);
     if(el){el.classList.remove('active');el.style.display='none';el.style.visibility='hidden';el.style.position='absolute';}
   });
@@ -5107,6 +5343,7 @@ function showPage(p,btn){
   if(p==='dashboard'){loadDashboard();}
   if(p==='admin'){loadAdminData();}
   if(p==='analytics'){renderAnalytics();}
+  if(p==='roadmap'){loadRoadmap();}
 }
 function updateStats(){
   const fs=document.getElementById('filterStrategy').value;
