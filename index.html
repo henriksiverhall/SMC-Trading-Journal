@@ -625,7 +625,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.8</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -676,7 +676,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.8</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1058,8 +1058,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
       <div style="overflow-x:auto">
         <table class="admin-table">
-          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th></tr></thead>
-          <tbody id="usersBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
+          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1094,7 +1094,30 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   </div>
 </div>
 
-<!-- ROADMAP PAGE -->
+<!-- DELETE USER MODAL -->
+<div class="modal-backdrop" id="deleteUserModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">🗑 Ta bort användare</div>
+      <button class="modal-close" onclick="closeDeleteUserModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div style="background:rgba(239,68,68,.08);border:1px solid var(--red);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--red);font-weight:600;margin-bottom:4px">⚠ Permanent åtgärd</div>
+        <div style="font-size:12px;color:var(--text2)" id="deleteUserInfo">Användaren och all data raderas permanent.</div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Detta tar bort alla trades, inställningar och profildata. Åtgärden kan inte ångras.</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:20px">
+        <input type="checkbox" id="deleteUserConfirmCheck" onchange="document.getElementById('deleteUserBtn').disabled=!this.checked" style="width:16px;height:16px;cursor:pointer">
+        <span style="font-size:13px;color:var(--text2)">Jag förstår att detta är permanent och kan inte ångras</span>
+      </label>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeDeleteUserModal()">Avbryt</button>
+        <button class="btn btn-danger btn-sm" id="deleteUserBtn" disabled onclick="executeDeleteUser()">Ta bort användare</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="page-roadmap" class="page" style="padding:18px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
     <div>
@@ -2245,7 +2268,7 @@ async function doLogout(){
   document.getElementById('authWrap').style.display='flex';
 }
 sb.auth.getSession().then(({data:{session}})=>{if(session&&session.user)onLogin(session.user);});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();closeTaskModal();document.getElementById('imgModal').classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();closeTaskModal();closeDeleteUserModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
 async function fetchChecklists(){
@@ -4175,16 +4198,17 @@ function renderUsersTable(users){
   const body=document.getElementById('usersBody');
   if(!body)return;
   if(!users.length){
-    body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px">Inga användare</td></tr>';
+    body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Inga användare</td></tr>';
     return;
   }
-  body.innerHTML=users.map(u=>`<tr style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">
-    <td style="font-size:12px">${u.email||'—'} ${u.user_id===currentUser?.id?'<span style="color:var(--blue);font-size:10px">(du)</span>':''}</td>
-    <td style="font-family:var(--mono);font-size:11px">${u.created?new Date(u.created).toLocaleDateString('sv-SE'):'—'}</td>
-    <td style="font-family:var(--mono);font-size:11px">${u.last_login||'Aldrig'}</td>
-    <td style="font-family:var(--mono);font-size:12px;text-align:center">${u.trade_count}</td>
-    <td><span class="status-pill ${u.confirmed?'done':''}">${u.confirmed?'✓':'Ej bekräftad'}</span></td>
-    <td><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓ Admin':'—'}</span></td>
+  body.innerHTML=users.map(u=>`<tr>
+    <td style="font-size:12px;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.email||'—'} ${u.user_id===currentUser?.id?'<span style="color:var(--blue);font-size:10px">(du)</span>':''}</td>
+    <td style="font-family:var(--mono);font-size:11px;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.created?new Date(u.created).toLocaleDateString('sv-SE'):'—'}</td>
+    <td style="font-family:var(--mono);font-size:11px;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.last_login||'Aldrig'}</td>
+    <td style="font-family:var(--mono);font-size:12px;text-align:center;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.trade_count}</td>
+    <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.confirmed?'done':''}">${u.confirmed?'✓':'Ej bekräftad'}</span></td>
+    <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓ Admin':'—'}</span></td>
+    <td style="text-align:right;padding-right:8px">${u.user_id===currentUser?.id?'':'<button class="btn btn-danger btn-sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();confirmDeleteUser(\''+u.user_id+'\',\''+u.email+'\')">🗑</button>'}</td>
   </tr>`).join('');
 }
 
@@ -4434,7 +4458,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.8</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5195,6 +5219,40 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
     out.innerHTML=`<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ ${e.message}</div></div>`;
   }
   btn.textContent='🤖 AI-analys';btn.disabled=false;
+}
+
+// ── DELETE USER ───────────────────────────────────────────────────────────────
+let _deleteTargetId=null;
+
+function confirmDeleteUser(userId, email){
+  if(userSettings?.is_admin!==true)return;
+  if(userId===currentUser?.id){alert('Du kan inte ta bort ditt eget konto härifrån.');return;}
+  _deleteTargetId=userId;
+  document.getElementById('deleteUserInfo').textContent=`Användare: ${email}`;
+  document.getElementById('deleteUserConfirmCheck').checked=false;
+  document.getElementById('deleteUserBtn').disabled=true;
+  document.getElementById('deleteUserModal').classList.add('open');
+}
+
+async function executeDeleteUser(){
+  if(!_deleteTargetId||userSettings?.is_admin!==true)return;
+  const btn=document.getElementById('deleteUserBtn');
+  btn.textContent='Tar bort…';btn.disabled=true;
+  const{error}=await sb.rpc('delete_user_completely',{target_user_id:_deleteTargetId});
+  if(error){
+    alert('Fel vid borttagning: '+error.message);
+    btn.textContent='Ta bort användare';btn.disabled=false;
+  }else{
+    closeDeleteUserModal();
+    allUsers=allUsers.filter(u=>u.user_id!==_deleteTargetId);
+    renderUsersTable(allUsers);
+    _deleteTargetId=null;
+  }
+}
+
+function closeDeleteUserModal(){
+  document.getElementById('deleteUserModal').classList.remove('open');
+  _deleteTargetId=null;
 }
 
 // ── ROADMAP / KANBAN ──────────────────────────────────────────────────────────
