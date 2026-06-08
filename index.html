@@ -622,7 +622,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.6</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.7</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -673,7 +673,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.6</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.7</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -4103,26 +4103,24 @@ function closeAdminUserModal(){
 }
 
 async function toggleAdminFlag(userId, makeAdmin){
-  const{error}=await sb.from('user_settings').upsert({
-    user_id:userId,
-    settings:{...(allUsers.find(u=>u.user_id===userId)?.settings||{}), is_admin:makeAdmin},
-    updated_at:new Date().toISOString()
+  const{error}=await sb.rpc('admin_set_user_setting',{
+    target_user_id:userId,
+    setting_key:'is_admin',
+    setting_value:makeAdmin
   });
   if(!error){
     const u=allUsers.find(u=>u.user_id===userId);
     if(u)u.is_admin=makeAdmin;
     renderUsersTable(allUsers);
     closeAdminUserModal();
-  }
+  }else{alert('Fel: '+error.message);}
 }
 
 async function toggleAIAccess(userId, enable){
-  const existing=await sb.from('user_settings').select('settings').eq('user_id',userId).maybeSingle();
-  const current=existing.data?.settings||{};
-  const{error}=await sb.from('user_settings').upsert({
-    user_id:userId,
-    settings:{...current, ai_enabled:enable},
-    updated_at:new Date().toISOString()
+  const{error}=await sb.rpc('admin_set_user_setting',{
+    target_user_id:userId,
+    setting_key:'ai_enabled',
+    setting_value:enable
   });
   if(!error){
     alert(`AI-analys ${enable?'aktiverad':'inaktiverad'} för användaren.`);
@@ -4408,7 +4406,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.6</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.7</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
