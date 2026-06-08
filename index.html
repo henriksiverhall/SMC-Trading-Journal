@@ -573,7 +573,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.7.6</span></div>
+    <div class="auth-logo">TradeLog <span>v1.7.7</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -624,7 +624,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.7.6</span></div>
+  <div class="header-logo">TradeLog <span>v1.7.7</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1169,7 +1169,9 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <div class="dash-card-title">🎯 MFE / MAE – Marknadsdata-analys</div>
       <div style="display:flex;gap:8px;align-items:center">
         <span style="font-size:11px;color:var(--text3)">Via TwelveData · max 20 senaste trades</span>
-        <button class="btn btn-primary btn-sm" id="loadMDBtn" onclick="loadMarketDataAnalysis()">▶ Hämta data</button>
+        <button class="btn btn-primary btn-sm" id="loadMDBtn" onclick="loadMarketDataAnalysis(true)">▶ Hämta data</button>
+      </div>
+      <div id="mfeFetchedAt" style="font-size:11px;margin-top:4px;min-height:16px"></div>
       </div>
     </div>
     <div class="dash-card-body" id="analyticsMFE">
@@ -2995,13 +2997,33 @@ async function calcMFE_MAE(trade){
 
 async function enrichTradesWithMD(trades){
   const results=[];
-  // Begränsa till 10 trades åt gången pga API-limit
   const sample=trades.slice(0,20);
+  const now=new Date().toISOString();
   for(const t of sample){
     const md=await calcMFE_MAE(t);
-    results.push({...t,_mfe:md?.mfe,_mae:md?.mae});
+    const enriched={...t,_mfe:md?.mfe,_mae:md?.mae};
+    // Spara till custom_data i Supabase om vi fick data
+    if(md!=null&&currentUser){
+      try{
+        const existing=t.custom_data||{};
+        const updated={...existing,_mfe:md.mfe,_mae:md.mae,_mfe_fetched_at:now};
+        await sb.from('trades').update({custom_data:updated}).eq('id',t.id).eq('user_id',currentUser.id);
+        // Uppdatera lokalt i journal-arrayen också
+        const idx=journal.findIndex(j=>j.id===t.id);
+        if(idx>=0)journal[idx].custom_data=updated;
+        enriched.custom_data=updated;
+      }catch(e){console.warn('MFE save error:',e);}
+    }
+    results.push(enriched);
   }
   return results;
+}
+
+// Läs cachad MFE/MAE från custom_data (utan API-anrop)
+function getCachedMFE(trades){
+  return trades
+    .filter(t=>t.custom_data?._mfe!=null)
+    .map(t=>({...t,_mfe:t.custom_data._mfe,_mae:t.custom_data._mae,_fetched_at:t.custom_data._mfe_fetched_at}));
 }
 
 
@@ -4120,7 +4142,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.7.6</span></div>
+      <div class="auth-logo">TradeLog <span>v1.7.7</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4166,37 +4188,72 @@ async function requestAccountDeletion(){
 
 
 
-async function loadMarketDataAnalysis(){
+async function loadMarketDataAnalysis(forceRefresh=false){
   const btn=document.getElementById('loadMDBtn');
   const el=document.getElementById('analyticsMFE');
+  const tsEl=document.getElementById('mfeFetchedAt');
   if(!el)return;
-  btn.textContent='Hämtar…';btn.disabled=true;
-  el.innerHTML='<div style="font-size:12px;color:var(--text3)">Hämtar marknadsdata – kan ta några sekunder…</div>';
-  
+
   const stratFilter=document.getElementById('analyticsStratFilter')?.value||'';
   const trades=(stratFilter?journal.filter(t=>t.strategy===stratFilter):journal)
     .filter(t=>t.entry&&t.sl&&t.date&&t.direction&&getTwelveSymbol(t.symbol));
-  
+
   if(!trades.length){
     el.innerHTML='<div style="font-size:12px;color:var(--text3)">Inga trades med matchande instrument hittades. Kontrollera att instrument är angivet (ex. NQ, EURUSD).</div>';
-    btn.textContent='▶ Hämta data';btn.disabled=false;
     return;
   }
-  
+
+  // Försök med cachad data först (om inte forceRefresh)
+  if(!forceRefresh){
+    const cached=getCachedMFE(trades);
+    if(cached.length>0){
+      renderMFETable(cached,tsEl);
+      btn.textContent='↺ Uppdatera';btn.disabled=false;
+      return;
+    }
+  }
+
+  // Hämta från TwelveData
+  btn.textContent='Hämtar…';btn.disabled=true;
+  el.innerHTML='<div style="font-size:12px;color:var(--text3)">Hämtar marknadsdata – kan ta några sekunder…</div>';
+
   const enriched=await enrichTradesWithMD(trades);
   const valid=enriched.filter(t=>t._mfe!=null);
-  
+
   if(!valid.length){
     el.innerHTML='<div style="font-size:12px;color:var(--amber)">⚠ Ingen data returnerades. Möjliga orsaker: instrumentet stöds inte på gratisplanen, marknaden stängd under trade-tidpunkten, eller API-limit nådd.</div>';
     btn.textContent='▶ Hämta data';btn.disabled=false;
     return;
   }
-  
+
+  renderMFETable(valid,tsEl);
+  btn.textContent='↺ Uppdatera';btn.disabled=false;
+}
+
+function renderMFETable(valid,tsEl){
+  const el=document.getElementById('analyticsMFE');
+  if(!el)return;
+
+  // Tidsstämpel – hitta äldsta fetched_at bland trades
+  const fetchTimes=valid.map(t=>t._fetched_at||t.custom_data?._mfe_fetched_at).filter(Boolean);
+  const oldestFetch=fetchTimes.length?fetchTimes.sort()[0]:null;
+  if(tsEl&&oldestFetch){
+    const fetchDate=new Date(oldestFetch);
+    const ageMin=Math.round((Date.now()-fetchDate.getTime())/60000);
+    const timeStr=fetchDate.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+    const dateStr=fetchDate.toLocaleDateString('sv-SE',{month:'short',day:'numeric'});
+    const isOld=ageMin>60;
+    tsEl.innerHTML=`<span style="color:${isOld?'var(--red)':'var(--text3)'}">
+      ${isOld?'⚠ ':''}Senast hämtad: ${dateStr} ${timeStr} · ${ageMin<60?ageMin+' min sedan':Math.round(ageMin/60)+' h sedan'}
+      ${isOld?' – överväg att uppdatera':''}
+    </span>`;
+  }
+
   const avgMFE=(valid.reduce((a,t)=>a+(t._mfe||0),0)/valid.length).toFixed(2);
   const avgMAE=(Math.abs(valid.reduce((a,t)=>a+(t._mae||0),0)/valid.length)).toFixed(2);
   const avgResult=(valid.filter(t=>t.result!=null).reduce((a,t)=>a+(t.result||0),0)/valid.filter(t=>t.result!=null).length||0).toFixed(2);
   const leftOnTable=(parseFloat(avgMFE)-parseFloat(avgResult)).toFixed(2);
-  
+
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
       <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center">
@@ -4245,7 +4302,6 @@ async function loadMarketDataAnalysis(){
       }).join('')}</tbody>
     </table>
   `;
-  btn.textContent='↺ Uppdatera';btn.disabled=false;
 }
 
 
@@ -4422,6 +4478,9 @@ function renderAnalytics(){
         `).join('')}
       </svg>`;
   }else if(rCurve){rCurve.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Logga trades för att se R-kurvan</div>';}
+
+  // Ladda cachad MFE/MAE automatiskt (utan API-anrop)
+  loadMarketDataAnalysis(false);
 }
 
 
