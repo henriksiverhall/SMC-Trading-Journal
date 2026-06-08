@@ -509,7 +509,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.6.3</span></div>
+    <div class="auth-logo">TradeLog <span>v1.6.4</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -560,7 +560,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.6.3</span></div>
+  <div class="header-logo">TradeLog <span>v1.6.4</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1779,7 +1779,13 @@ async function onLogin(user){
   const validPages=['dashboard','journal','checklist','profil','admin'];
   const savedPage=sessionStorage.getItem('currentPage');
   const startPage=(savedPage&&validPages.includes(savedPage))?savedPage:'dashboard';
+  // Visa rätt sida men ladda data explicit efteråt
   showPage(startPage,null);
+  // Ladda sidans data explicit så det inte missas
+  if(startPage==='dashboard')await loadDashboard();
+  else if(startPage==='journal'){updateStats();renderJournal();}
+  else if(startPage==='checklist'){}
+  else if(startPage==='profil')await loadProfil();
 }
 async function doLogout(){
   await sb.auth.signOut();
@@ -2595,11 +2601,6 @@ const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 async function loadDashboard(){
   if(!currentUser)return;
-  // Vänta om data inte är klar än (max 2s)
-  if(!_appReady){
-    await new Promise(r=>setTimeout(r,300));
-    if(!_appReady)await new Promise(r=>setTimeout(r,500));
-  }
   // Namn & datum
   const meta=currentUser.user_metadata||{};
   const name=meta.display_name||(currentUser.email||'').split('@')[0];
@@ -3600,7 +3601,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.6.3</span></div>
+      <div class="auth-logo">TradeLog <span>v1.6.4</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
