@@ -603,7 +603,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.8.2</span></div>
+    <div class="auth-logo">TradeLog <span>v1.8.3</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -654,7 +654,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.8.2</span></div>
+  <div class="header-logo">TradeLog <span>v1.8.3</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -4300,7 +4300,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.8.2</span></div>
+      <div class="auth-logo">TradeLog <span>v1.8.3</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -4974,10 +4974,27 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
         messages:[{role:'user',content:prompt}]
       })
     });
-    const data=await resp.json();
+    const rawText=await resp.text();
+    console.log('AI response status:',resp.status);
+    console.log('AI response raw:',rawText);
+    if(!resp.ok){
+      out.innerHTML=`<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ HTTP ${resp.status}: ${rawText.substring(0,200)}</div></div>`;
+      btn.textContent='🤖 AI-analys';btn.disabled=false;return;
+    }
+    const data=JSON.parse(rawText);
+    if(data.error){
+      out.innerHTML=`<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ API-fel: ${JSON.stringify(data.error)}</div></div>`;
+      btn.textContent='🤖 AI-analys';btn.disabled=false;return;
+    }
     const raw=data.content?.find(c=>c.type==='text')?.text||'';
+    console.log('AI text content:',raw);
     const clean=raw.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
+    let parsed;
+    try{parsed=JSON.parse(clean);}catch(je){
+      // Modellen svarade inte i JSON – visa råtexten istället
+      out.innerHTML=`<div class="ai-analysis-card"><h3>🤖 AI-analys</h3><div style="font-size:13px;line-height:1.7;color:var(--text2)">${raw.replace(/\n/g,'<br>')}</div></div>`;
+      btn.textContent='🤖 AI-analys';btn.disabled=false;return;
+    }
     const insights=parsed.insights||[];
     out.innerHTML=`<div class="ai-analysis-card">
       <h3>🤖 AI-analys <span style="font-size:11px;color:var(--text3);font-weight:400">${new Date().toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}</span></h3>
@@ -4986,7 +5003,8 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
       <div style="font-size:10px;color:var(--text3);margin-top:12px">AI-analys är ett komplement, inte ett handelsråd. Verifiera alltid med din egen bedömning.</div>
     </div>`;
   }catch(e){
-    out.innerHTML='<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ Kunde inte hämta AI-analys. Försök igen.</div></div>';
+    console.error('AI fetch error:',e);
+    out.innerHTML=`<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ ${e.message}</div></div>`;
   }
   btn.textContent='🤖 AI-analys';btn.disabled=false;
 }
