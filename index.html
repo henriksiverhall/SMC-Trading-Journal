@@ -5950,6 +5950,24 @@ async function executeDeleteUser(){
 function closeDeleteUserModal(){
   document.getElementById('deleteUserModal').classList.remove('open');
   _deleteTargetId=null;
+  // Återställ modal-body så knapparna fungerar nästa gång
+  const modalBody=document.querySelector('#deleteUserModal .modal-body');
+  if(modalBody){
+    modalBody.innerHTML=`
+      <div style="background:rgba(239,68,68,.08);border:1px solid var(--red);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--red);font-weight:600;margin-bottom:4px">⚠ Permanent åtgärd</div>
+        <div style="font-size:12px;color:var(--text2)" id="deleteUserInfo">Användaren och all data raderas permanent.</div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Detta tar bort alla trades, inställningar och profildata. Åtgärden kan inte ångras.</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:20px">
+        <input type="checkbox" id="deleteUserConfirmCheck" onchange="document.getElementById('deleteUserBtn').disabled=!this.checked" style="width:16px;height:16px;cursor:pointer">
+        <span style="font-size:13px;color:var(--text2)">Jag förstår att detta är permanent och kan inte ångras</span>
+      </label>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeDeleteUserModal()">Avbryt</button>
+        <button class="btn btn-danger btn-sm" id="deleteUserBtn" disabled onclick="executeDeleteUser()">Ta bort användare</button>
+      </div>`;
+  }
 }
 
 // ── ROADMAP / KANBAN ──────────────────────────────────────────────────────────
