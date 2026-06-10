@@ -1099,8 +1099,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
       <div style="overflow-x:auto">
         <table class="admin-table">
-          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th></th></tr></thead>
-          <tbody id="usersBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
+          <thead><tr><th>E-post</th><th>Skapad</th><th>Senast inloggad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th>AI</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Laddar…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1320,6 +1320,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
       <div style="margin-top:14px">
         <button class="btn btn-ghost btn-sm" onclick="showChangePassword()">🔑 Byt lösenord</button>
+      </div>
+      <!-- Coaching consent – dold tills vidare, aktiveras via Kanban t_coach1 -->
+      <div id="coachingConsentSection" style="display:none;margin-top:16px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">📊 Coaching & Analysåtkomst</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Tillåt TradeLog att analysera din journaldata i coaching-syfte. Du kan när som helst återkalla detta samtycke.</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="coachingConsentCheck" onchange="saveCoachingConsent(this.checked)" style="width:15px;height:15px">
+          <span style="font-size:13px;color:var(--text2)">Jag godkänner att min tradingdata får analyseras för coaching-ändamål</span>
+        </label>
+        <div id="coachingConsentDate" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
       </div>
       <div id="changePwSection" style="display:none;margin-top:12px;display:none">
         <div class="form-group"><label>Nytt lösenord</label><input type="password" class="form-control" id="newPw1" placeholder="Minst 6 tecken"></div>
@@ -4825,7 +4835,7 @@ function renderUsersTable(users){
   const body=document.getElementById('usersBody');
   if(!body)return;
   if(!users.length){
-    body.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Inga användare</td></tr>';
+    body.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:16px">Inga användare</td></tr>';
     return;
   }
   body.innerHTML=users.map(u=>`<tr>
@@ -4834,7 +4844,8 @@ function renderUsersTable(users){
     <td style="font-family:var(--mono);font-size:11px;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.last_login||'Aldrig'}</td>
     <td style="font-family:var(--mono);font-size:12px;text-align:center;cursor:pointer" onclick="openAdminUserModal('${u.user_id}')">${u.trade_count}</td>
     <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.confirmed?'done':''}">${u.confirmed?'✓':'Ej bekräftad'}</span></td>
-    <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓ Admin':'—'}</span></td>
+    <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.is_admin?'done':''}">${u.is_admin?'✓':'—'}</span></td>
+    <td style="cursor:pointer" onclick="openAdminUserModal('${u.user_id}')"><span class="status-pill ${u.ai_enabled?'done':''}">${u.ai_enabled?'✓':'—'}</span></td>
     <td style="text-align:right;padding-right:8px">${u.user_id===currentUser?.id?'':'<button class="btn btn-danger btn-sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();confirmDeleteUser(\''+u.user_id+'\',\''+u.email+'\')">🗑</button>'}</td>
   </tr>`).join('');
 }
@@ -4957,9 +4968,29 @@ async function loadProfil(){
   const created=new Date(currentUser.created_at).toLocaleDateString('sv-SE');
   document.getElementById('profil-created').textContent=created;
   document.getElementById('profil-tradecount').textContent=journal.length+' trades';
-  document.getElementById('profil-stratcount').textContent=userChecklists.length+' st';
+  const userStratCount=userChecklists.filter(c=>c.user_id===currentUser.id).length||userChecklists.length;
+  document.getElementById('profil-stratcount').textContent=userStratCount+' st';
   await checkMfaStatus();
   await checkDeletionRequest();
+  // Coaching consent – populera om synlig
+  const consentCheck=document.getElementById('coachingConsentCheck');
+  const consentDate=document.getElementById('coachingConsentDate');
+  if(consentCheck){
+    consentCheck.checked=userSettings.coaching_consent===true;
+    if(consentDate&&userSettings.coaching_consent_date){
+      consentDate.textContent='Godkänt: '+new Date(userSettings.coaching_consent_date).toLocaleDateString('sv-SE');
+    }
+  }
+}
+
+async function saveCoachingConsent(enabled){
+  userSettings.coaching_consent=enabled;
+  userSettings.coaching_consent_date=enabled?new Date().toISOString():null;
+  await saveUserSettings();
+  const consentDate=document.getElementById('coachingConsentDate');
+  if(consentDate){
+    consentDate.textContent=enabled?'Godkänt: '+new Date().toLocaleDateString('sv-SE'):'';
+  }
 }
 
 async function saveDisplayName(){
