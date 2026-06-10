@@ -634,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9j</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9k</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -672,7 +672,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <input type="password" class="auth-input" id="signupPassword2" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">
-        Genom att skapa ett konto godkänner du att dina uppgifter lagras enligt GDPR. Du kan när som helst begära radering via profilsidan.
+        Genom att skapa ett konto godkänner du att dina uppgifter lagras enligt GDPR. Du kan när som helst begära radering via profilsidan. <a href="#" onclick="showPage('policy',null);return false;" style="color:var(--blue)">Integritetspolicy →</a>
       </div>
       <button class="auth-btn" onclick="doSignup()" id="signupBtn">Skapa konto</button>
       <div class="auth-err" id="signupErr"></div>
@@ -685,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9j</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9k</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1158,6 +1158,59 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     </div>
   </div>
 </div>
+<!-- PRIVACY POLICY PAGE -->
+<div id="page-policy" class="page" style="padding:18px">
+  <div style="max-width:800px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    <button class="btn btn-ghost btn-sm" onclick="showPage('dashboard',null)">← Tillbaka</button>
+    <div style="font-size:20px;font-weight:700;color:var(--text)">🔒 Integritetspolicy</div>
+  </div>
+  <div class="dash-card" style="padding:28px 32px;line-height:1.8;color:var(--text2)">
+    <p style="font-size:12px;color:var(--text3);margin-bottom:24px">Senast uppdaterad: juni 2026</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">1. Personuppgiftsansvarig</h2>
+    <p style="font-size:14px;margin-bottom:20px">TradeLog drivs av Henrik Siverhall. Tjänsten finns på <a href="https://journal.smctrading.se" style="color:var(--blue)">journal.smctrading.se</a>. Kontakt: <a href="mailto:henrik.siverhall@gmail.com" style="color:var(--blue)">henrik.siverhall@gmail.com</a></p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">2. Vilka uppgifter samlar vi in?</h2>
+    <ul style="font-size:14px;margin-bottom:20px;padding-left:20px">
+      <li><strong>Kontouppgifter:</strong> E-postadress, valfritt namn och visningsnamn</li>
+      <li><strong>Tradingdata:</strong> Trades du loggar – datum, pris, strategi, resultat och noteringar</li>
+      <li><strong>Inloggningslogg:</strong> Tidpunkt och enhetstyp (säkerhetssyfte)</li>
+      <li><strong>Inställningar:</strong> Appinställningar, checklistor och strategier</li>
+    </ul>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">3. Varför behandlar vi dina uppgifter?</h2>
+    <ul style="font-size:14px;margin-bottom:20px;padding-left:20px">
+      <li>För att tillhandahålla tjänsten (journalföring, analytics, checklist)</li>
+      <li>För att skicka bekräftelsemail och lösenordsåterställning</li>
+      <li>För att administrera ditt konto</li>
+    </ul>
+    <p style="font-size:14px;margin-bottom:20px">Rättslig grund: <em>avtal</em> och <em>berättigat intresse</em> (säkerhet).</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">4. Hur länge sparar vi dina uppgifter?</h2>
+    <p style="font-size:14px;margin-bottom:20px">Dina uppgifter sparas så länge ditt konto är aktivt. Vid radering tas all data bort inom 30 dagar. Begär radering via Profil → Radera konto & data.</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">5. Delas dina uppgifter med tredje part?</h2>
+    <ul style="font-size:14px;margin-bottom:20px;padding-left:20px">
+      <li><strong>Supabase (EU):</strong> Databas och autentisering</li>
+      <li><strong>Resend:</strong> E-postleverans</li>
+      <li><strong>Anthropic (Claude API):</strong> Vid AI-analys skickas aggregerad statistik – inga personuppgifter</li>
+      <li><strong>TwelveData/Finnhub:</strong> Marknadsdata – inga personuppgifter delas</li>
+    </ul>
+    <p style="font-size:14px;margin-bottom:20px">Vi säljer aldrig dina uppgifter.</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">6. Dina rättigheter (GDPR)</h2>
+    <ul style="font-size:14px;margin-bottom:20px;padding-left:20px">
+      <li><strong>Tillgång:</strong> Du ser all din data i appen</li>
+      <li><strong>Rättelse:</strong> Redigera via inställningar</li>
+      <li><strong>Radering:</strong> Profil → Radera konto & data</li>
+      <li><strong>Dataportabilitet:</strong> CSV-export i journalen</li>
+      <li><strong>Invändning:</strong> Kontakta oss via e-post</li>
+    </ul>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">7. Cookies och lokal lagring</h2>
+    <p style="font-size:14px;margin-bottom:20px">TradeLog använder sessionStorage (ej cookies) för att komma ihåg aktiv sida. Ingen spårning, ingen reklam, inga tredjepartscookies.</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">8. Säkerhet</h2>
+    <p style="font-size:14px;margin-bottom:20px">All data överförs krypterat (HTTPS). Databasen skyddas av Row Level Security – du kan bara se din egen data. Lösenord lagras aldrig i klartext.</p>
+    <h2 style="font-size:16px;font-weight:700;color:var(--text);margin:0 0 8px">9. Kontakt</h2>
+    <p style="font-size:14px;">Frågor? Kontakta oss: <a href="mailto:henrik.siverhall@gmail.com" style="color:var(--blue)">henrik.siverhall@gmail.com</a></p>
+  </div>
+  </div>
+</div>
+
 <div id="page-roadmap" class="page" style="padding:18px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
     <div>
@@ -1307,10 +1360,10 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     </div>
 
   </div>
+  <div style="text-align:center;padding:16px 0;font-size:12px;color:var(--text3)">
+    <a href="#" onclick="showPage('policy',null);return false;" style="color:var(--blue)">🔒 Integritetspolicy</a>
+  </div>
 </div>
-
-
-<!-- ANALYTICS PAGE -->
 <div id="page-analytics" class="page" style="padding:18px">
 
   <!-- Header -->
@@ -5025,7 +5078,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9j</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9k</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -6194,7 +6247,7 @@ function showPage(p,btn){
   // Spara aktiv sida för refresh-återställning
   try{sessionStorage.setItem('currentPage',p);}catch(e){}
   // Dölj alla sidor explicit
-  ['dashboard','checklist','journal','analytics','profil','admin','roadmap'].forEach(id=>{
+  ['dashboard','checklist','journal','analytics','profil','admin','roadmap','policy'].forEach(id=>{
     const el=document.getElementById('page-'+id);
     if(el){el.classList.remove('active');el.style.display='none';el.style.visibility='hidden';el.style.position='absolute';}
   });
