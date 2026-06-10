@@ -634,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9i</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9j</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -685,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9i</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9j</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -2568,7 +2568,22 @@ async function onLogin(user){
 async function doLogout(){
   await sb.auth.signOut();
   currentUser=null;journal=[];userChecklists=[];
+  // Rensa all användardata från minnet
+  userSettings={};
+  allUsers=[];allLogs=[];roadmapTasks=[];
   sessionStorage.removeItem('currentPage');
+  // Dölj AI-output och historik
+  const aiOut=document.getElementById('aiAnalysisOutput');
+  const aiHist=document.getElementById('aiAnalysisHistory');
+  if(aiOut){aiOut.style.display='none';aiOut.innerHTML='';}
+  if(aiHist){aiHist.style.display='none';}
+  // Dölj admin/roadmap-knappar
+  const adminBtn=document.getElementById('adminMenuBtn');
+  const rmBtn=document.getElementById('roadmapMenuBtn');
+  const aiBtn=document.getElementById('aiAnalysisBtn');
+  if(adminBtn)adminBtn.style.display='none';
+  if(rmBtn)rmBtn.style.display='none';
+  if(aiBtn)aiBtn.style.display='none';
   document.getElementById('appWrap').style.display='none';
   document.getElementById('authWrap').style.display='flex';
 }
@@ -5010,7 +5025,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9i</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9j</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5819,6 +5834,11 @@ async function saveAIAnalysis(entry){
 function renderAIHistory(){
   const histEl=document.getElementById('aiAnalysisHistory');
   const listEl=document.getElementById('aiHistoryList');
+  // Visa bara för användare med AI aktiverat
+  if(!userSettings?.ai_enabled&&!userSettings?.is_admin){
+    if(histEl)histEl.style.display='none';
+    return;
+  }
   const history=userSettings.ai_analysis_history||[];
   if(!histEl||!listEl||history.length===0){if(histEl)histEl.style.display='none';return;}
   histEl.style.display='block';
