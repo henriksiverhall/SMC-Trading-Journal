@@ -634,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9g</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9h</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -685,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9g</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9h</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1986,20 +1986,27 @@ function calcMonetary(){
   const size=parseFloat(userSettings.accountSize)||0;
   const curr=userSettings.currency||'USD';
   const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
-  // Räkna ut dollarvärde per 1R
   const riskAmount=size&&pct?size*(pct/100):0;
-  // Uppdatera alla monetaryResult-element
+  // Bug 3: Faktisk futures-risk om kontrakt är angivna
+  const fSym=document.getElementById('f-symbol')?.value||'';
+  const fEntry=parseFloat(document.getElementById('f-entry')?.value);
+  const fSl=parseFloat(document.getElementById('f-sl')?.value);
+  const fContracts=parseInt(document.getElementById('f-contracts')?.value)||0;
+  const fSpec=getFuturesSpec(fSym);
+  const futuresRisk=fSpec&&fEntry&&fSl&&fContracts?fContracts*Math.abs(fEntry-fSl)*fSpec.pointValue:0;
+  const effectiveRisk=futuresRisk||riskAmount;
   document.querySelectorAll('[id="monetaryResult"]').forEach(el=>{
-    if(!riskAmount){el.textContent='';return;}
-    // Hitta aktuellt R-värde från närmaste rrDisplay
+    if(!effectiveRisk){el.textContent='';return;}
     const r=calculatedR;
     if(r!=null){
-      const monetary=riskAmount*Math.abs(r);
+      const monetary=effectiveRisk*Math.abs(r);
       const sign=r>0?'+':r<0?'-':'';
-      el.textContent=`${sign}${currSymbol}${monetary.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})} (${currSymbol}${riskAmount.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})}/R)`;
+      const perR=futuresRisk?`${currSymbol}${futuresRisk.toFixed(0)}/R`:`${currSymbol}${riskAmount.toFixed(0)}/R`;
+      const diff=futuresRisk&&riskAmount&&Math.abs(futuresRisk-riskAmount)>5?` · mål ${currSymbol}${riskAmount.toFixed(0)}`:'';
+      el.textContent=`${sign}${currSymbol}${monetary.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})} (${perR}${diff})`;
       el.style.color=r>0?'var(--green)':r<0?'var(--red)':'var(--text3)';
     }else{
-      el.textContent=`${currSymbol}${riskAmount.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})}/R`;
+      el.textContent=`${currSymbol}${effectiveRisk.toFixed(0)}/R`;
       el.style.color='var(--text3)';
     }
   });
@@ -3343,6 +3350,53 @@ async function logToJournal(){
     customData._entries.forEach(e=>{totalQty+=e.qty||1;weightedSum+=(e.price||mainEntry)*(e.qty||1);});
     customData._avg_entry=parseFloat((weightedSum/totalQty).toFixed(2));
   }
+  // Beräkna slutgiltigt R-värde
+  // Bug 1: Om delvinster finns, beräkna viktad R från exits
+  // Bug 2: Använd avg_entry om scale-in finns
+  let finalR=calculatedR;
+  const effectiveEntry=customData._avg_entry||parseFloat(document.getElementById('f-entry').value)||null;
+  const sl_val=parseFloat(document.getElementById('f-sl').value)||null;
+  const direction_val=document.getElementById('f-direction').value;
+  const symbol_val=document.getElementById('f-symbol').value||'';
+  const spec=getFuturesSpec(symbol_val);
+
+  if(exits.length&&effectiveEntry&&sl_val){
+    const risk=Math.abs(effectiveEntry-sl_val);
+    if(risk>0){
+      const totalContracts=contracts||1;
+      let weightedR=0;
+      let exitedQty=0;
+      exits.forEach(e=>{
+        const exitPrice=parseFloat(e.price);
+        const qty=parseInt(e.qty)||1;
+        if(!exitPrice||isNaN(exitPrice))return;
+        const sign=(direction_val==='Long'&&exitPrice>effectiveEntry)||(direction_val==='Short'&&exitPrice<effectiveEntry)?1:-1;
+        const priceDiff=Math.abs(exitPrice-effectiveEntry);
+        const eR=sign*(priceDiff/risk);
+        weightedR+=eR*(qty/totalContracts);
+        exitedQty+=qty;
+      });
+      // Om alla kontrakt exitade via delvinster – använd viktad R
+      if(exitedQty>=totalContracts){
+        finalR=parseFloat(weightedR.toFixed(2));
+      }else if(exitedQty>0&&calculatedR!=null){
+        // Blandad: delvis exit + TP/SL för resten
+        const remainPct=(totalContracts-exitedQty)/totalContracts;
+        finalR=parseFloat((weightedR+calculatedR*remainPct).toFixed(2));
+      }
+    }
+  }else if(effectiveEntry!==parseFloat(document.getElementById('f-entry').value)&&sl_val){
+    // Bug 2: Räkna om R med avg_entry om scale-in finns och inga delvinster
+    const tp_val=parseFloat(document.getElementById('f-tp').value);
+    const outcome_val=document.getElementById('f-outcome').value;
+    const risk=Math.abs(effectiveEntry-sl_val);
+    if(risk>0){
+      if(outcome_val==='W'&&tp_val)finalR=parseFloat((Math.abs(tp_val-effectiveEntry)/risk).toFixed(2));
+      else if(outcome_val==='L')finalR=-1;
+      else if(outcome_val==='BE')finalR=0;
+    }
+  }
+
   const media=document.getElementById('f-media').value||null;
   const trade={
     date:document.getElementById('f-date').value||new Date().toISOString().split('T')[0],
@@ -3350,11 +3404,11 @@ async function logToJournal(){
     strategy:strat.name,
     symbol:document.getElementById('f-symbol').value||null,
     direction:document.getElementById('f-direction').value||null,
-    entry:parseFloat(document.getElementById('f-entry').value)||null,
-    sl:parseFloat(document.getElementById('f-sl').value)||null,
+    entry:effectiveEntry||parseFloat(document.getElementById('f-entry').value)||null,
+    sl:sl_val,
     tp:parseFloat(document.getElementById('f-tp').value)||null,
     outcome:document.getElementById('f-outcome').value||null,
-    result:calculatedR,
+    result:finalR,
     grade:selectedGrade||null,
     checklist_pct:pct,
     notes:document.getElementById('f-notes').value||null,
@@ -3494,8 +3548,47 @@ function setModalReadOnly(readonly){
 function enableModalEdit(){
   modalEditMode=true;
   setModalReadOnly(false);
-  // Re-enable custom fields
   customFields.forEach(f=>{const el=document.getElementById('mcf-'+f.id);if(el)el.disabled=false;});
+  // Visa futures-redigeringsfält om futures-instrument
+  const existing=journal.find(t=>String(t.id)===String(editingTradeId));
+  const futuresEl=document.getElementById('modalFuturesInfo');
+  if(futuresEl&&existing&&getFuturesSpec(existing.symbol||'')){
+    const spec=getFuturesSpec(existing.symbol);
+    const curr=existing.risk_currency||'USD';
+    const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+    const contracts=existing.custom_data?._contracts||'';
+    const exits=existing.custom_data?._exits||[];
+    const entries=existing.custom_data?._entries||[];
+    futuresEl.innerHTML=`
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:8px">🔷 ${spec.name} – Redigera futures-data</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label style="font-size:12px;min-width:80px">Kontrakt:</label>
+        <input type="number" step="1" min="1" class="form-control" id="m-contracts" value="${contracts}" style="width:80px;font-size:12px" placeholder="1">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Delvinster (exitpris):</div>
+      <div id="m-exits-list">
+        ${exits.map((e,i)=>`<div style="display:flex;gap:6px;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text3);min-width:45px">Exit ${i+1}</span>
+          <input type="number" step="1" class="form-control" placeholder="Kontrakt" value="${e.qty||''}" id="m-exit-qty-${i}" style="width:80px;font-size:12px">
+          <input type="number" step="0.01" class="form-control" placeholder="Pris" value="${e.price||''}" id="m-exit-price-${i}" style="flex:1;font-size:12px">
+        </div>`).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="addModalExit(${exits.length})" style="font-size:11px;padding:2px 8px">+ exit</button>
+      </div>`;
+    futuresEl.style.display='block';
+  }
+}
+
+function addModalExit(idx){
+  const list=document.getElementById('m-exits-list');
+  if(!list)return;
+  const btn=list.querySelector('button');
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:6px;margin-bottom:4px';
+  row.innerHTML=`<span style="font-size:11px;color:var(--text3);min-width:45px">Exit ${idx+1}</span>
+    <input type="number" step="1" class="form-control" placeholder="Kontrakt" id="m-exit-qty-${idx}" style="width:80px;font-size:12px">
+    <input type="number" step="0.01" class="form-control" placeholder="Pris" id="m-exit-price-${idx}" style="flex:1;font-size:12px">`;
+  list.insertBefore(row,btn);
+  btn.setAttribute('onclick',`addModalExit(${idx+1})`);
 }
 
 async function saveModalTrade(){
@@ -3504,6 +3597,24 @@ async function saveModalTrade(){
   customFields.forEach(f=>{const el=document.getElementById('mcf-'+f.id);if(el)customData[f.name]=el.value||null;});
   const existing=journal.find(t=>String(t.id)===String(editingTradeId));
   const existingCD=existing?.custom_data||{};
+  // Samla futures-data från modal om det redigerats
+  let futuresCD={};
+  const mContracts=document.getElementById('m-contracts');
+  if(mContracts){
+    const c=parseInt(mContracts.value)||null;
+    if(c)futuresCD._contracts=c;
+    // Samla exits
+    const exitRows=document.querySelectorAll('#m-exits-list [id^="m-exit-price-"]');
+    if(exitRows.length){
+      const exits=[];
+      exitRows.forEach((el,i)=>{
+        const price=parseFloat(el.value);
+        const qty=parseInt(document.getElementById(`m-exit-qty-${i}`)?.value)||null;
+        if(price)exits.push({qty,price});
+      });
+      if(exits.length)futuresCD._exits=exits;
+    }
+  }
   const fields={
     date:document.getElementById('m-date').value||null,
     time:document.getElementById('m-time').value||null,
@@ -3517,8 +3628,7 @@ async function saveModalTrade(){
     result:modalCalculatedR,grade:modalGrade||null,
     notes:document.getElementById('m-notes').value||null,
     chart_link:media,image_url:media,
-    // Bevara befintliga futures-data + journal-tags + custom fields
-    custom_data:{...existingCD,...customData},
+    custom_data:{...existingCD,...customData,...futuresCD},
   };
   const ok=await updateTrade(editingTradeId,fields);
   if(ok){closeModal();renderRecentTrades();if(document.getElementById('page-journal').classList.contains('active')){updateStats();renderJournal();}}
@@ -4893,7 +5003,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9g</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9h</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
