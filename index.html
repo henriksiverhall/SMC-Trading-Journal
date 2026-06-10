@@ -634,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9c</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9d</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -685,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9c</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9d</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -979,6 +979,19 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <!-- Futures-info – visas automatiskt för futures-instrument -->
       <div class="form-group" id="futuresInfoGroup" style="display:none;grid-column:span 2">
         <div id="futuresInfoBox" class="futures-info-box"></div>
+      </div>
+      <!-- Antal kontrakt – bara futures -->
+      <div class="form-group" id="contractsGroup" style="display:none">
+        <label>Antal kontrakt <span style="font-size:10px;color:var(--text3);font-weight:400">faktiskt tagna</span></label>
+        <input type="number" step="1" min="1" class="form-control" id="f-contracts" placeholder="1" oninput="calcRR(false)">
+      </div>
+      <!-- Delvinster / exits – visas alltid men är frivillig -->
+      <div class="form-group" id="partialExitsGroup" style="grid-column:span 2;display:none">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          <span>Delvinster <span style="font-size:10px;color:var(--text3);font-weight:400">valfritt – lägg till om du tog partial exits</span></span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addPartialExit()">+ Lägg till</button>
+        </label>
+        <div id="partialExitsList" style="margin-top:6px"></div>
       </div>
       <div class="form-group" id="gradeGroup"><label>Grade</label>
         <div class="grade-btns" id="mainGradeBtns">
@@ -1506,6 +1519,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         </div>
         <div class="form-group wide" id="modalCustomFields"></div>
         <div class="form-group wide" id="modalJournalTags"></div>
+        <div class="form-group wide" id="modalFuturesInfo" style="display:none;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1983,8 +1997,115 @@ function saveRiskSettings(){
   userSettings.currency=curr||'USD';
   saveUserSettings();
   calcMonetary();
+  // Uppdatera futures-kalkylatorn om ett futures-instrument är valt
+  const symbol=document.getElementById('f-symbol')?.value||'';
+  const entry=parseFloat(document.getElementById('f-entry')?.value);
+  const sl=parseFloat(document.getElementById('f-sl')?.value);
+  renderFuturesInfo(symbol,entry||null,sl||null);
 }
 
+
+// ── PARTIAL EXITS ─────────────────────────────────────────────────────────────
+let partialExits=[];
+
+function addPartialExit(){
+  const id='pe_'+Date.now();
+  partialExits.push({id,qty:'',price:'',type:'partial'});
+  renderPartialExits();
+}
+
+function removePartialExit(id){
+  partialExits=partialExits.filter(p=>p.id!==id);
+  renderPartialExits();
+  calcRR(false);
+}
+
+function renderPartialExits(){
+  const list=document.getElementById('partialExitsList');
+  if(!list)return;
+  if(!partialExits.length){list.innerHTML='';return;}
+  const symbol=document.getElementById('f-symbol')?.value||'';
+  const spec=getFuturesSpec(symbol);
+  const curr=userSettings.currency||'USD';
+  const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+  list.innerHTML=partialExits.map((p,i)=>`
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:6px;padding:8px;background:var(--bg2);border-radius:6px">
+      <span style="font-size:11px;color:var(--text3);font-weight:500">Exit ${i+1}</span>
+      ${spec?`<div><input type="number" step="1" min="1" class="form-control" placeholder="Kontrakt" value="${p.qty}" oninput="updatePartialExit('${p.id}','qty',this.value)" style="font-size:12px"></div>`:'<div></div>'}
+      <div><input type="number" step="0.01" class="form-control" placeholder="Exitpris" value="${p.price}" oninput="updatePartialExit('${p.id}','price',this.value)" style="font-size:12px"></div>
+      <button class="btn btn-ghost btn-sm" onclick="removePartialExit('${p.id}')" style="padding:4px 8px;color:var(--red)">✕</button>
+    </div>`).join('');
+  // Visa R-preview om möjligt
+  updatePartialR();
+}
+
+function updatePartialExit(id,field,val){
+  const p=partialExits.find(p=>p.id===id);
+  if(p)p[field]=val;
+  updatePartialR();
+}
+
+function updatePartialR(){
+  const entry=parseFloat(document.getElementById('f-entry')?.value);
+  const sl=parseFloat(document.getElementById('f-sl')?.value);
+  const symbol=document.getElementById('f-symbol')?.value||'';
+  const contracts=parseInt(document.getElementById('f-contracts')?.value)||1;
+  const spec=getFuturesSpec(symbol);
+  if(!entry||!sl||isNaN(entry)||isNaN(sl)||Math.abs(entry-sl)===0)return;
+  const risk=Math.abs(entry-sl);
+  const curr=userSettings.currency||'USD';
+  const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+
+  let totalRealizedR=0;
+  let totalRealizedDollar=0;
+  partialExits.forEach(p=>{
+    const exitPrice=parseFloat(p.price);
+    if(!exitPrice||isNaN(exitPrice))return;
+    if(spec){
+      const qty=parseInt(p.qty)||contracts;
+      const initialRiskDollar=contracts*risk*spec.pointValue;
+      const exitPnL=qty*(exitPrice-entry)*(document.getElementById('f-direction')?.value==='Short'?-1:1)*spec.pointValue;
+      totalRealizedDollar+=exitPnL;
+      if(initialRiskDollar>0)totalRealizedR+=exitPnL/initialRiskDollar;
+    }else{
+      const priceDiff=Math.abs(exitPrice-entry);
+      const direction=document.getElementById('f-direction')?.value;
+      const sign=(direction==='Long'&&exitPrice>entry)||(direction==='Short'&&exitPrice<entry)?1:-1;
+      totalRealizedR+=sign*(priceDiff/risk);
+    }
+  });
+
+  const preview=document.getElementById('partialExitsList');
+  if(preview&&partialExits.some(p=>p.price)){
+    const existing=preview.querySelector('.pe-summary');
+    const summaryEl=existing||document.createElement('div');
+    summaryEl.className='pe-summary';
+    summaryEl.style.cssText='font-size:11px;color:var(--text3);margin-top:4px;padding:6px 8px;background:var(--bg);border-radius:4px';
+    const rColor=totalRealizedR>0?'var(--green)':totalRealizedR<0?'var(--red)':'var(--text3)';
+    summaryEl.innerHTML=`Realiserat: <span style="font-family:var(--mono);font-weight:600;color:${rColor}">${totalRealizedR>0?'+':''}${totalRealizedR.toFixed(2)}R</span>${spec?` · <span style="font-family:var(--mono)">${totalRealizedDollar>0?'+':''}${currSymbol}${totalRealizedDollar.toFixed(0)}</span>`:''}`;
+    if(!existing)preview.appendChild(summaryEl);
+  }
+}
+
+// ── PARTIAL EXITS – spara/ladda med trade ─────────────────────────────────────
+function getPartialExitsData(){
+  return partialExits.filter(p=>p.price).map(p=>({
+    qty:parseInt(p.qty)||null,
+    price:parseFloat(p.price),
+    type:p.type||'partial'
+  }));
+}
+
+function loadPartialExits(exits){
+  if(!exits||!exits.length){partialExits=[];renderPartialExits();return;}
+  partialExits=exits.map(e=>({id:'pe_'+Date.now()+Math.random(),qty:e.qty||'',price:e.price||'',type:e.type||'partial'}));
+  renderPartialExits();
+}
+
+function clearPartialExits(){
+  partialExits=[];
+  renderPartialExits();
+}
 
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
@@ -2496,7 +2617,9 @@ function renderJournalTaggedFields(){
 function resetChecklist(){
   checked={};selectedGrade='';calculatedR=null;
   document.querySelectorAll('#mainGradeBtns .grade-btn').forEach(b=>b.classList.remove('sel'));
-  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media','f-contracts'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  clearPartialExits();
+  renderFuturesInfo('',null,null);
   document.getElementById('f-direction').value='';document.getElementById('f-outcome').value='';
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('rrDisplay').textContent='—';document.getElementById('rrDisplay').className='rr-display';
@@ -2663,10 +2786,19 @@ function calcRR(isModal){
 function renderFuturesInfo(symbol, entry, sl){
   const group=document.getElementById('futuresInfoGroup');
   const box=document.getElementById('futuresInfoBox');
+  const contractsGroup=document.getElementById('contractsGroup');
+  const partialGroup=document.getElementById('partialExitsGroup');
   if(!group||!box)return;
   const spec=getFuturesSpec(symbol);
-  if(!spec){group.style.display='none';return;}
+  if(!spec){
+    group.style.display='none';
+    if(contractsGroup)contractsGroup.style.display='none';
+    if(partialGroup)partialGroup.style.display='none';
+    return;
+  }
   group.style.display='block';
+  if(contractsGroup)contractsGroup.style.display='block';
+  if(partialGroup)partialGroup.style.display='block';
   const accountSize=parseFloat(userSettings.accountSize)||0;
   const riskPct=parseFloat(userSettings.riskPct)||0;
   const curr=userSettings.currency||'USD';
@@ -2680,7 +2812,7 @@ function renderFuturesInfo(symbol, entry, sl){
         <div class="futures-info-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(59,130,246,.2)">
           <div class="futures-info-item fi-highlight">
             <div class="fi-val">${calc.contracts}</div>
-            <div class="fi-lbl">Kontrakt</div>
+            <div class="fi-lbl">Rekomm. kontrakt</div>
           </div>
           <div class="futures-info-item">
             <div class="fi-val">${calc.slPoints.toFixed(2)}</div>
@@ -3057,8 +3189,12 @@ async function logToJournal(){
   const pct=all.length?Math.round(all.filter(it=>checked[it.id]).length/all.length*100):0;
   const journalTags={};
   all.filter(it=>it.journal).forEach(it=>journalTags[it.label]=checked[it.id]?true:false);
-  const customData={};
+  const contracts=parseInt(document.getElementById('f-contracts')?.value)||null;
+  const exits=getPartialExitsData();
+  const customData={...{},...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})};
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)customData[f.name]=el.value||null;});
+  if(contracts)customData._contracts=contracts;
+  if(exits.length)customData._exits=exits;
   const media=document.getElementById('f-media').value||null;
   const trade={
     date:document.getElementById('f-date').value||new Date().toISOString().split('T')[0],
@@ -3077,7 +3213,7 @@ async function logToJournal(){
     chart_link:media,image_url:media,
     risk_amount:parseFloat(document.getElementById('f-riskpct')?.value)||null,
     risk_currency:document.getElementById('f-currency')?.value||null,
-    custom_data:{...customData,...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})},
+    custom_data:customData,
   };
   const saved=await saveTrade(trade);
   if(saved){
@@ -3153,6 +3289,32 @@ function openTradeModal(id){
       Object.entries(jt).map(([k,v])=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0">
         <span style="color:${v?'var(--green)':'var(--text3)'}">${v?'✓':'○'}</span><span>${k}</span></div>`).join('');
   }else{jtEl.style.display='none';}
+
+  // Futures: kontrakt och delvinster
+  const futuresEl=document.getElementById('modalFuturesInfo');
+  const spec=getFuturesSpec(t.symbol||'');
+  if(futuresEl){
+    const contracts=t.custom_data?._contracts;
+    const exits=t.custom_data?._exits;
+    if(spec&&(contracts||exits?.length)){
+      const curr=t.risk_currency||'USD';
+      const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+      let html=`<div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔷 Futures – ${spec.name}</div>`;
+      if(contracts) html+=`<div style="font-size:12px;margin-bottom:6px">Kontrakt: <strong>${contracts}</strong> · ${currSymbol}${spec.pointValue}/punkt</div>`;
+      if(exits?.length){
+        html+=`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Delvinster:</div>`;
+        exits.forEach((e,i)=>{
+          const pnlPoints=e.price&&t.entry?Math.abs(e.price-t.entry).toFixed(2):'—';
+          html+=`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+            Exit ${i+1}: ${e.qty?e.qty+' kontrakt @ ':''}<span style="font-family:var(--mono)">${e.price}</span>
+            ${pnlPoints!=='—'?`<span style="color:var(--text3);font-size:11px"> · ${pnlPoints} punkter</span>`:''}
+          </div>`;
+        });
+      }
+      futuresEl.style.display='block';
+      futuresEl.innerHTML=html;
+    }else{futuresEl.style.display='none';}
+  }
   // Set read-only state
   setModalReadOnly(true);
   document.getElementById('tradeModal').classList.add('open');
@@ -4569,7 +4731,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9c</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9d</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
