@@ -526,7 +526,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .futures-info-item.fi-highlight .fi-val{color:var(--blue);}
 .futures-info-item.fi-warn .fi-val{color:var(--amber);}
 /* Kanban */
-.kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;}
+.kanban-board{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:start;}
 .kanban-col{background:var(--bg2);border-radius:var(--r);padding:12px;min-height:200px;}
 .kanban-col-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
 .kanban-col-count{background:var(--border);color:var(--text3);border-radius:10px;padding:1px 7px;font-size:10px;}
@@ -545,7 +545,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .kanban-prio-high{border-left:3px solid var(--red);}
 .kanban-prio-medium{border-left:3px solid var(--amber);}
 .kanban-prio-low{border-left:3px solid var(--green);}
-@media(max-width:900px){.kanban-board{grid-template-columns:1fr 1fr;}}
+@media(max-width:1100px){.kanban-board{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.kanban-board{grid-template-columns:1fr 1fr;}}
 /* Analytics */
 .analytics-filters{display:flex;flex-wrap:wrap;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:8px;}
 .af-group{display:flex;flex-direction:column;gap:3px;}
@@ -1275,6 +1276,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <div class="form-group"><label>Status</label>
           <select class="form-control" id="taskStatus">
             <option value="todo">📌 Att göra</option>
+            <option value="bug">🐛 Bugg</option>
             <option value="inprogress">🔄 Pågående</option>
             <option value="waiting">⏳ Väntar</option>
             <option value="done">✅ Klar</option>
@@ -5953,6 +5955,7 @@ function closeDeleteUserModal(){
 // ── ROADMAP / KANBAN ──────────────────────────────────────────────────────────
 const KANBAN_COLS=[
   {id:'todo',label:'📌 Att göra'},
+  {id:'bug',label:'🐛 Buggar'},
   {id:'inprogress',label:'🔄 Pågående'},
   {id:'waiting',label:'⏳ Väntar'},
   {id:'done',label:'✅ Klar'},
