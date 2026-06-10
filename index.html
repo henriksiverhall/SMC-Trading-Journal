@@ -625,7 +625,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9a</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9b</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -676,7 +676,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9a</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9b</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -1119,7 +1119,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   </div>
 </div>
 <div id="page-roadmap" class="page" style="padding:18px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
     <div>
       <div style="font-size:20px;font-weight:700;color:var(--text)">📋 Roadmap</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px">TradeLog – utvecklingsstatus och uppgifter</div>
@@ -1127,6 +1127,21 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="exportKanban()">⬇ Exportera</button>
       <button class="btn btn-primary btn-sm" onclick="openAddTask()">+ Ny task</button>
+    </div>
+  </div>
+
+  <!-- Claude-kommando -->
+  <div class="dash-card" style="margin-bottom:20px">
+    <div class="dash-card-header">
+      <div class="dash-card-title">🤖 Claude-kommando</div>
+      <span style="font-size:11px;color:var(--text3)">Klistra in kommando från Claude och kör</span>
+    </div>
+    <div class="dash-card-body">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <textarea id="claudeKanbanCmd" class="form-control" rows="2" placeholder='{"action":"update","id":"t3","status":"done"}' style="font-family:var(--mono);font-size:12px;flex:1;resize:vertical"></textarea>
+        <button class="btn btn-primary" onclick="runClaudeKanbanCmd()" style="white-space:nowrap">▶ Kör</button>
+      </div>
+      <div id="claudeKanbanResult" style="font-size:12px;margin-top:8px;font-family:var(--mono);min-height:16px"></div>
     </div>
   </div>
 
@@ -1805,6 +1820,7 @@ function moveFormField(key,dir){
 
 // ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
 let userSettings={};
+const KANBAN_SECRET='tradelog-kanban-568056';
 
 async function loadUserSettings(){
   if(!currentUser)return;
@@ -4458,7 +4474,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9a</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9b</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5410,6 +5426,74 @@ function exportKanban(){
   a.download=`tradelog-kanban-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function runClaudeKanbanCmd(){
+  const input=document.getElementById('claudeKanbanCmd');
+  const result=document.getElementById('claudeKanbanResult');
+  if(!input||!result)return;
+  const raw=input.value.trim();
+  if(!raw){result.textContent='⚠ Inget kommando angivet.';result.style.color='var(--amber)';return;}
+
+  let cmd;
+  try{cmd=JSON.parse(raw);}catch(e){result.textContent='⚠ Ogiltigt JSON: '+e.message;result.style.color='var(--red)';return;}
+
+  const action=cmd.action;
+  if(!['update','add','delete','read'].includes(action)){
+    result.textContent='⚠ Okänd action. Använd: update, add, delete, read';
+    result.style.color='var(--red)';return;
+  }
+
+  result.textContent='⏳ Kör…';result.style.color='var(--text3)';
+
+  const workerBase='https://tradelog-claude-api.henrik-siverhall.workers.dev';
+  const secret=KANBAN_SECRET;
+
+  try{
+    let endpoint,body;
+    if(action==='read'){
+      endpoint='/kanban/read';
+      const resp=await fetch(workerBase+endpoint,{headers:{'X-Kanban-Secret':secret}});
+      const data=await resp.json();
+      // Uppdatera lokalt
+      roadmapTasks=data.tasks||[];
+      renderKanban();
+      result.textContent=`✅ Laddade ${data.count} tasks från Worker.`;
+      result.style.color='var(--green)';
+      input.value='';
+      return;
+    }
+
+    const {action:_,...payload}=cmd;
+    endpoint=`/kanban/${action}`;
+    const resp=await fetch(workerBase+endpoint,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Kanban-Secret':secret},
+      body:JSON.stringify(payload)
+    });
+    const data=await resp.json();
+    if(data.success){
+      // Synka lokalt
+      if(action==='update'){
+        const idx=roadmapTasks.findIndex(t=>t.id===data.task.id);
+        if(idx>=0)roadmapTasks[idx]=data.task;
+      }else if(action==='add'){
+        roadmapTasks.push(data.task);
+      }else if(action==='delete'){
+        roadmapTasks=roadmapTasks.filter(t=>t.id!==payload.id);
+      }
+      renderKanban();
+      result.textContent=`✅ ${action} lyckades.`;
+      result.style.color='var(--green)';
+      input.value='';
+    }else{
+      result.textContent='⚠ '+JSON.stringify(data.error);
+      result.style.color='var(--red)';
+    }
+  }catch(e){
+    result.textContent='⚠ Fel: '+e.message;
+    result.style.color='var(--red)';
+  }
 }
 
 function openAddTask(){
