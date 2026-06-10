@@ -634,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9f</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9g</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -685,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9f</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9g</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -988,7 +988,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         <label>Antal kontrakt <span style="font-size:10px;color:var(--text3);font-weight:400">faktiskt tagna</span></label>
         <input type="number" step="1" min="1" class="form-control" id="f-contracts" placeholder="1" oninput="calcRR(false)">
       </div>
-      <!-- Delvinster / exits – visas alltid men är frivillig -->
+      <!-- Delvinster / exits -->
       <div class="form-group" id="partialExitsGroup" style="grid-column:span 2;display:none;padding:0">
         <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
           <span style="font-size:12px;font-weight:600;color:var(--text2)">Delvinster</span>
@@ -996,6 +996,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
           <button type="button" class="btn btn-ghost btn-sm" onclick="addPartialExit()" style="margin-left:auto;padding:1px 8px;font-size:11px">+ exit</button>
         </div>
         <div id="partialExitsList"></div>
+      </div>
+      <!-- Scale-in / add-on entries -->
+      <div class="form-group" id="scaleInGroup" style="grid-column:span 2;display:none;padding:0">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">Scale-in</span>
+          <span style="font-size:10px;color:var(--text3)">valfritt – tillagda positioner</span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addScaleIn()" style="margin-left:auto;padding:1px 8px;font-size:11px">+ add-on</button>
+        </div>
+        <div id="scaleInList"></div>
+        <div id="scaleInSummary" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
       </div>
       <div class="form-group" id="gradeGroup"><label>Grade</label>
         <div class="grade-btns" id="mainGradeBtns">
@@ -2012,6 +2022,97 @@ function saveRiskSettings(){
 }
 
 
+// ── SCALE-IN ──────────────────────────────────────────────────────────────────
+let scaleIns=[];
+
+function addScaleIn(){
+  const id='si_'+Date.now();
+  scaleIns.push({id,qty:'',price:''});
+  renderScaleIns();
+}
+
+function removeScaleIn(id){
+  scaleIns=scaleIns.filter(s=>s.id!==id);
+  renderScaleIns();
+}
+
+function updateScaleIn(id,field,val){
+  const s=scaleIns.find(s=>s.id===id);
+  if(s)s[field]=val;
+  renderScaleInSummary();
+}
+
+function renderScaleIns(){
+  const list=document.getElementById('scaleInList');
+  if(!list)return;
+  const symbol=document.getElementById('f-symbol')?.value||'';
+  const spec=getFuturesSpec(symbol);
+  list.innerHTML=scaleIns.map((s,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text3);min-width:50px">Add-on ${i+1}</span>
+      ${spec?`<input type="number" step="1" min="1" class="form-control" placeholder="Kontrakt" value="${s.qty}" oninput="updateScaleIn('${s.id}','qty',this.value)" style="font-size:12px;width:90px">`:''}
+      <input type="number" step="0.01" class="form-control" placeholder="Entry-pris" value="${s.price}" oninput="updateScaleIn('${s.id}','price',this.value)" style="font-size:12px;flex:1">
+      <button class="btn btn-ghost btn-sm" onclick="removeScaleIn('${s.id}')" style="padding:2px 8px;color:var(--red);font-size:12px">✕</button>
+    </div>`).join('');
+  renderScaleInSummary();
+}
+
+function renderScaleInSummary(){
+  const summaryEl=document.getElementById('scaleInSummary');
+  if(!summaryEl)return;
+  const entry=parseFloat(document.getElementById('f-entry')?.value);
+  const contracts=parseInt(document.getElementById('f-contracts')?.value)||1;
+  const symbol=document.getElementById('f-symbol')?.value||'';
+  const spec=getFuturesSpec(symbol);
+  if(!entry||isNaN(entry)||!scaleIns.some(s=>s.price)){summaryEl.textContent='';return;}
+
+  // Beräkna weighted average entry
+  const validScales=scaleIns.filter(s=>s.price&&!isNaN(parseFloat(s.price)));
+  if(!validScales.length){summaryEl.textContent='';return;}
+
+  let totalQty=contracts;
+  let weightedSum=entry*contracts;
+  validScales.forEach(s=>{
+    const qty=parseInt(s.qty)||contracts;
+    const price=parseFloat(s.price);
+    totalQty+=qty;
+    weightedSum+=price*qty;
+  });
+  const avgEntry=(weightedSum/totalQty).toFixed(2);
+  const curr=userSettings.currency||'USD';
+  const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+
+  let riskInfo='';
+  if(spec){
+    const sl=parseFloat(document.getElementById('f-sl')?.value);
+    if(sl&&!isNaN(sl)){
+      const totalRisk=totalQty*Math.abs(avgEntry-sl)*spec.pointValue;
+      riskInfo=` · Total risk: ${currSymbol}${totalRisk.toFixed(0)} (${totalQty} kontrakt)`;
+    }
+  }
+
+  summaryEl.innerHTML=`Avg entry: <span style="font-family:var(--mono);font-weight:600;color:var(--blue)">${avgEntry}</span> (${totalQty} kontrakt tot.)${riskInfo}`;
+}
+
+function getScaleInData(){
+  return scaleIns.filter(s=>s.price).map(s=>({
+    qty:parseInt(s.qty)||null,
+    price:parseFloat(s.price)
+  }));
+}
+
+function loadScaleIns(entries){
+  if(!entries||!entries.length){scaleIns=[];renderScaleIns();return;}
+  // Första entry är huvud-entry (f-entry), resten är scale-ins
+  scaleIns=entries.slice(1).map(e=>({id:'si_'+Date.now()+Math.random(),qty:e.qty||'',price:e.price||''}));
+  renderScaleIns();
+}
+
+function clearScaleIns(){
+  scaleIns=[];
+  renderScaleIns();
+}
+
 // ── PARTIAL EXITS ─────────────────────────────────────────────────────────────
 let partialExits=[];
 
@@ -2648,6 +2749,7 @@ function resetChecklist(){
   document.querySelectorAll('#mainGradeBtns .grade-btn').forEach(b=>b.classList.remove('sel'));
   ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media','f-contracts'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   clearPartialExits();
+  clearScaleIns();
   renderFuturesInfo('',null,null);
   document.getElementById('f-direction').value='';document.getElementById('f-outcome').value='';
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
@@ -2795,6 +2897,7 @@ function calcRR(isModal){
     if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
   if(!isModal)renderFuturesInfo(symbol,entry,sl);
+  if(!isModal)renderScaleInSummary();
   if(!isModal)calcMonetary();
   else{
     const pct=parseFloat(userSettings.riskPct)||0;
@@ -2817,17 +2920,20 @@ function renderFuturesInfo(symbol, entry, sl){
   const box=document.getElementById('futuresInfoBox');
   const contractsGroup=document.getElementById('contractsGroup');
   const partialGroup=document.getElementById('partialExitsGroup');
+  const scaleGroup=document.getElementById('scaleInGroup');
   if(!group||!box)return;
   const spec=getFuturesSpec(symbol);
   if(!spec){
     group.style.display='none';
     if(contractsGroup)contractsGroup.style.display='none';
     if(partialGroup)partialGroup.style.display='none';
+    if(scaleGroup)scaleGroup.style.display='none';
     return;
   }
   group.style.display='block';
   if(contractsGroup)contractsGroup.style.display='block';
   if(partialGroup)partialGroup.style.display='block';
+  if(scaleGroup)scaleGroup.style.display='block';
   const accountSize=parseFloat(userSettings.accountSize)||0;
   const riskPct=parseFloat(userSettings.riskPct)||0;
   const curr=userSettings.currency||'USD';
@@ -3222,10 +3328,21 @@ async function logToJournal(){
   all.filter(it=>it.journal).forEach(it=>journalTags[it.label]=checked[it.id]?true:false);
   const contracts=parseInt(document.getElementById('f-contracts')?.value)||null;
   const exits=getPartialExitsData();
+  const scaleIns_data=getScaleInData();
   const customData={...{},...(Object.keys(journalTags).length?{_journal_tags:journalTags}:{})};
   customFields.forEach(f=>{const el=document.getElementById('cf-'+f.id);if(el)customData[f.name]=el.value||null;});
   if(contracts)customData._contracts=contracts;
   if(exits.length)customData._exits=exits;
+  if(scaleIns_data.length){
+    // Bygg entries-array: huvud-entry + scale-ins
+    const mainEntry=parseFloat(document.getElementById('f-entry').value);
+    const mainQty=contracts||1;
+    customData._entries=[{qty:mainQty,price:mainEntry},...scaleIns_data];
+    // Beräkna weighted average entry
+    let totalQty=0,weightedSum=0;
+    customData._entries.forEach(e=>{totalQty+=e.qty||1;weightedSum+=(e.price||mainEntry)*(e.qty||1);});
+    customData._avg_entry=parseFloat((weightedSum/totalQty).toFixed(2));
+  }
   const media=document.getElementById('f-media').value||null;
   const trade={
     date:document.getElementById('f-date').value||new Date().toISOString().split('T')[0],
@@ -3333,10 +3450,21 @@ function openTradeModal(id){
       const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
       let html=`<div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔷 Futures – ${spec.name}</div>`;
       if(contracts) html+=`<div style="font-size:12px;margin-bottom:6px">Kontrakt: <strong>${contracts}</strong> · ${currSymbol}${spec.pointValue}/punkt</div>`;
+      // Scale-in entries
+      const entries=t.custom_data?._entries;
+      if(entries?.length>1){
+        html+=`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Entries (scale-in):</div>`;
+        entries.forEach((e,i)=>{
+          html+=`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">Entry ${i+1}: ${e.qty?e.qty+' kontrakt @ ':''}<span style="font-family:var(--mono)">${e.price}</span></div>`;
+        });
+        const avgEntry=t.custom_data?._avg_entry;
+        if(avgEntry) html+=`<div style="font-size:12px;margin-top:4px;color:var(--blue)">Avg entry: <strong style="font-family:var(--mono)">${avgEntry}</strong></div>`;
+      }
       if(exits?.length){
-        html+=`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Delvinster:</div>`;
+        html+=`<div style="font-size:11px;color:var(--text3);margin:6px 0 4px">Delvinster:</div>`;
         exits.forEach((e,i)=>{
-          const pnlPoints=e.price&&t.entry?Math.abs(e.price-t.entry).toFixed(2):'—';
+          const avgE=t.custom_data?._avg_entry||t.entry;
+          const pnlPoints=e.price&&avgE?Math.abs(e.price-avgE).toFixed(2):'—';
           html+=`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
             Exit ${i+1}: ${e.qty?e.qty+' kontrakt @ ':''}<span style="font-family:var(--mono)">${e.price}</span>
             ${pnlPoints!=='—'?`<span style="color:var(--text3);font-size:11px"> · ${pnlPoints} punkter</span>`:''}
@@ -4765,7 +4893,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9f</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9g</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
