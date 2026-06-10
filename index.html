@@ -516,6 +516,15 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
+/* Futures */
+.futures-info-box{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:12px 14px;font-size:12px;}
+.futures-info-box .fi-title{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.futures-info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.futures-info-item{text-align:center;}
+.futures-info-item .fi-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--text);}
+.futures-info-item .fi-lbl{font-size:10px;color:var(--text3);margin-top:2px;}
+.futures-info-item.fi-highlight .fi-val{color:var(--blue);}
+.futures-info-item.fi-warn .fi-val{color:var(--amber);}
 /* Kanban */
 .kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;}
 .kanban-col{background:var(--bg2);border-radius:var(--r);padding:12px;min-height:200px;}
@@ -625,7 +634,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9b</span></div>
+    <div class="auth-logo">TradeLog <span>v1.9.9c</span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -676,7 +685,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9b</span></div>
+  <div class="header-logo">TradeLog <span>v1.9.9c</span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -950,7 +959,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <div class="form-grid">
       <div class="form-group"><label>Datum</label><input type="date" class="form-control" id="f-date"></div>
       <div class="form-group"><label>Tid (ET)</label><input type="time" class="form-control" id="f-time"></div>
-      <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="NQ, ES, XAU…"></div>
+      <div class="form-group"><label>Instrument</label><input type="text" class="form-control" id="f-symbol" placeholder="NQ, ES, XAU…" oninput="calcRR(false)"></div>
       <div class="form-group"><label>Riktning</label>
         <select class="form-control" id="f-direction">
           <option value="">Välj…</option><option value="Long">Long</option><option value="Short">Short</option>
@@ -966,6 +975,10 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
       <div class="form-group" id="rrDisplayGroup"><label>R <span style="color:var(--text3);font-size:10px;font-weight:400">auto</span></label>
         <div class="rr-display" id="rrDisplay">—</div>
+      </div>
+      <!-- Futures-info – visas automatiskt för futures-instrument -->
+      <div class="form-group" id="futuresInfoGroup" style="display:none;grid-column:span 2">
+        <div id="futuresInfoBox" class="futures-info-box"></div>
       </div>
       <div class="form-group" id="gradeGroup"><label>Grade</label>
         <div class="grade-btns" id="mainGradeBtns">
@@ -1822,6 +1835,39 @@ function moveFormField(key,dir){
 let userSettings={};
 const KANBAN_SECRET='tradelog-kanban-568056';
 
+// ── Futures instrument-specifikationer ────────────────────────────────────────
+const FUTURES_SPECS={
+  MNQ:{name:'Micro Nasdaq',pointValue:2,tickSize:0.25,exchange:'CME'},
+  NQ: {name:'Nasdaq',      pointValue:20,tickSize:0.25,exchange:'CME'},
+  MES:{name:'Micro S&P',   pointValue:5, tickSize:0.25,exchange:'CME'},
+  ES: {name:'S&P 500',     pointValue:50,tickSize:0.25,exchange:'CME'},
+  MYM:{name:'Micro Dow',   pointValue:0.5,tickSize:1,  exchange:'CBOT'},
+  YM: {name:'Dow Jones',   pointValue:5, tickSize:1,   exchange:'CBOT'},
+};
+
+function getFuturesSpec(symbol){
+  if(!symbol)return null;
+  return FUTURES_SPECS[(symbol||'').toUpperCase().trim()]||null;
+}
+
+function isFutures(symbol){
+  return !!getFuturesSpec(symbol);
+}
+
+function calcFuturesContracts(symbol, entry, sl, accountSize, riskPct){
+  const spec=getFuturesSpec(symbol);
+  if(!spec||!entry||!sl||!accountSize||!riskPct)return null;
+  const slPoints=Math.abs(entry-sl);
+  if(slPoints===0)return null;
+  const dollarRiskPerContract=slPoints*spec.pointValue;
+  const targetRisk=accountSize*(riskPct/100);
+  const optimal=targetRisk/dollarRiskPerContract;
+  const contracts=Math.max(1,Math.floor(optimal));
+  const actualRisk=contracts*dollarRiskPerContract;
+  const actualRiskPct=(actualRisk/accountSize*100).toFixed(2);
+  return{spec,slPoints,dollarRiskPerContract,targetRisk,contracts,actualRisk,actualRiskPct};
+}
+
 async function loadUserSettings(){
   if(!currentUser)return;
   try{
@@ -2569,31 +2615,36 @@ async function saveChecklist(){
 function calcRR(isModal){
   const p=isModal?'m-':'f-';
   const dispId=isModal?'mRrDisplay':'rrDisplay';
-  const entry=parseFloat(document.getElementById(p+'entry').value);
-  const sl=parseFloat(document.getElementById(p+'sl').value);
-  const tp=parseFloat(document.getElementById(p+'tp').value);
-  const outcome=document.getElementById(p+'outcome').value;
+  const entry=parseFloat(document.getElementById(p+'entry')?.value);
+  const sl=parseFloat(document.getElementById(p+'sl')?.value);
+  const tp=parseFloat(document.getElementById(p+'tp')?.value);
+  const outcome=document.getElementById(p+'outcome')?.value;
+  const symbol=document.getElementById('f-symbol')?.value||'';
   const disp=document.getElementById(dispId);
   const risk=Math.abs(entry-sl);
   if(!entry||!sl||isNaN(entry)||isNaN(sl)||risk===0){
-    disp.textContent='—';disp.className='rr-display';
-    if(isModal)modalCalculatedR=null;else calculatedR=null;return;
+    if(disp){disp.textContent='—';disp.className='rr-display';}
+    if(isModal)modalCalculatedR=null;else calculatedR=null;
+    if(!isModal)renderFuturesInfo(symbol,null,null);
+    return;
   }
-  if(outcome==='BE'){disp.textContent='0.00R';disp.className='rr-display neutral';if(isModal)modalCalculatedR=0;else calculatedR=0;return;}
-  if(outcome==='W'&&tp&&!isNaN(tp)){
+  if(outcome==='BE'){
+    if(disp){disp.textContent='0.00R';disp.className='rr-display neutral';}
+    if(isModal)modalCalculatedR=0;else calculatedR=0;
+  }else if(outcome==='W'&&tp&&!isNaN(tp)){
     const r=parseFloat((Math.abs(tp-entry)/risk).toFixed(2));
-    disp.textContent='+'+r.toFixed(2)+'R';disp.className='rr-display positive';
+    if(disp){disp.textContent='+'+r.toFixed(2)+'R';disp.className='rr-display positive';}
     if(isModal)modalCalculatedR=r;else calculatedR=r;
   }else if(outcome==='L'){
-    disp.textContent='-1.00R';disp.className='rr-display negative';
+    if(disp){disp.textContent='-1.00R';disp.className='rr-display negative';}
     if(isModal)modalCalculatedR=-1;else calculatedR=-1;
   }else{
-    disp.textContent='—';disp.className='rr-display';
+    if(disp){disp.textContent='—';disp.className='rr-display';}
     if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
+  if(!isModal)renderFuturesInfo(symbol,entry,sl);
   if(!isModal)calcMonetary();
   else{
-    // Modal: uppdatera monetärt i modal om det finns
     const pct=parseFloat(userSettings.riskPct)||0;
     const size=parseFloat(userSettings.accountSize)||0;
     const curr=userSettings.currency||'USD';
@@ -2607,6 +2658,50 @@ function calcRR(isModal){
       mMonetary.style.color=modalCalculatedR>0?'var(--green)':modalCalculatedR<0?'var(--red)':'var(--text3)';
     }else if(mMonetary){mMonetary.textContent='';}
   }
+}
+
+function renderFuturesInfo(symbol, entry, sl){
+  const group=document.getElementById('futuresInfoGroup');
+  const box=document.getElementById('futuresInfoBox');
+  if(!group||!box)return;
+  const spec=getFuturesSpec(symbol);
+  if(!spec){group.style.display='none';return;}
+  group.style.display='block';
+  const accountSize=parseFloat(userSettings.accountSize)||0;
+  const riskPct=parseFloat(userSettings.riskPct)||0;
+  const curr=userSettings.currency||'USD';
+  const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+  let calcHtml='';
+  if(entry&&sl&&!isNaN(entry)&&!isNaN(sl)&&Math.abs(entry-sl)>0&&accountSize&&riskPct){
+    const calc=calcFuturesContracts(symbol,entry,sl,accountSize,riskPct);
+    if(calc){
+      const diff=calc.actualRisk-calc.targetRisk;
+      calcHtml=`
+        <div class="futures-info-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(59,130,246,.2)">
+          <div class="futures-info-item fi-highlight">
+            <div class="fi-val">${calc.contracts}</div>
+            <div class="fi-lbl">Kontrakt</div>
+          </div>
+          <div class="futures-info-item">
+            <div class="fi-val">${calc.slPoints.toFixed(2)}</div>
+            <div class="fi-lbl">SL-punkter</div>
+          </div>
+          <div class="futures-info-item ${Math.abs(diff)>calc.targetRisk*0.15?'fi-warn':''}">
+            <div class="fi-val">${currSymbol}${calc.actualRisk.toFixed(0)}</div>
+            <div class="fi-lbl">Faktisk risk (${calc.actualRiskPct}%)</div>
+          </div>
+          <div class="futures-info-item">
+            <div class="fi-val">${currSymbol}${calc.dollarRiskPerContract.toFixed(0)}</div>
+            <div class="fi-lbl">Risk/kontrakt</div>
+          </div>
+        </div>
+        ${Math.abs(diff)>1?`<div style="font-size:10px;color:var(--amber);margin-top:6px">⚠ Avvikelse från målrisk: ${diff>0?'+':''}${currSymbol}${Math.abs(diff).toFixed(0)} – kontrakt är diskreta enheter</div>`:''}`;
+    }
+  }
+  box.innerHTML=`
+    <div class="fi-title">🔷 ${spec.name} (${symbol.toUpperCase()}) · ${currSymbol}${spec.pointValue}/punkt · ${spec.exchange}</div>
+    ${calcHtml||(!accountSize||!riskPct?'<div style="font-size:11px;color:var(--text3);margin-top:6px">Ange kontostorlek och risk% nedan för att se rekommenderade kontrakt</div>':'')}
+  `;
 }
 
 function setGrade(g,ctx){
@@ -4474,7 +4569,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9b</span></div>
+      <div class="auth-logo">TradeLog <span>v1.9.9c</span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
