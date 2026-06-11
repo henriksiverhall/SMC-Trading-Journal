@@ -1,6 +1,6 @@
 import { useAuth } from '../hooks/useAuth'
 
-export default function Topbar({ title, actions }) {
+export default function Topbar({ title, subtitle, actions }) {
   const { user, userSettings } = useAuth()
   const initial = (userSettings?.displayName || user?.email || 'U')[0].toUpperCase()
 
@@ -8,6 +8,7 @@ export default function Topbar({ title, actions }) {
     <header className="topbar">
       <div className="topbar-left">
         <h1 className="page-title">{title}</h1>
+        {subtitle && <span style={{ fontSize: 12, color: 'var(--text4)', fontWeight: 500 }}>{subtitle}</span>}
         {actions && <div style={{ display: 'flex', gap: 8 }}>{actions}</div>}
       </div>
       <div className="topbar-right">
