@@ -756,7 +756,8 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       </div>
 
             <!-- Ekonomisk kalender -->
-      <div class="dash-widget span-4" data-widget="calendar" draggable="true">
+      <!-- EKONOMISK KALENDER – gömd i v1.9.9v, Finnhub domänrestriktion. Återaktiveras i v2.0 med ny datakälla (t_cal1). -->
+      <div class="dash-widget span-4" data-widget="calendar" draggable="true" style="display:none">
         <div class="dash-drag-handle">⠿ Flytta</div>
         <div class="dash-width-picker">
           <button class="dash-width-btn active" data-span="4" onclick="setWidgetSpan(this,'calendar',4)">4</button>
@@ -1954,7 +1955,7 @@ function moveFormField(key,dir){
 
 // ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
 let userSettings={};
-const APP_VERSION='v1.9.9u';
+const APP_VERSION='v1.9.9v';
 const WORKER_URL='https://tradelog-claude-api.henrik-siverhall.workers.dev';
 const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
