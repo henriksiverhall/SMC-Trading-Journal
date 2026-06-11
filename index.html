@@ -4373,7 +4373,7 @@ async function loadNewsForRange(from,to){
   }
   el.innerHTML='<div class="news-empty">Hämtar nyheter…</div>';
   try{
-    const url=`https://finnhub.io/api/v1/calendar/economic?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+    const url=`${WORKER_URL}/finnhub/calendar?from=${from}&to=${to}`;
     const res=await fetch(url);
     const data=await res.json();
     const events=(data.economicCalendar||[]).sort((a,b)=>{
