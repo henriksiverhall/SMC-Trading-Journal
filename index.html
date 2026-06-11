@@ -1016,6 +1016,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
           <button class="grade-btn" data-grade="C" onclick="setGrade('C','main')">C</button>
         </div>
       </div>
+      <div class="form-group"><label>Känsla <span style="font-size:10px;color:var(--text3);font-weight:400">valfritt</span></label>
+        <div class="grade-btns" id="mainEmotionBtns" style="flex-wrap:wrap;gap:4px">
+          <button class="grade-btn" data-emotion="Disciplined" onclick="setEmotion('Disciplined','main')" title="Följde plan">🎯 Disciplined</button>
+          <button class="grade-btn" data-emotion="Confident" onclick="setEmotion('Confident','main')" title="Trygg i setupen">💪 Confident</button>
+          <button class="grade-btn" data-emotion="Hesitant" onclick="setEmotion('Hesitant','main')" title="Tveksam vid entry">😟 Hesitant</button>
+          <button class="grade-btn" data-emotion="FOMO" onclick="setEmotion('FOMO','main')" title="Rädd att missa rörelsen">⚡ FOMO</button>
+          <button class="grade-btn" data-emotion="Revenge" onclick="setEmotion('Revenge','main')" title="Ville ta igen förlust">😤 Revenge</button>
+          <button class="grade-btn" data-emotion="Overconfident" onclick="setEmotion('Overconfident','main')" title="Tog för stor risk">🎰 Over</button>
+        </div>
+      </div>
       <div class="form-group" id="riskGroup" style="grid-column:span 2">
         <label>Risk % <span style="color:var(--text3);font-weight:400;font-size:10px">av konto</span></label>
         <div style="display:flex;gap:6px;align-items:center">
@@ -1601,6 +1611,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
             <button class="grade-btn" data-grade="C" onclick="setGrade('C','modal')" disabled>C</button>
           </div>
         </div>
+        <div class="form-group"><label>Känsla</label>
+          <div class="grade-btns" id="modalEmotionBtns" style="flex-wrap:wrap;gap:4px">
+            <button class="grade-btn" data-emotion="Disciplined" onclick="setEmotion('Disciplined','modal')" disabled>🎯 Disciplined</button>
+            <button class="grade-btn" data-emotion="Confident" onclick="setEmotion('Confident','modal')" disabled>💪 Confident</button>
+            <button class="grade-btn" data-emotion="Hesitant" onclick="setEmotion('Hesitant','modal')" disabled>😟 Hesitant</button>
+            <button class="grade-btn" data-emotion="FOMO" onclick="setEmotion('FOMO','modal')" disabled>⚡ FOMO</button>
+            <button class="grade-btn" data-emotion="Revenge" onclick="setEmotion('Revenge','modal')" disabled>😤 Revenge</button>
+            <button class="grade-btn" data-emotion="Overconfident" onclick="setEmotion('Overconfident','modal')" disabled>🎰 Over</button>
+          </div>
+        </div>
         <div class="form-group half"><label>Chart / Skärmbild</label>
           <div class="media-input-wrap">
             <input type="text" class="form-control" id="m-media" disabled oninput="previewMedia('m-media','mMediaPreview')">
@@ -1781,6 +1801,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     <div class="admin-modal-tabs" id="adminModalTabs">
       <button class="admin-modal-tab active" onclick="switchAdminTab('profil',this)">👤 Profil</button>
       <button class="admin-modal-tab" onclick="switchAdminTab('trades',this)">📈 Trades</button>
+      <button class="admin-modal-tab" onclick="switchAdminTab('analytics',this)">📊 Analytics</button>
       <button class="admin-modal-tab" onclick="switchAdminTab('checklistor',this)">✅ Checklistor</button>
       <button class="admin-modal-tab" onclick="switchAdminTab('installningar',this)">⚙ Inställningar</button>
       <button class="admin-modal-tab" onclick="switchAdminTab('inloggningar',this)">🔐 Inloggningar</button>
@@ -1797,10 +1818,16 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
     <!-- TRADES-FLIK -->
     <div class="admin-tab-content" id="atab-trades">
-      <div id="adminUserTrades" style="overflow-x:auto;max-height:400px;overflow-y:auto"></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button class="btn btn-danger btn-sm" onclick="confirmClearTrades()" style="font-size:11px">🗑 Rensa all tradingdata</button>
+      </div>
+      <div id="adminUserTrades" style="overflow-x:auto;max-height:380px;overflow-y:auto"></div>
     </div>
 
-    <!-- CHECKLISTOR-FLIK -->
+    <!-- ANALYTICS-FLIK -->
+    <div class="admin-tab-content" id="atab-analytics">
+      <div id="adminUserAnalytics" style="padding:8px 0"></div>
+    </div>
     <div class="admin-tab-content" id="atab-checklistor">
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-amber btn-sm" onclick="enableAdminEdit('checklistor')">✏️ Redigera</button>
@@ -2390,7 +2417,18 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
 let currentUser=null,journal=[],userChecklists=[],checked={};
 let activeStratKey='unicorn',activeStrat=null;
 let sortCol='date',sortDir=-1;
-let selectedGrade='',modalGrade='',calculatedR=null,modalCalculatedR=null;
+let selectedEmotion='', modalEmotion='';
+let selectedGrade='', modalGrade='', calculatedR=null, modalCalculatedR=null;
+
+function setEmotion(e, ctx){
+  if(ctx==='main'){
+    selectedEmotion=selectedEmotion===e?'':e;
+    document.querySelectorAll('#mainEmotionBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.emotion===selectedEmotion));
+  }else{
+    modalEmotion=modalEmotion===e?'':e;
+    document.querySelectorAll('#modalEmotionBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.emotion===modalEmotion));
+  }
+}
 let customFields=JSON.parse(localStorage.getItem('customFields')||'[]');
 let editingTradeId=null,authMode='login',editorOpen=false,modalEditMode=false;
 
@@ -2844,8 +2882,8 @@ function renderJournalTaggedFields(){
 }
 
 function resetChecklist(){
-  checked={};selectedGrade='';calculatedR=null;
-  document.querySelectorAll('#mainGradeBtns .grade-btn').forEach(b=>b.classList.remove('sel'));
+  checked={};selectedGrade='';selectedEmotion='';calculatedR=null;
+  document.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('sel'));
   ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media','f-contracts'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   clearPartialExits();
   clearScaleIns();
@@ -3502,6 +3540,7 @@ async function logToJournal(){
     outcome:document.getElementById('f-outcome').value||null,
     result:finalR,
     grade:selectedGrade||null,
+    emotion:selectedEmotion||null,
     checklist_pct:pct,
     notes:document.getElementById('f-notes').value||null,
     chart_link:media,image_url:media,
@@ -3559,6 +3598,8 @@ function openTradeModal(id){
   document.getElementById('m-media').value=media;
   modalGrade=t.grade||'';
   document.querySelectorAll('#modalGradeBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.grade===modalGrade));
+  modalEmotion=t.emotion||'';
+  document.querySelectorAll('#modalEmotionBtns .grade-btn').forEach(b=>b.classList.toggle('sel',b.dataset.emotion===modalEmotion));
   modalCalculatedR=t.result;
   const disp=document.getElementById('mRrDisplay');
   if(t.result!=null){disp.textContent=(t.result>0?'+':'')+Number(t.result).toFixed(2)+'R';disp.className='rr-display '+(t.result>0?'positive':t.result<0?'negative':'neutral');}
@@ -3641,8 +3682,8 @@ function enableModalEdit(){
   modalEditMode=true;
   setModalReadOnly(false);
   customFields.forEach(f=>{const el=document.getElementById('mcf-'+f.id);if(el)el.disabled=false;});
+  document.querySelectorAll('#modalEmotionBtns .grade-btn').forEach(b=>b.disabled=false);
   // Visa futures-redigeringsfält om futures-instrument
-  const existing=journal.find(t=>String(t.id)===String(editingTradeId));
   const futuresEl=document.getElementById('modalFuturesInfo');
   if(futuresEl&&existing&&getFuturesSpec(existing.symbol||'')){
     const spec=getFuturesSpec(existing.symbol);
@@ -3718,6 +3759,7 @@ async function saveModalTrade(){
     tp:parseFloat(document.getElementById('m-tp').value)||null,
     outcome:document.getElementById('m-outcome').value||null,
     result:modalCalculatedR,grade:modalGrade||null,
+    emotion:modalEmotion||null,
     notes:document.getElementById('m-notes').value||null,
     chart_link:media,image_url:media,
     custom_data:{...existingCD,...customData,...futuresCD},
@@ -4277,7 +4319,7 @@ function openNewsModal(type){
     document.querySelector('#tradeModal .modal').style.maxWidth='680px';
     footer.style.display='none';
     body.innerHTML=`<div style="overflow-x:auto"><table class="jtable" style="font-size:12px">
-      <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Strategi</th></tr></thead>
+      <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Känsla</th><th>Strategi</th></tr></thead>
       <tbody>${journal.slice(0,30).map(t=>`<tr onclick="closeModal();openTradeModal('${t.id}')" style="cursor:pointer">
         <td style="font-family:var(--mono);font-size:11px">${t.date||'—'}</td>
         <td><strong>${t.symbol||'—'}</strong></td>
@@ -4678,7 +4720,7 @@ async function openAdminUserModal(userId){
     tradesEl.innerHTML='<div class="empty">Inga trades loggade.</div>';
   }else{
     tradesEl.innerHTML=`<div style='font-size:11px;color:var(--text3);margin-bottom:8px'>Klicka på en rad för att redigera traden.</div><table class="jtable">
-      <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Strategi</th></tr></thead>
+      <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th>R</th><th>Grade</th><th>Känsla</th><th>Strategi</th></tr></thead>
       <tbody>${trades.map(t=>`<tr style='cursor:pointer' onclick='closeAdminUserModal();openTradeModal("${t.id}")'>
         <td style="font-family:var(--mono);font-size:11px">${t.date||'—'}</td>
         <td><strong>${t.symbol||'—'}</strong></td>
@@ -4766,6 +4808,80 @@ function switchAdminTab(tab, btn){
   const tabEl=document.getElementById('atab-'+tab);
   if(tabEl)tabEl.classList.add('active');
   if(btn)btn.classList.add('active');
+  if(tab==='analytics')renderAdminAnalytics();
+}
+
+function renderAdminAnalytics(){
+  const el=document.getElementById('adminUserAnalytics');
+  if(!el||!adminSelectedUser)return;
+  const user=allUsers.find(u=>u.user_id===adminSelectedUser);
+  if(!user){el.innerHTML='<div style="color:var(--text3);font-size:13px">Ingen data</div>';return;}
+  // Hämta trades för denna användare
+  sb.from('trades').select('*').eq('user_id',adminSelectedUser).order('date',{ascending:false}).then(({data:trades})=>{
+    if(!trades||!trades.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:20px 0">Inga trades loggade</div>';return;}
+    const withR=trades.filter(t=>t.result!=null);
+    const wins=withR.filter(t=>t.outcome==='W');
+    const losses=withR.filter(t=>t.outcome==='L');
+    const wr=withR.length?(wins.length/withR.length*100).toFixed(1):0;
+    const totalR=withR.reduce((a,t)=>a+(t.result||0),0).toFixed(2);
+    const winR=wins.reduce((a,t)=>a+(t.result||0),0);
+    const lossR=Math.abs(losses.reduce((a,t)=>a+(t.result||0),0));
+    const pf=lossR>0?(winR/lossR).toFixed(2):'∞';
+    const avgR=withR.length?(withR.reduce((a,t)=>a+(t.result||0),0)/withR.length).toFixed(2):0;
+    // Emotion breakdown
+    const emotionMap={};
+    trades.filter(t=>t.emotion).forEach(t=>{
+      if(!emotionMap[t.emotion])emotionMap[t.emotion]={count:0,wins:0};
+      emotionMap[t.emotion].count++;
+      if(t.outcome==='W')emotionMap[t.emotion].wins++;
+    });
+    const emotionRows=Object.entries(emotionMap).sort((a,b)=>b[1].count-a[1].count).map(([e,d])=>
+      `<tr><td>${e}</td><td>${d.count}</td><td>${d.count?(d.wins/d.count*100).toFixed(0)+'%':'—'}</td></tr>`
+    ).join('');
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--text3)">Trades</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text)">${trades.length}</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--text3)">Win Rate</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green)">${wr}%</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--text3)">Total R</div>
+          <div style="font-size:20px;font-weight:700;color:${totalR>0?'var(--green)':'var(--red)'}">${totalR>0?'+':''}${totalR}R</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--text3)">Profit Factor</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text)">${pf}</div>
+        </div>
+      </div>
+      ${emotionRows?`
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Känsla per trade</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="color:var(--text3);font-size:11px"><th style="text-align:left;padding:4px">Känsla</th><th>Antal</th><th>WR</th></tr></thead>
+        <tbody>${emotionRows}</tbody>
+      </table>`:''}`;
+  });
+}
+
+function confirmClearTrades(){
+  if(!adminSelectedUser||userSettings?.is_admin!==true)return;
+  const user=allUsers.find(u=>u.user_id===adminSelectedUser);
+  if(!confirm(`Radera ALL tradingdata för ${user?.email}?\nDetta kan inte ångras.`))return;
+  clearUserTrades(adminSelectedUser);
+}
+
+async function clearUserTrades(userId){
+  if(userSettings?.is_admin!==true)return;
+  const{error}=await sb.from('trades').delete().eq('user_id',userId);
+  if(error){alert('Fel: '+error.message);return;}
+  const u=allUsers.find(u=>u.user_id===userId);
+  if(u)u.trade_count=0;
+  renderUsersTable(allUsers);
+  document.getElementById('adminUserTrades').innerHTML='<div style="color:var(--text3);font-size:13px;padding:16px">All tradingdata raderad.</div>';
+  alert('Klar – all tradingdata raderad.');
 }
 
 function closeAdminUserModal(){
