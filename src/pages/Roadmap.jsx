@@ -1,6 +1,14 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import Topbar from '../components/Topbar'
+import { createClient } from '@supabase/supabase-js'
+
+// Kanban alltid mot PROD – en gemensam roadmap oavsett miljö
+const sbProd = createClient(
+  'https://zmtpgnnqtkkdsrswhrzk.supabase.co',
+  'sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ'
+)
+const PROD_ADMIN_ID = '9ed649b7-8ad8-4ba7-bc89-ec0efa566b9d'
 
 const COLUMNS = [
   { id: 'todo',       label: 'Att göra',  emoji: '📌' },
@@ -197,26 +205,46 @@ const modalBox = {
 }
 
 export default function Roadmap() {
-  const { userSettings, saveSettings, isAdmin } = useAuth()
-
-  // roadmapTasks: { [colId]: [{id, title, desc}] }
-  const rawTasks = userSettings?.roadmapTasks
-  const [tasks, setTasks] = useState(() => {
-    if (rawTasks && typeof rawTasks === 'object' && !Array.isArray(rawTasks)) return rawTasks
-    // migrate old array format if needed
-    return Object.fromEntries(COLUMNS.map(c => [c.id, []]))
-  })
-
+  const { isAdmin } = useAuth()
+  const emptyTasks = Object.fromEntries(COLUMNS.map(c => [c.id, []]))
+  const [tasks, setTasks] = useState(emptyTasks)
   const [addingIn, setAddingIn] = useState(null)
-  const [editCard, setEditCard] = useState(null) // {card, colId}
-  const dragCard = useRef(null) // {id, fromCol}
+  const [editCard, setEditCard] = useState(null)
+  const dragCard = useRef(null)
   const [dragOverCol, setDragOverCol] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await sbProd
+        .from('user_settings')
+        .select('settings')
+        .eq('user_id', PROD_ADMIN_ID)
+        .single()
+      if (data?.settings?.roadmapTasks) {
+        const rt = data.settings.roadmapTasks
+        if (typeof rt === 'object' && !Array.isArray(rt)) setTasks(rt)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   async function persist(newTasks) {
     setTasks(newTasks)
     setSaving(true)
-    await saveSettings({ roadmapTasks: newTasks })
+    const { data } = await sbProd
+      .from('user_settings')
+      .select('settings')
+      .eq('user_id', PROD_ADMIN_ID)
+      .single()
+    const merged = { ...(data?.settings || {}), roadmapTasks: newTasks }
+    await sbProd.from('user_settings').upsert({
+      user_id: PROD_ADMIN_ID,
+      settings: merged,
+      updated_at: new Date().toISOString()
+    })
     setSaving(false)
   }
 
@@ -236,7 +264,6 @@ export default function Roadmap() {
     if (!dragCard.current) return
     const { id, fromCol } = dragCard.current
     if (fromCol === toCol) return
-
     const updated = { ...tasks }
     const card = (updated[fromCol] || []).find(c => c.id === id)
     if (!card) return
@@ -268,6 +295,12 @@ export default function Roadmap() {
 
   const totalCards = Object.values(tasks).flat().length
 
+  if (loading) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>
+      Laddar roadmap…
+    </div>
+  )
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <Topbar title="Roadmap" subtitle={`${totalCards} kort${saving ? ' · Sparar…' : ''}`} />
@@ -294,7 +327,6 @@ export default function Roadmap() {
                   transition: 'border-color 0.15s, background 0.15s',
                 }}
               >
-                {/* Column header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 14 }}>{col.emoji}</span>
@@ -318,7 +350,6 @@ export default function Roadmap() {
                   )}
                 </div>
 
-                {/* Cards */}
                 {cards.map(card => (
                   <Card
                     key={card.id}
@@ -331,12 +362,10 @@ export default function Roadmap() {
                   />
                 ))}
 
-                {/* Add form */}
                 {addingIn === col.id && (
                   <AddCardForm colId={col.id} onAdd={handleAdd} onCancel={() => setAddingIn(null)} />
                 )}
 
-                {/* Empty state */}
                 {cards.length === 0 && addingIn !== col.id && (
                   <div style={{
                     border: '1px dashed var(--border)', borderRadius: 'var(--r)',
@@ -350,7 +379,6 @@ export default function Roadmap() {
         </div>
       </div>
 
-      {/* Edit modal */}
       {editCard && (
         <EditCardModal
           card={editCard.card}
