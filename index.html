@@ -1954,7 +1954,7 @@ function moveFormField(key,dir){
 
 // ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
 let userSettings={};
-const APP_VERSION='v1.9.9s';
+const APP_VERSION='v1.9.9t';
 const WORKER_URL='https://tradelog-claude-api.henrik-siverhall.workers.dev';
 const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
@@ -3528,10 +3528,12 @@ async function logToJournal(){
 // ── RECENT TRADES ─────────────────────────────────────────────────────────────
 function renderRecentTrades(){
   const list=document.getElementById('recentTradesList');
-  if(!list)return; // Element finns inte på nuvarande sida
-  const recent=journal.slice(0,8);
-  if(!recent.length){list.innerHTML='<div class="recent-empty">Inga trades loggade ännu.</div>';return;}
-  list.innerHTML=recent.map(t=>`<div class="recent-row" onclick="openTradeModal('${t.id}')">
+  if(!list)return;
+  const all=journal.slice(0,8);
+  if(!all.length){list.innerHTML='<div class="recent-empty">Inga trades loggade ännu.</div>';return;}
+  const shown=all.slice(0,3);
+  const hidden=all.slice(3);
+  const rows=t=>`<div class="recent-row" onclick="openTradeModal('${t.id}')">
     <span style="font-family:var(--mono);font-size:11px">${t.date||'—'}</span>
     <strong style="font-size:12px">${t.symbol||'—'}</strong>
     <span>${t.direction?`<span class="badge badge-${t.direction}" style="font-size:10px">${t.direction}</span>`:'—'}</span>
@@ -3539,7 +3541,17 @@ function renderRecentTrades(){
     <span class="${t.result>0?'r-pos':t.result<0?'r-neg':'r-neu'}" style="font-size:11px">${t.result!=null?((t.result>0?'+':'')+Number(t.result).toFixed(2)+'R'):'—'}</span>
     <span style="font-weight:700;font-size:11px;color:${gradeColor(t.grade)}">${t.grade||'—'}</span>
     <span style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.strategy||'—'}</span>
-  </div>`).join('');
+  </div>`;
+  list.innerHTML=shown.map(rows).join('')+
+    (hidden.length?`<div id="recentTradesHidden" style="display:none">${hidden.map(rows).join('')}</div>
+    <div style="text-align:center;margin-top:4px">
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;width:100%" onclick="
+        const h=document.getElementById('recentTradesHidden');
+        const expanded=h.style.display!=='none';
+        h.style.display=expanded?'none':'block';
+        this.textContent=expanded?'Visa fler ▾':'Visa färre ▴';
+      ">Visa fler ▾</button>
+    </div>`:'');
 }
 function gradeColor(g){return g==='A+'?'var(--green)':g==='A'?'var(--teal)':g==='B'?'var(--amber)':g==='C'?'var(--red)':'var(--text3)';}
 
