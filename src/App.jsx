@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
@@ -10,9 +10,18 @@ import Admin from './pages/Admin'
 import Roadmap from './pages/Roadmap'
 import Sidebar from './components/Sidebar'
 
+const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap']
+
 export default function App() {
   const { user, loading } = useAuth()
-  const [page, setPage] = useState('dashboard')
+  const [page, setPage] = useState(() => {
+    const saved = sessionStorage.getItem('tl_page')
+    return VALID_PAGES.includes(saved) ? saved : 'dashboard'
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('tl_page', page)
+  }, [page])
 
   if (loading) return (
     <div style={{
