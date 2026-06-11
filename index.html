@@ -271,8 +271,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 /* MODAL */
 
-
-
 /* TRADING PAGE */
 .trading-wrap{display:flex;flex-direction:column;height:calc(100vh - 50px);background:var(--bg2);}
 .trading-top{padding:16px 24px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
@@ -341,7 +339,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .journal-modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .journal-modal-grid .wide{grid-column:1/-1;}
 .journal-modal-grid .half{grid-column:span 2;}
-
 
 /* DASHBOARD DRAG-AND-DROP */
 .dash-layout-grid{
@@ -513,7 +510,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 .insight-label{color:var(--text3);font-size:12px;}
 .insight-value{font-weight:600;font-family:var(--mono);}
 
-
 /* ADMIN */
 .admin-wrap{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
 /* Futures */
@@ -635,7 +631,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <!-- AUTH -->
 <div id="authWrap" class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">TradeLog <span>v1.9.9r</span></div>
+    <div class="auth-logo">TradeLog <span id="versionDisplay"></span></div>
     <div class="auth-sub">Logga in för att komma åt din journal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Logga in</button>
@@ -686,7 +682,7 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 <div id="appWrap" style="display:none">
 <div class="app">
 <div class="header">
-  <div class="header-logo">TradeLog <span>v1.9.9r</span></div>
+  <div class="header-logo">TradeLog <span id="versionDisplay"></span></div>
   <div class="header-right">
     <div class="header-tabs">
       <button class="htab active" onclick="showPage('dashboard',this)">Dashboard</button>
@@ -710,7 +706,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     </div>
   </div>
 </div>
-
 
 <!-- DASHBOARD PAGE -->
 <div id="page-dashboard" class="page active">
@@ -805,7 +800,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
         </div>
         <div class="dash-card-scroll" id="dashNews"><div class="news-empty">Hämtar nyheter…</div></div>
       </div>
-
 
       <!-- Streak -->
       <div class="dash-widget span-4" data-widget="streak" draggable="true">
@@ -1566,7 +1560,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
 
 </div>
 
-
 <!-- TRADE MODAL -->
 <div class="modal-backdrop" id="tradeModal">
   <div class="modal">
@@ -1646,7 +1639,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
   </div>
 </div>
 
-
 <!-- MFA SETUP MODAL -->
 <div class="modal-backdrop" id="mfaModal">
   <div class="modal" style="max-width:440px">
@@ -1661,8 +1653,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
     </div>
   </div>
 </div>
-
-
 
 <!-- JOURNAL MODAL (full logg) -->
 <div class="modal-backdrop" id="journalModal">
@@ -1905,9 +1895,6 @@ function initThemeBtn(){
   if(btn)btn.textContent=isDark?'☀️':'🌙';
 }
 
-
-
-
 // ── DYNAMISK FÄLTSORTERING ────────────────────────────────────────────────────
 // Sparar ordningen som lista av std-IDs + custom-IDs i userSettings
 
@@ -1965,10 +1952,12 @@ function moveFormField(key,dir){
   renderFieldManager();
 }
 
-
 // ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
 let userSettings={};
-const KANBAN_SECRET='tradelog-kanban-568056';
+const APP_VERSION='v1.9.9s';
+const WORKER_URL='https://tradelog-claude-api.henrik-siverhall.workers.dev';
+const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
+const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
 
 // ── Futures instrument-specifikationer ────────────────────────────────────────
 const FUTURES_SPECS={
@@ -1983,10 +1972,6 @@ const FUTURES_SPECS={
 function getFuturesSpec(symbol){
   if(!symbol)return null;
   return FUTURES_SPECS[(symbol||'').toUpperCase().trim()]||null;
-}
-
-function isFutures(symbol){
-  return !!getFuturesSpec(symbol);
 }
 
 function calcFuturesContracts(symbol, entry, sl, accountSize, riskPct){
@@ -2132,7 +2117,6 @@ function saveRiskSettings(){
   renderFuturesInfo(symbol,entry||null,sl||null);
 }
 
-
 // ── SCALE-IN ──────────────────────────────────────────────────────────────────
 let scaleIns=[];
 
@@ -2210,13 +2194,6 @@ function getScaleInData(){
     qty:parseInt(s.qty)||null,
     price:parseFloat(s.price)
   }));
-}
-
-function loadScaleIns(entries){
-  if(!entries||!entries.length){scaleIns=[];renderScaleIns();return;}
-  // Första entry är huvud-entry (f-entry), resten är scale-ins
-  scaleIns=entries.slice(1).map(e=>({id:'si_'+Date.now()+Math.random(),qty:e.qty||'',price:e.price||''}));
-  renderScaleIns();
 }
 
 function clearScaleIns(){
@@ -2315,12 +2292,6 @@ function getPartialExitsData(){
   }));
 }
 
-function loadPartialExits(exits){
-  if(!exits||!exits.length){partialExits=[];renderPartialExits();return;}
-  partialExits=exits.map(e=>({id:'pe_'+Date.now()+Math.random(),qty:e.qty||'',price:e.price||'',type:e.type||'partial'}));
-  renderPartialExits();
-}
-
 function clearPartialExits(){
   partialExits=[];
   renderPartialExits();
@@ -2401,9 +2372,7 @@ function validateRequiredFields(){
   return[...new Set(missing)];
 }
 
-const SUPA_URL='https://zmtpgnnqtkkdsrswhrzk.supabase.co';
-const SUPA_KEY='sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ';
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
+const sb=supabase.createClient('https://zmtpgnnqtkkdsrswhrzk.supabase.co','sb_publishable_ApF8t4SG9vnJC5_ZYVvRWg_PlS2t7xJ',{
   auth:{
     storage:window.sessionStorage,
     persistSession:true,
@@ -2696,6 +2665,9 @@ async function doLogout(){
   document.getElementById('authWrap').style.display='flex';
 }
 sb.auth.getSession().then(({data:{session}})=>{if(session&&session.user)onLogin(session.user);});
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('#versionDisplay').forEach(el=>el.textContent=APP_VERSION);
+});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeMfaModal();closeAdminUserModal();closeJournalModal();closeQuickLog();closeTaskModal();closeDeleteUserModal();document.getElementById('imgModal').classList.remove('open');}});
 
 // ── CHECKLISTS DB ─────────────────────────────────────────────────────────────
@@ -2808,7 +2780,6 @@ function createNewStrategy(){
   });
 }
 
-
 function renderChecklist(){
   const strat=activeStrat||getActiveChecklist();
   const container=document.getElementById('checklistContainer');
@@ -2907,7 +2878,6 @@ function toggleEditor(){
   if(editorOpen)renderEditor();
 }
 
-
 function renderEditor(){
   const strat=activeStrat||getActiveChecklist();
   document.getElementById('editorStratName').textContent=strat.name;
@@ -3001,7 +2971,6 @@ async function saveChecklist(){
   renderJournalTaggedFields();
   populateStrategyPicker();
 }
-
 
 function calcRR(isModal){
   const p=isModal?'m-':'f-';
@@ -3215,8 +3184,6 @@ function cfDragStart(i){cfDragIdx=i;}
 function moveCF(i,dir){moveFormField('custom:'+customFields[i].id,dir);}
 
 let dragFieldIdx=null;
-
-
 
 function toggleDropdownOptions(type){
   document.getElementById('dropdownOptionsRow').style.display=type==='select'?'block':'none';
@@ -3449,7 +3416,6 @@ function loadRisk(){
   if(saved.accountSize){const el=document.getElementById('f-accountsize');if(el)el.value=saved.accountSize;}
   if(saved.currency){const el=document.getElementById('f-currency');if(el)el.value=saved.currency;}
 }
-
 
 async function logToJournal(){
   const missing=validateRequiredFields();
@@ -3776,10 +3742,7 @@ async function doDelete(){
   if(document.getElementById('page-journal').classList.contains('active')){updateStats();renderJournal();}
 }
 
-
-
 let _appReady = false;
-
 
 // ── DASHBOARD DRAG & DROP ─────────────────────────────────────────────────────
 let dashEditMode=false;
@@ -3876,8 +3839,6 @@ document.addEventListener('drop',e=>{
   if(fromIdx<toIdx)target.after(dragWidget);
   else target.before(dragWidget);
 });
-
-
 
 // ── MARKET DATA (TwelveData) ──────────────────────────────────────────────────
 const TWELVE_SYMBOL_MAP = {
@@ -3992,10 +3953,8 @@ function getCachedMFE(trades){
     .map(t=>({...t,_mfe:t.custom_data._mfe,_mae:t.custom_data._mae,_fetched_at:t.custom_data._mfe_fetched_at}));
 }
 
-
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
-const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
+
 
 async function loadDashboard(){
   if(!currentUser)return;
@@ -4177,7 +4136,6 @@ function renderDashInsights(){
     </div>`;
 }
 
-
 function renderDashMonth(){
   if(!document.getElementById('dashMonth'))return;
   const elCheck=document.getElementById('dashMonth');if(!elCheck)return;
@@ -4200,7 +4158,6 @@ function renderDashMonth(){
       </div>
     </div>`;
 }
-
 
 // ── NEWS FILTER ───────────────────────────────────────────────────────────────
 let newsFilterImpact=new Set(['high','medium']);
@@ -4337,7 +4294,6 @@ function openNewsModal(type){
   modal.classList.add('open');
 }
 
-
 // ── NYHETER (FINNHUB) ─────────────────────────────────────────────────────────
 
 // ── NEWS DATUMHANTERING ────────────────────────────────────────────────────────
@@ -4424,7 +4380,6 @@ async function loadNewsForRange(from,to){
   }
 }
 
-
 async function loadNews(){
   const today=getDateStr(new Date());
   newsFromDate=userSettings.newsFromDate||today;
@@ -4463,8 +4418,6 @@ async function logLogin(){
     }]);
   }catch(e){console.log('Login log failed (non-critical)',e);}
 }
-
-
 
 // ── ADMIN EDIT ────────────────────────────────────────────────────────────────
 let adminEditMode = null;
@@ -4651,7 +4604,6 @@ function renderAdminEditChecklists(){
         </details>`).join('')}
     </div>`).join('');
 }
-
 
 // ── ADMIN USER MODAL ──────────────────────────────────────────────────────────
 let adminSelectedUser = null;
@@ -4930,7 +4882,6 @@ async function adminResetPassword(email){
   else alert('Fel: '+error.message);
 }
 
-
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 let allUsers=[];
 let allLogs=[];
@@ -5069,7 +5020,6 @@ async function markDeletionDone(id){
   const{error}=await sb.from('deletion_requests').update({status:'done',admin_note:note||''}).eq('id',id);
   if(!error)loadAdminData();
 }
-
 
 // ── PROFIL ────────────────────────────────────────────────────────────────────
 let mfaFactors=[];
@@ -5232,7 +5182,7 @@ async function handleMfaChallenge(user){
   const factor=verified[0];
   document.getElementById('authWrap').innerHTML=`
     <div class="auth-card">
-      <div class="auth-logo">TradeLog <span>v1.9.9r</span></div>
+      <div class="auth-logo">TradeLog <span id="versionDisplay"></span></div>
       <div class="auth-sub">Ange koden från din autentiseringsapp</div>
       <div class="form-group"><label>Kod (6 siffror)</label>
         <input type="text" inputmode="numeric" maxlength="6" class="totp-input" id="loginTotpCode" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLoginMfa('${factor.id}')">
@@ -5274,9 +5224,6 @@ async function requestAccountDeletion(){
     alert('Begäran om radering har skickats. Du kommer att kontaktas via e-post.');
   }
 }
-
-
-
 
 async function loadMarketDataAnalysis(forceRefresh=false){
   const btn=document.getElementById('loadMDBtn');
@@ -5408,7 +5355,6 @@ function renderMFETable(valid,tsEl){
     </table>
   `;
 }
-
 
 // ── ANALYTICS ─────────────────────────────────────────────────────────────────
 // ── Session helper (ET time) ────────────────────────────────────────────────
@@ -5830,7 +5776,6 @@ function renderAnalytics(){
   loadMarketDataAnalysis(false);
 }
 
-
 // ── AI ANALYSIS ────────────────────────────────────────────────────────────────
 async function runAIAnalysis(){
   const btn=document.getElementById('aiAnalysisBtn');
@@ -5973,7 +5918,7 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
 {"insights":[{"type":"positive|warning|critical","title":"kort rubrik max 5 ord","text":"konkret insikt och specifik åtgärd, max 3 meningar"}]}`;
 
   try{
-    const resp=await fetch('https://tradelog-claude-api.henrik-siverhall.workers.dev',{
+    const resp=await fetch(WORKER_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -5983,8 +5928,6 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
       })
     });
     const rawText=await resp.text();
-    console.log('AI response status:',resp.status);
-    console.log('AI response raw:',rawText);
     if(!resp.ok){
       out.innerHTML=`<div class="ai-analysis-card"><div style="font-size:13px;color:var(--red)">⚠ HTTP ${resp.status}: ${rawText.substring(0,200)}</div></div>`;
       btn.textContent='🤖 AI-analys';btn.disabled=false;return;
@@ -5995,7 +5938,6 @@ Svara ENBART i detta JSON-format utan markdown-backticks:
       btn.textContent='🤖 AI-analys';btn.disabled=false;return;
     }
     const raw=data.content?.find(c=>c.type==='text')?.text||'';
-    console.log('AI text content:',raw);
     const clean=raw.replace(/```json|```/g,'').trim();
     let parsed;
     try{parsed=JSON.parse(clean);}catch(je){
@@ -6298,14 +6240,13 @@ async function runClaudeKanbanCmd(){
 
   result.textContent='⏳ Kör…';result.style.color='var(--text3)';
 
-  const workerBase='https://tradelog-claude-api.henrik-siverhall.workers.dev';
   const secret=KANBAN_SECRET;
 
   try{
     let endpoint,body;
     if(action==='read'){
       endpoint='/kanban/read';
-      const resp=await fetch(workerBase+endpoint,{headers:{'X-Kanban-Secret':secret}});
+      const resp=await fetch(WORKER_URL+endpoint,{headers:{'X-Kanban-Secret':secret}});
       const data=await resp.json();
       // Uppdatera lokalt
       roadmapTasks=data.tasks||[];
@@ -6318,7 +6259,7 @@ async function runClaudeKanbanCmd(){
 
     const {action:_,...payload}=cmd;
     endpoint=`/kanban/${action}`;
-    const resp=await fetch(workerBase+endpoint,{
+    const resp=await fetch(WORKER_URL+endpoint,{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Kanban-Secret':secret},
       body:JSON.stringify(payload)
