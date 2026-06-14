@@ -983,6 +983,12 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <div class="form-group"><label>Entry</label><input type="number" step="0.01" class="form-control" id="f-entry" oninput="calcRR(false)" placeholder="0.00"></div>
       <div class="form-group"><label>Stop Loss</label><input type="number" step="0.01" class="form-control" id="f-sl" oninput="calcRR(false)" placeholder="0.00"></div>
       <div class="form-group"><label>Take Profit 1</label><input type="number" step="0.01" class="form-control" id="f-tp" oninput="calcRR(false)" placeholder="0.00"></div>
+      <!-- Faktiskt exit-pris -->
+      <div class="form-group" id="actualExitGroup">
+        <label>Faktiskt exit <span style="font-size:10px;color:var(--text3);font-weight:400">valfritt</span></label>
+        <input type="number" step="0.01" class="form-control" id="f-actual-exit" placeholder="Om ej exakt TP/SL" oninput="calcRR(false)">
+        <div id="actualRDisplay" style="font-size:11px;font-family:var(--mono);margin-top:3px;min-height:14px"></div>
+      </div>
       <div class="form-group"><label>Utfall</label>
         <select class="form-control" id="f-outcome" onchange="calcRR(false)">
           <option value="">Välj…</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
@@ -999,12 +1005,6 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <!-- R display -->
       <div class="form-group" id="rrDisplayGroup" style="grid-column:span 2"><label>R <span style="color:var(--text3);font-size:10px;font-weight:400">auto</span></label>
         <div class="rr-display" id="rrDisplay">—</div>
-      </div>
-      <!-- Faktiskt exit-pris -->
-      <div class="form-group" id="actualExitGroup" style="grid-column:span 2">
-        <label>Faktiskt exit-pris <span style="font-size:10px;color:var(--text3);font-weight:400">valfritt – för exakt R</span></label>
-        <input type="number" step="0.01" class="form-control" id="f-actual-exit" placeholder="Om du exitar annorlunda än TP/SL" oninput="calcRR(false)">
-        <div id="actualRDisplay" style="font-size:11px;font-family:var(--mono);margin-top:3px;min-height:14px"></div>
       </div>
       <!-- Antal kontrakt – bara futures -->
       <div class="form-group" id="contractsGroup" style="display:none">
@@ -1982,7 +1982,7 @@ function moveFormField(key,dir){
 
 // ── USER SETTINGS (Supabase) ──────────────────────────────────────────────────
 let userSettings={};
-const APP_VERSION='v1.9.9z';
+const APP_VERSION='v1.9.9.01';
 const WORKER_URL='https://tradelog-claude-api.henrik-siverhall.workers.dev';
 const TWELVE_KEY='6834415a3a0745989f7ed475a5c7f418';
 const FINNHUB_KEY='d8h6hh1r01qhjpmqqk4gd8h6hh1r01qhjpmqqk50';
@@ -2327,19 +2327,20 @@ function clearPartialExits(){
 
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
-  {id:'grp-strategy', label:'Strategi',                    ids:['f-strategy-journal'],  required:true},
-  {id:'grp-datetime', label:'Datum & Tid',                 ids:['f-date','f-time'],      required:true},
-  {id:'grp-symbol',   label:'Instrument',                  ids:['f-symbol'],             required:true},
-  {id:'grp-direction',label:'Riktning',                    ids:['f-direction'],          required:false},
-  {id:'grp-prices',   label:'Entry / SL / TP1',            ids:['f-entry','f-sl','f-tp'],required:false},
-  {id:'grp-outcome',  label:'Utfall',                      ids:['f-outcome'],            required:true},
-  {id:'grp-multitps', label:'Fler Take Profits (TP2/TP3…)',ids:['multiTpGroup'],         required:false},
-  {id:'grp-risk',     label:'Risk % & Kontostorlek',       ids:['riskGroup'],            required:false},
-  {id:'grp-rr',       label:'Resultat R (auto)',           ids:['rrDisplayGroup'],       required:false},
-  {id:'grp-grade',    label:'Setup-kvalitet (Grade)',      ids:['gradeGroup'],           required:false},
-  {id:'grp-emotion',  label:'Känsla / Emotion',           ids:['mainEmotionBtns'],      required:false},
-  {id:'grp-media',    label:'Chart / Skärmbild',          ids:['mediaGroup'],           required:false},
-  {id:'grp-notes',    label:'Noteringar',                  ids:['f-notes'],              required:false},
+  {id:'grp-strategy',   label:'Strategi',                     ids:['f-strategy-journal'],  required:true},
+  {id:'grp-datetime',   label:'Datum & Tid',                  ids:['f-date','f-time'],     required:true},
+  {id:'grp-symbol',     label:'Instrument',                   ids:['f-symbol'],            required:true},
+  {id:'grp-direction',  label:'Riktning',                     ids:['f-direction'],         required:false},
+  {id:'grp-prices',     label:'Entry / SL / TP1',             ids:['f-entry','f-sl','f-tp'],required:false},
+  {id:'grp-actualexit', label:'Faktiskt exit-pris',           ids:['actualExitGroup'],     required:false},
+  {id:'grp-outcome',    label:'Utfall',                       ids:['f-outcome'],           required:true},
+  {id:'grp-multitps',   label:'Fler Take Profits (TP2/TP3…)', ids:['multiTpGroup'],        required:false},
+  {id:'grp-rr',         label:'Resultat R (auto)',            ids:['rrDisplayGroup'],      required:false},
+  {id:'grp-grade',      label:'Setup-kvalitet (Grade)',       ids:['gradeGroup'],          required:false},
+  {id:'grp-emotion',    label:'Känsla / Emotion',            ids:['mainEmotionBtns'],     required:false},
+  {id:'grp-risk',       label:'Risk % & Kontostorlek',        ids:['riskGroup'],           required:false},
+  {id:'grp-media',      label:'Chart / Skärmbild',           ids:['mediaGroup'],          required:false},
+  {id:'grp-notes',      label:'Noteringar',                   ids:['f-notes'],             required:false},
 ];
 let fieldSettings=JSON.parse(localStorage.getItem('fieldSettings')||'{}');
 
@@ -2363,7 +2364,7 @@ function applyFieldSettings(){
       const el=document.getElementById(inputId);
       if(!el)return;
       // multiTpGroup och liknande är direkt container
-      if(['multiTpGroup','rrDisplayGroup','gradeGroup','mediaGroup'].includes(inputId)){
+      if(['multiTpGroup','rrDisplayGroup','gradeGroup','mediaGroup','actualExitGroup'].includes(inputId)){
         el.style.display=visible?'':'none';return;
       }
       // mainEmotionBtns – hitta parent form-group
