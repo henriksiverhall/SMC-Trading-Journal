@@ -2321,19 +2321,19 @@ function clearPartialExits(){
 
 // ── FIELD VISIBILITY ──────────────────────────────────────────────────────────
 const STD_FIELDS=[
-  {id:'grp-strategy',label:'Strategi',ids:['f-strategy-journal'],required:true},
-  {id:'grp-risk',label:'Risk % & Kontostorlek',ids:['riskGroup'],required:false},
-  {id:'grp-symbol',label:'Instrument',ids:['f-symbol'],required:true},
-  {id:'grp-datetime',label:'Datum & Tid',ids:['f-date','f-time'],required:true},
-  {id:'grp-direction',label:'Riktning',ids:['f-direction'],required:false},
-  {id:'grp-prices',label:'Entry / SL / TP1',ids:['f-entry','f-sl','f-tp'],required:false},
-  {id:'grp-outcome',label:'Utfall',ids:['f-outcome'],required:true},
-  {id:'grp-multitps',label:'Fler Take Profits (TP2/TP3…)',ids:['multiTpGroup'],required:false},
-  {id:'grp-rr',label:'Resultat R (auto)',ids:['rrDisplayGroup'],required:false},
-  {id:'grp-grade',label:'Setup-kvalitet (Grade)',ids:['gradeGroup'],required:false},
-  {id:'grp-emotion',label:'Känsla / Emotion',ids:['mainEmotionBtns'],required:false},
-  {id:'grp-media',label:'Chart / Skärmbild',ids:['mediaGroup'],required:false},
-  {id:'grp-notes',label:'Noteringar',ids:['f-notes'],required:false},
+  {id:'grp-strategy', label:'Strategi',                    ids:['f-strategy-journal'],  required:true},
+  {id:'grp-datetime', label:'Datum & Tid',                 ids:['f-date','f-time'],      required:true},
+  {id:'grp-symbol',   label:'Instrument',                  ids:['f-symbol'],             required:true},
+  {id:'grp-direction',label:'Riktning',                    ids:['f-direction'],          required:false},
+  {id:'grp-prices',   label:'Entry / SL / TP1',            ids:['f-entry','f-sl','f-tp'],required:false},
+  {id:'grp-outcome',  label:'Utfall',                      ids:['f-outcome'],            required:true},
+  {id:'grp-multitps', label:'Fler Take Profits (TP2/TP3…)',ids:['multiTpGroup'],         required:false},
+  {id:'grp-risk',     label:'Risk % & Kontostorlek',       ids:['riskGroup'],            required:false},
+  {id:'grp-rr',       label:'Resultat R (auto)',           ids:['rrDisplayGroup'],       required:false},
+  {id:'grp-grade',    label:'Setup-kvalitet (Grade)',      ids:['gradeGroup'],           required:false},
+  {id:'grp-emotion',  label:'Känsla / Emotion',           ids:['mainEmotionBtns'],      required:false},
+  {id:'grp-media',    label:'Chart / Skärmbild',          ids:['mediaGroup'],           required:false},
+  {id:'grp-notes',    label:'Noteringar',                  ids:['f-notes'],              required:false},
 ];
 let fieldSettings=JSON.parse(localStorage.getItem('fieldSettings')||'{}');
 
