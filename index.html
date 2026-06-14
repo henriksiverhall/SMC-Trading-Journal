@@ -1000,6 +1000,12 @@ body{font-family:var(--font);color:var(--text);background:#e8edf2;min-height:100
       <div class="form-group" id="rrDisplayGroup" style="grid-column:span 2"><label>R <span style="color:var(--text3);font-size:10px;font-weight:400">auto</span></label>
         <div class="rr-display" id="rrDisplay">—</div>
       </div>
+      <!-- Faktiskt exit-pris -->
+      <div class="form-group" id="actualExitGroup" style="grid-column:span 2">
+        <label>Faktiskt exit-pris <span style="font-size:10px;color:var(--text3);font-weight:400">valfritt – för exakt R</span></label>
+        <input type="number" step="0.01" class="form-control" id="f-actual-exit" placeholder="Om du exitar annorlunda än TP/SL" oninput="calcRR(false)">
+        <div id="actualRDisplay" style="font-size:11px;font-family:var(--mono);margin-top:3px;min-height:14px"></div>
+      </div>
       <!-- Antal kontrakt – bara futures -->
       <div class="form-group" id="contractsGroup" style="display:none">
         <label>Antal kontrakt <span style="font-size:10px;color:var(--text3);font-weight:400">faktiskt tagna</span></label>
@@ -2934,7 +2940,7 @@ function renderJournalTaggedFields(){
 function resetChecklist(){
   checked={};selectedGrade='';selectedEmotion='';calculatedR=null;clearExtraTPs();
   document.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('sel'));
-  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media','f-contracts'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-date','f-time','f-symbol','f-entry','f-sl','f-tp','f-notes','f-media','f-contracts','f-actual-exit'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   clearPartialExits();
   clearScaleIns();
   renderFuturesInfo('',null,null);
@@ -3115,6 +3121,32 @@ function calcRR(isModal){
     if(isModal)modalCalculatedR=null;else calculatedR=null;
   }
   if(!isModal)renderFuturesInfo(symbol,entry,sl);
+  // Faktiskt R – om actual exit ifyllt
+  if(!isModal){
+    const actualExit=parseFloat(document.getElementById('f-actual-exit')?.value);
+    const actualREl=document.getElementById('actualRDisplay');
+    if(actualREl){
+      if(actualExit&&!isNaN(actualExit)&&entry&&sl&&risk>0){
+        const direction=document.getElementById('f-direction')?.value;
+        const sign=(direction==='Long')?(actualExit>entry?1:-1):(actualExit<entry?1:-1);
+        // Om ingen riktning angiven – använd prisrelation mot entry
+        const autoSign=actualExit>=entry?1:-1;
+        const usedSign=direction?sign:autoSign;
+        const actualR=parseFloat((usedSign*Math.abs(actualExit-entry)/risk).toFixed(2));
+        const spec=getFuturesSpec(document.getElementById('f-symbol')?.value||'');
+        const contracts=parseInt(document.getElementById('f-contracts')?.value)||1;
+        const curr=userSettings.currency||'USD';
+        const currSymbol=curr==='SEK'?'kr':curr==='EUR'?'€':'$';
+        const pnlStr=spec?` · ${usedSign>0?'+':''}${currSymbol}${(Math.abs(actualExit-entry)*spec.pointValue*contracts).toFixed(0)}`:'';
+        const color=actualR>0?'var(--green)':actualR<0?'var(--red)':'var(--amber)';
+        actualREl.innerHTML=`Faktiskt R: <span style="font-weight:700;color:${color}">${actualR>0?'+':''}${actualR}R</span>${pnlStr}`;
+        // Sätt calculatedR till faktiskt om ifyllt
+        calculatedR=actualR;
+      }else{
+        actualREl.textContent='';
+      }
+    }
+  }
   if(!isModal)renderScaleInSummary();
   if(!isModal)calcMonetary();
   else{
@@ -3549,6 +3581,8 @@ async function logToJournal(){
   if(contracts)customData._contracts=contracts;
   if(exits.length)customData._exits=exits;
   if(extraTPs.length>0)customData._extra_tps=extraTPs.map(t=>({price:parseFloat(t.value)||null,pct:parseFloat(t.pct)||null,label:t.label})).filter(t=>t.price);
+  const actualExit=parseFloat(document.getElementById('f-actual-exit')?.value)||null;
+  if(actualExit)customData._actual_exit=actualExit;
   if(scaleIns_data.length){
     // Bygg entries-array: huvud-entry + scale-ins
     const mainEntry=parseFloat(document.getElementById('f-entry').value);
@@ -3747,6 +3781,29 @@ function openTradeModal(id){
             Exit ${i+1}: ${e.qty?e.qty+' kontrakt @ ':''}<span style="font-family:var(--mono)">${e.price}</span>
             ${pnlPoints!=='—'?`<span style="color:var(--text3);font-size:11px"> · ${pnlPoints} punkter</span>`:''}
           </div>`;
+        });
+      }
+      // Faktiskt exit-pris
+      const actualExit=t.custom_data?._actual_exit;
+      if(actualExit){
+        const avgE=t.custom_data?._avg_entry||t.entry;
+        const risk=avgE&&t.sl?Math.abs(avgE-t.sl):null;
+        const actualR=risk&&risk>0?((Math.abs(actualExit-avgE)/risk)*(actualExit>avgE?1:-1)).toFixed(2):null;
+        const color=actualR>0?'var(--green)':actualR<0?'var(--red)':'var(--amber)';
+        html+=`<div style="font-size:12px;margin-top:8px;padding:8px;background:var(--bg3);border-radius:var(--r)">
+          <span style="color:var(--text3)">Faktiskt exit:</span>
+          <strong style="font-family:var(--mono);margin-left:6px">${actualExit}</strong>
+          ${actualR!==null?`<span style="font-family:var(--mono);font-weight:700;color:${color};margin-left:8px">${actualR>0?'+':''}${actualR}R (faktiskt)</span>`:''}
+        </div>`;
+      }
+      // Extra TPs
+      const extraTpsData=t.custom_data?._extra_tps;
+      if(extraTpsData?.length){
+        html+=`<div style="font-size:11px;color:var(--text3);margin:8px 0 4px">Multipla targets:</div>`;
+        extraTpsData.forEach(tp=>{
+          html+=`<div style="font-size:12px;padding:3px 0">${tp.label}: <span style="font-family:var(--mono)">${tp.price}</span>${tp.pct?` (${tp.pct}%)`:''}`;
+          if(t.entry&&t.sl){const r=Math.abs(tp.price-t.entry)/Math.abs(t.entry-t.sl);html+=` <span style="color:var(--green);font-family:var(--mono)">+${r.toFixed(2)}R</span>`;}
+          html+='</div>';
         });
       }
       futuresEl.style.display='block';
