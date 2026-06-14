@@ -109,12 +109,13 @@ export default function Journal() {
   // ── R computation ─────────────────────────────────────────────────────────
   function computeR(f, scales, partials) {
     const entry = getWeightedEntry(f, scales)
-    const sl = parseFloat(f.sl)
-    const tp = parseFloat(f.tp)
-    const spec = getFuturesSpec(f.symbol)
+    const sl    = parseFloat(f.sl)
+    const tp    = parseFloat(f.tp)
+    const spec  = getFuturesSpec(f.symbol)
     const totalContracts = scales.length > 0 ? getTotalContracts(f, scales) : (parseFloat(f.contracts) || 1)
 
     if (!entry || !sl || isNaN(entry) || isNaN(sl)) { setCalcR(null); setCalcUSD(null); return }
+    // risk = distance entry→SL in points (always positive)
     const risk = Math.abs(entry - sl)
     if (risk === 0) { setCalcR(null); setCalcUSD(null); return }
 
@@ -126,32 +127,32 @@ export default function Journal() {
       r = -1
     } else if (f.outcome === 'W') {
       if (partials.length > 0) {
+        // Partial exits: R per exit = |exitPrice - entry| / risk (always positive for wins)
         const validPartials = partials.filter(p => p.price && p.contracts)
         if (validPartials.length > 0) {
-          let totalR = 0
-          let totalQty = 0
+          let totalR = 0, totalQty = 0
           for (const p of validPartials) {
-            const pQty = parseFloat(p.contracts) || 0
+            const pQty   = parseFloat(p.contracts) || 0
             const pPrice = parseFloat(p.price)
             if (!pPrice || !pQty) continue
-            const pR = (pPrice - entry) / risk * (f.direction === 'Short' ? -1 : 1)
-            totalR += pR * pQty
+            const pR = Math.abs(pPrice - entry) / risk
+            totalR   += pR * pQty
             totalQty += pQty
           }
           r = totalQty > 0 ? parseFloat((totalR / totalQty).toFixed(2)) : null
         }
       } else if (tp && !isNaN(tp)) {
-        const mult = f.direction === 'Short' ? -1 : 1
-        r = parseFloat(((tp - entry) / risk * mult).toFixed(2))
+        // R = |TP - entry| / risk — direction-agnostic, always positive for a win
+        r = parseFloat((Math.abs(tp - entry) / risk).toFixed(2))
       }
     }
 
     setCalcR(r)
 
+    // USD P&L for futures: risk (points) × pointValue × contracts × R-multiple
     if (spec && r !== null) {
       const riskUSD = risk * spec.pointValue * totalContracts
-      const usd = r * riskUSD
-      setCalcUSD(parseFloat(usd.toFixed(2)))
+      setCalcUSD(parseFloat((r * riskUSD).toFixed(2)))
     } else {
       setCalcUSD(null)
     }

@@ -334,26 +334,12 @@ export default function Roadmap() {
             style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', color: 'var(--text2)', fontSize: 12, padding: '5px 10px', fontFamily: 'var(--font)' }}>
             {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text4)', marginRight: 4 }}>Visa/dölj:</span>
-            {COLUMNS.map(col => (
-              <button key={col.id} onClick={() => toggleCollapse(col.id)} title={collapsed[col.id] ? `Visa ${col.label}` : `Dölj ${col.label}`}
-                style={{
-                  background: collapsed[col.id] ? 'var(--bg3)' : 'var(--bg2)',
-                  border: `1px solid ${collapsed[col.id] ? 'var(--border2)' : 'var(--border)'}`,
-                  borderRadius: 'var(--r)', padding: '3px 8px', fontSize: 12, cursor: 'pointer',
-                  color: collapsed[col.id] ? 'var(--text4)' : 'var(--text2)',
-                  textDecoration: collapsed[col.id] ? 'line-through' : 'none'
-                }}>
-                {col.emoji} {col.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Board */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          {COLUMNS.filter(col => !collapsed[col.id]).map(col => {
+          {COLUMNS.map(col => {
+            const isCollapsed = collapsed[col.id]
             const cards = sortCards(tasks[col.id] || [], sortBy)
             const isDragTarget = dragOverCol === col.id
             return (
@@ -369,27 +355,37 @@ export default function Roadmap() {
                   transition: 'border-color 0.15s, background 0.15s',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 0 : 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 14 }}>{col.emoji}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)' }}>{col.label}</span>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text4)', background: 'var(--bg4)', borderRadius: 20, padding: '1px 7px' }}>{cards.length}</span>
                   </div>
-                  {isAdmin && (
-                    <button onClick={() => setAddingIn(addingIn === col.id ? null : col.id)} title="Lägg till kort"
-                      style={{ background: 'none', border: 'none', color: 'var(--text4)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', fontFamily: 'var(--font)' }}>+</button>
-                  )}
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {isAdmin && !isCollapsed && (
+                      <button onClick={() => setAddingIn(addingIn === col.id ? null : col.id)} title="Lägg till kort"
+                        style={{ background: 'none', border: 'none', color: 'var(--text4)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', fontFamily: 'var(--font)' }}>+</button>
+                    )}
+                    <button onClick={() => toggleCollapse(col.id)} title={isCollapsed ? 'Expandera' : 'Minimera'}
+                      style={{ background: 'none', border: 'none', color: 'var(--text4)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: '0 2px', transition: 'transform 0.2s', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                      ▼
+                    </button>
+                  </div>
                 </div>
 
-                {cards.map(card => (
-                  <Card key={card.id} card={card} colId={col.id}
-                    onDragStart={handleDragStart}
-                    onCardClick={(c, cid) => setDetailCard({ card: c, colId: cid })}
-                  />
-                ))}
-                {addingIn === col.id && <AddCardForm colId={col.id} onAdd={handleAdd} onCancel={() => setAddingIn(null)} />}
-                {cards.length === 0 && addingIn !== col.id && (
-                  <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--r)', padding: '16px 12px', textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Tom</div>
+                {!isCollapsed && (
+                  <>
+                    {cards.map(card => (
+                      <Card key={card.id} card={card} colId={col.id}
+                        onDragStart={handleDragStart}
+                        onCardClick={(c, cid) => setDetailCard({ card: c, colId: cid })}
+                      />
+                    ))}
+                    {addingIn === col.id && <AddCardForm colId={col.id} onAdd={handleAdd} onCancel={() => setAddingIn(null)} />}
+                    {cards.length === 0 && addingIn !== col.id && (
+                      <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--r)', padding: '16px 12px', textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Tom</div>
+                    )}
+                  </>
                 )}
               </div>
             )
