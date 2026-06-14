@@ -18,21 +18,15 @@ export default function App() {
     const saved = sessionStorage.getItem('tl_page')
     return VALID_PAGES.includes(saved) ? saved : 'dashboard'
   })
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     sessionStorage.setItem('tl_page', page)
   }, [page])
 
   if (loading) return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg)', flexDirection: 'column', gap: 12
-    }}>
-      <div style={{
-        width: 36, height: 36, background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)',
-        borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--accent)', fontWeight: 800, fontSize: 14
-      }}>TL</div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', flexDirection: 'column', gap: 12 }}>
+      <div style={{ width: 36, height: 36, background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', fontWeight: 800, fontSize: 14 }}>TL</div>
       <div style={{ color: 'var(--text3)', fontSize: 13 }}>Loading…</div>
     </div>
   )
@@ -51,8 +45,8 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={page} onNavigate={setPage} />
-      <main className="main-content sidebar-open">
+      <Sidebar activePage={page} onNavigate={setPage} onOpenChange={setSidebarOpen} />
+      <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
         {pages[page] || pages.dashboard}
       </main>
     </div>
