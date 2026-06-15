@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -12,26 +12,53 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) loadSettings(session.user.id)
-      else setLoading(false)
+      if (session?.user) {
+        loadSettings(session.user.id)
+        fetchUnread(session.user.id)
+      } else setLoading(false)
     })
 
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) loadSettings(session.user.id)
-      else { setUserSettings({}); setLoading(false); setUnreadCount(0) }
+      if (session?.user) {
+        loadSettings(session.user.id)
+        fetchUnread(session.user.id)
+      } else {
+        setUserSettings({})
+        setLoading(false)
+        setUnreadCount(0)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
+  async function fetchUnread(userId) {
+    if (!userId) return
+    try {
+      const [{ data: published }, { data: reads }, { data: unreadInbox }] = await Promise.all([
+        sb.from('messages').select('id').eq('is_published', true),
+        sb.from('message_reads').select('message_id').eq('user_id', userId),
+        sb.from('inbox_messages')
+          .select('id, inbox_threads!inner(user_id)')
+          .eq('inbox_threads.user_id', userId)
+          .neq('sender_id', userId)
+          .is('read_at', null)
+      ])
+      const readIds = new Set((reads || []).map(r => r.message_id))
+      const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+      setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
+    } catch (e) {
+      console.warn('fetchUnread:', e)
+    }
+  }
+
   async function loadSettings(userId) {
     try {
-      const { data, error } = await sb.from('user_settings').select('settings').eq('user_id', userId).maybeSingle()
+      const { data } = await sb.from('user_settings').select('settings').eq('user_id', userId).maybeSingle()
       if (data?.settings) {
         setUserSettings(data.settings)
-      } else if (error || !data) {
-        // No row exists yet – create one silently
+      } else {
         await sb.from('user_settings').upsert({ user_id: userId, settings: {}, updated_at: new Date().toISOString() })
       }
     } catch (e) {
@@ -52,31 +79,9 @@ export function AuthProvider({ children }) {
     })
   }
 
-  const refreshUnread = useCallback(async (userId) => {
-    if (!userId) return
-    try {
-      // Always check both broadcast and inbox regardless of role
-      // Admin will have 0 broadcast unread naturally (they publish them)
-      const [{ data: published }, { data: reads }, { data: unreadInbox }] = await Promise.all([
-        sb.from('messages').select('id').eq('is_published', true),
-        sb.from('message_reads').select('message_id').eq('user_id', userId),
-        sb.from('inbox_messages')
-          .select('id, inbox_threads!inner(user_id)')
-          .eq('inbox_threads.user_id', userId)
-          .neq('sender_id', userId)
-          .is('read_at', null)
-      ])
-      const readIds = new Set((reads || []).map(r => r.message_id))
-      const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
-      setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
-    } catch (e) {
-      console.warn('refreshUnread:', e)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (user) refreshUnread(user.id)
-  }, [user, refreshUnread])
+  function refreshUnread(userId) {
+    fetchUnread(userId || user?.id)
+  }
 
   async function signOut() {
     await sb.auth.signOut()
