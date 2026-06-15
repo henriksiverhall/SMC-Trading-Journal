@@ -78,8 +78,20 @@ export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
           <>
             <div className="sidebar-section-label" style={{ marginTop: 8 }}>Admin</div>
             <button className={`nav-item ${activePage === 'admin' ? 'active' : ''}`}
-              onClick={() => onNavigate('admin')} title={!open ? 'Administration' : undefined}>
-              {icons.admin}<span className="nav-label">Administration</span>
+              onClick={() => onNavigate('admin')} title={!open ? 'Administration' : undefined}
+              style={{ position: 'relative' }}>
+              <span style={{ position: 'relative', flexShrink: 0 }}>
+                {icons.admin}
+                {unreadCount > 0 && !open && (
+                  <span style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '1px solid var(--bg2)' }} />
+                )}
+              </span>
+              <span className="nav-label">Administration</span>
+              {unreadCount > 0 && open && (
+                <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center', lineHeight: '16px' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
             <button className={`nav-item ${activePage === 'roadmap' ? 'active' : ''}`}
               onClick={() => onNavigate('roadmap')} title={!open ? 'Roadmap' : undefined}>
