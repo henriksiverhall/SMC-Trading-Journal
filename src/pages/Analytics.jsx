@@ -12,33 +12,56 @@ import {
 // ── TwelveData helpers ────────────────────────────────────────────────────────
 const _mdCache = {}
 
-async function fetchOHLC(symbol, datetime) {
-  const key = symbol + '_' + datetime
+// Convert ET time to UTC for TwelveData API
+// ET = UTC-5 (EST) or UTC-4 (EDT). Use UTC-4 as default (most of trading year)
+function etToUtc(dateStr, timeStr) {
+  const time = timeStr || '09:30'
+  const [h, m] = time.split(':').map(Number)
+  const utcH = h + 4 // EDT offset (UTC-4); adjust to +5 for EST if needed
+  const utcTime = `${String(utcH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+  return `${dateStr} ${utcTime}`
+}
+
+async function fetchOHLC(symbol, dateStr, timeStr) {
+  const startDt = etToUtc(dateStr, timeStr)
+  const key = symbol + '_' + startDt
   if (_mdCache[key]) return _mdCache[key]
   try {
-    const startDt = datetime.replace('T', ' ').substring(0, 16)
     const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=5min&start_date=${encodeURIComponent(startDt)}&outputsize=120&apikey=${TWELVE_KEY}`
     const res = await fetch(url)
     const data = await res.json()
-    if (data.status === 'error' || !data.values) return null
+    if (data.status === 'error' || !data.values) {
+      console.warn('TwelveData error for', symbol, startDt, ':', data.message || data.status)
+      return null
+    }
     _mdCache[key] = data.values
     return data.values
-  } catch { return null }
+  } catch (e) {
+    console.warn('TwelveData fetch failed:', e)
+    return null
+  }
 }
 
 async function calcMFE_MAE(trade) {
   if (!trade.entry || !trade.sl || !trade.date || !trade.direction) return null
   const sym = getTwelveSymbol(trade.symbol)
   if (!sym) return null
-  const dt = trade.date + 'T' + (trade.time || '09:30') + ':00'
-  const bars = await fetchOHLC(sym, dt)
+
+  const bars = await fetchOHLC(sym, trade.date, trade.time)
   if (!bars?.length) return null
 
-  const entryTime = new Date(dt).getTime()
+  // TwelveData returns UTC timestamps – convert entry time to UTC for comparison
+  const entryUtc = etToUtc(trade.date, trade.time)
+  const entryTime = new Date(entryUtc.replace(' ', 'T') + 'Z').getTime()
+
   const afterEntry = bars
-    .filter(b => new Date(b.datetime).getTime() >= entryTime)
+    .filter(b => new Date(b.datetime + ' UTC').getTime() >= entryTime - 300000) // 5min buffer
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
-  if (!afterEntry.length) return null
+
+  if (!afterEntry.length) {
+    console.warn('No bars after entry for', trade.symbol, trade.date, trade.time)
+    return null
+  }
 
   const isLong = trade.direction === 'Long'
   const risk = Math.abs(trade.entry - trade.sl)
@@ -114,17 +137,21 @@ function MFESection({ trades, onFetched }) {
   const [results, setResults] = useState([])
   const [fetchedAt, setFetchedAt] = useState(null)
 
-  const candidates = trades.filter(t => t.entry && t.sl && t.date && t.direction && getTwelveSymbol(t.symbol))
+  const candidates = trades.filter(t => t.entry && t.sl && t.date && t.direction)
 
   useEffect(() => {
-    const cached = candidates
-      .filter(t => t.custom_data?._mfe != null)
-      .map(t => ({ ...t, _mfe: t.custom_data._mfe, _mae: t.custom_data._mae }))
-    if (cached.length > 0) {
-      setResults(cached)
-      setFetchedAt(cached[0]?.custom_data?._mfe_fetched_at)
-      setStatus('done')
-      onFetched?.(cached)
+    // Always show ALL candidates, using cached MFE where available
+    const enriched = candidates.map(t => ({
+      ...t,
+      _mfe: t.custom_data?._mfe ?? null,
+      _mae: t.custom_data?._mae ?? null,
+    }))
+    setResults(enriched)
+    const anyFetched = enriched.filter(t => t._mfe != null)
+    if (anyFetched.length > 0) {
+      setFetchedAt(anyFetched[0]?.custom_data?._mfe_fetched_at)
+      setStatus('partial')
+      onFetched?.(enriched)
     }
   }, [trades.length])
 
@@ -132,21 +159,22 @@ function MFESection({ trades, onFetched }) {
     if (!candidates.length) return
     setStatus('loading')
     const now = new Date().toISOString()
-    const out = []
-    for (const t of candidates.slice(0, 20)) {
+    const enriched = [...candidates]
+    for (let i = 0; i < enriched.length; i++) {
+      const t = enriched[i]
+      const sym = getTwelveSymbol(t.symbol)
+      if (!sym) continue
       const md = await calcMFE_MAE(t)
       if (md) {
         const updated = { ...(t.custom_data || {}), _mfe: md.mfe, _mae: md.mae, _mfe_fetched_at: now }
         await sb.from('trades').update({ custom_data: updated }).eq('id', t.id)
-        out.push({ ...t, _mfe: md.mfe, _mae: md.mae })
+        enriched[i] = { ...t, _mfe: md.mfe, _mae: md.mae, custom_data: updated }
       }
     }
-    if (out.length) {
-      setResults(out)
-      setFetchedAt(now)
-      setStatus('done')
-      onFetched?.(out)
-    } else setStatus('error')
+    setResults(enriched)
+    setFetchedAt(now)
+    setStatus('done')
+    onFetched?.(enriched)
   }
 
   const avgMFE = results.length ? (results.reduce((a, t) => a + (t._mfe || 0), 0) / results.length).toFixed(2) : null
@@ -221,29 +249,18 @@ function MFESection({ trades, onFetched }) {
 
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
 function RROptimizer({ mfeResults, trades }) {
-  // Build enriched dataset:
-  // 1) Use mfeResults if MFE > 0 (real TwelveData)
-  // 2) Fall back to logged trade data as proxy:
-  //    - Win: MFE proxy = result (actual R achieved, conservative lower bound)
-  //    - Loss: MFE proxy = 0 (we don't know how far it went before stopping out)
-
   const buildDataset = () => {
-    // Prefer mfeResults with real MFE data
     const mfeMap = {}
     for (const t of (mfeResults || [])) {
-      if (t._mfe > 0) mfeMap[t.id] = t._mfe
+      if (t._mfe != null && t._mfe > 0) mfeMap[t.id] = t._mfe
     }
-
-    // Use filtered trades as base
     const base = trades.filter(t => t.result != null && t.entry && t.sl)
     return base.map(t => {
-      const risk = Math.abs(t.entry - (t.sl || t.entry))
-      // Real MFE from TwelveData if available and > 0
-      if (mfeMap[t.id]) return { ...t, _mfe: mfeMap[t.id] }
-      // Proxy: for wins, MFE >= result (it reached TP or actual exit)
-      if (t.outcome === 'W' && t.result > 0) return { ...t, _mfe: t.result }
-      // Loss: conservative, assume MFE = 0
-      return { ...t, _mfe: 0 }
+      if (mfeMap[t.id] != null) return { ...t, _mfe: mfeMap[t.id], _src: 'real' }
+      // Win proxy: price reached AT LEAST result R. Mark with sentinel so
+      // it counts at all RR levels <= result, but NOT above (unknown).
+      if (t.outcome === 'W' && t.result > 0) return { ...t, _mfe: t.result, _src: 'proxy_win' }
+      return { ...t, _mfe: 0, _src: 'proxy_loss' }
     })
   }
 
@@ -259,14 +276,17 @@ function RROptimizer({ mfeResults, trades }) {
     </div>
   )
 
-  const usingProxy = (mfeResults || []).filter(t => t._mfe > 0).length < valid.length
+  const hasRealMFE = dataset.some(t => t._src === 'real')
   const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0]
-
   const winningTrades = valid.filter(t => t.outcome === 'W')
   const currentAvgRR = winningTrades.length
     ? parseFloat((winningTrades.reduce((a, t) => a + (t.result || 0), 0) / winningTrades.length).toFixed(2))
     : 0
 
+  // Key insight: proxy wins have _mfe = result R (lower bound).
+  // A trade "reaches" RR level X if _mfe >= X.
+  // This means wins with result=3R count for 0.5R-3R but NOT 3.5R+ (honest).
+  // Real MFE data from TwelveData would show actual excursion beyond TP.
   const simData = rrLevels.map(rr => {
     const wins = valid.filter(t => t._mfe >= rr)
     const wr = wins.length / valid.length
@@ -290,7 +310,7 @@ function RROptimizer({ mfeResults, trades }) {
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
-        {usingProxy && (
+        {!hasRealMFE && (
           <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
             ⚠ MFE-data saknas eller är 0 för vissa trades. Analys baseras på loggat utfall (R) som konservativ undre gräns – hämta MFE-data ovan för exaktare resultat.
           </div>
