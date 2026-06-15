@@ -9,9 +9,10 @@ import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import Roadmap from './pages/Roadmap'
 import Changelog from './pages/Changelog'
+import Messages from './pages/Messages'
 import Sidebar from './components/Sidebar'
 
-const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog']
+const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages']
 
 export default function App() {
   const { user, loading, isAdmin } = useAuth()
@@ -43,6 +44,7 @@ export default function App() {
     admin:     <Admin />,
     roadmap:   <Roadmap />,
     changelog: isAdmin ? <Changelog /> : <Dashboard onNavigate={setPage} />,
+    messages:  <Messages />,
   }
 
   return (
