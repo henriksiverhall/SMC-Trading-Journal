@@ -3,6 +3,7 @@ import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatR, gradeColor, WORKER_URL, TWELVE_KEY, getTwelveSymbol } from '../lib/constants'
 import Topbar from '../components/Topbar'
+import DragGrid from '../components/DragGrid'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell, ReferenceLine
@@ -481,64 +482,81 @@ export default function Analytics() {
           <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
         </div>
 
-        {/* Stats */}
-        <div className="stats-grid" style={{ marginBottom: 20 }}>
-          <StatCard label="Trades"       value={filtered.length}                          sub={`${wins.length}V · ${losses.length}F`} />
-          <StatCard label="Win Rate"     value={winRate.toFixed(1) + '%'}                 cls={winRate >= 50 ? 'positive' : 'negative'} />
-          <StatCard label="Total R"      value={(totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R'} cls={totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : ''} />
-          <StatCard label="Profit Factor" value={pf.toFixed(2)}                           cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
-          <StatCard label="Avg Vinst"    value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
+  const widgets = [
+    {
+      id: 'stats',
+      title: 'Statistik',
+      span: 2,
+      content: (
+        <div className="stats-grid">
+          <StatCard label="Trades"        value={filtered.length}                                      sub={`${wins.length}V · ${losses.length}F`} />
+          <StatCard label="Win Rate"      value={winRate.toFixed(1) + '%'}                             cls={winRate >= 50 ? 'positive' : 'negative'} />
+          <StatCard label="Total R"       value={(totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R'}   cls={totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : ''} />
+          <StatCard label="Profit Factor" value={pf.toFixed(2)}                                        cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
+          <StatCard label="Avg Vinst"     value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
         </div>
-
-        {/* Equity Curve */}
-        <EquityCurve trades={filtered} />
-
-        {/* Grade + Emotion */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-          {gradeData.length > 0 && (
-            <div className="card">
-              <div className="card-header"><div className="card-title">Win Rate per Grade</div></div>
-              <div className="card-body">
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={gradeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="grade" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
-                    <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} domain={[0, 100]} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="wr" name="Win Rate" radius={[4, 4, 0, 0]}>
-                      {gradeData.map(e => <Cell key={e.grade} fill={gradeColor(e.grade)} fillOpacity={0.8} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-          {emotionData.length > 0 && (
-            <div className="card">
-              <div className="card-header"><div className="card-title">Win Rate per Emotion</div></div>
-              <div className="card-body">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {emotionData.map(e => (
-                    <div key={e.emotion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 110, fontSize: 12, color: 'var(--text2)' }}>{e.emotion}</div>
-                      <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 4, width: e.wr + '%', background: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', transition: 'width 0.5s ease' }} />
-                      </div>
-                      <div style={{ width: 60, fontSize: 12, fontFamily: 'var(--mono)', color: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', textAlign: 'right' }}>
-                        {e.wr}% <span style={{ color: 'var(--text4)' }}>({e.trades})</span>
-                      </div>
-                    </div>
-                  ))}
+      )
+    },
+    {
+      id: 'equity',
+      title: 'Equity Curve',
+      span: 2,
+      content: <EquityCurve trades={filtered} />
+    },
+    {
+      id: 'grade',
+      title: 'Win Rate per Grade',
+      content: gradeData.length > 0 ? (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Win Rate per Grade</div></div>
+          <div className="card-body">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={gradeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="grade" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
+                <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="wr" name="Win Rate" radius={[4, 4, 0, 0]}>
+                  {gradeData.map(e => <Cell key={e.grade} fill={gradeColor(e.grade)} fillOpacity={0.8} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : <div className="card"><div className="card-body" style={{ color: 'var(--text3)', fontSize: 13 }}>Inga grade-data ännu.</div></div>
+    },
+    {
+      id: 'emotion',
+      title: 'Win Rate per Emotion',
+      content: emotionData.length > 0 ? (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Win Rate per Emotion</div></div>
+          <div className="card-body">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {emotionData.map(e => (
+                <div key={e.emotion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 110, fontSize: 12, color: 'var(--text2)' }}>{e.emotion}</div>
+                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 4, width: e.wr + '%', background: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', transition: 'width 0.5s ease' }} />
+                  </div>
+                  <div style={{ width: 60, fontSize: 12, fontFamily: 'var(--mono)', color: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', textAlign: 'right' }}>
+                    {e.wr}% <span style={{ color: 'var(--text4)' }}>({e.trades})</span>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
-
-        {/* Strategy breakdown */}
-        {stratData.length > 1 && (
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="card-header"><div className="card-title">Strategi-breakdown</div></div>
+      ) : <div className="card"><div className="card-body" style={{ color: 'var(--text3)', fontSize: 13 }}>Inga emotion-data ännu.</div></div>
+    },
+    {
+      id: 'strategy',
+      title: 'Strategi-breakdown',
+      span: 2,
+      content: (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Strategi-breakdown</div></div>
+          {stratData.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table className="journal-table">
                 <thead><tr><th>Strategi</th><th>Trades</th><th>Win Rate</th><th>Total R</th></tr></thead>
@@ -554,17 +572,63 @@ export default function Analytics() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          ) : <div className="card-body" style={{ color: 'var(--text3)', fontSize: 13 }}>Inga strategi-data ännu.</div>}
+        </div>
+      )
+    },
+    {
+      id: 'mfe',
+      title: 'MFE / MAE',
+      span: 2,
+      content: <MFESection trades={filtered} />
+    },
+    {
+      id: 'rr',
+      title: 'RR-optimerare',
+      span: 2,
+      content: <RROptimizer trades={filtered} />
+    },
+    {
+      id: 'ai',
+      title: 'AI-analys',
+      span: 2,
+      content: <AIAnalysis trades={filtered} aiEnabled={aiEnabled} />
+    },
+  ]
 
-        {/* MFE/MAE */}
-        <MFESection trades={filtered} />
+  return (
+    <div style={{ flex: 1 }}>
+      <Topbar title="Analytics" />
+      <div className="page-content">
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+          <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+            value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
+            <option value="">Alla utfall</option>
+            <option value="W">Vinster</option>
+            <option value="L">Förluster</option>
+            <option value="BE">Break Even</option>
+          </select>
+          <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+            value={filter.direction} onChange={e => setFilter(f => ({ ...f, direction: e.target.value }))}>
+            <option value="">Alla riktningar</option>
+            <option value="Long">Long</option>
+            <option value="Short">Short</option>
+          </select>
+          {strategies.length > 0 && (
+            <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+              value={filter.strategy} onChange={e => setFilter(f => ({ ...f, strategy: e.target.value }))}>
+              <option value="">Alla strategier</option>
+              {strategies.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
+          {(filter.outcome || filter.direction || filter.strategy) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '' })}>✕ Rensa</button>
+          )}
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
+        </div>
 
-        {/* RR Optimizer */}
-        <RROptimizer trades={filtered} />
-
-        {/* AI Analysis */}
-        <AIAnalysis trades={filtered} aiEnabled={aiEnabled} />
+        <DragGrid pageKey="analytics" widgets={widgets} columns={2} />
 
         {withR.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontSize: 14 }}>
