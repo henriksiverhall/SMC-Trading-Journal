@@ -220,30 +220,54 @@ function MFESection({ trades, onFetched }) {
 }
 
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
-function RROptimizer({ mfeResults }) {
-  // mfeResults = array of trades with _mfe and _mae from MFESection
-  const valid = (mfeResults || []).filter(t => t._mfe != null && t.result != null)
+function RROptimizer({ mfeResults, trades }) {
+  // Build enriched dataset:
+  // 1) Use mfeResults if MFE > 0 (real TwelveData)
+  // 2) Fall back to logged trade data as proxy:
+  //    - Win: MFE proxy = result (actual R achieved, conservative lower bound)
+  //    - Loss: MFE proxy = 0 (we don't know how far it went before stopping out)
+
+  const buildDataset = () => {
+    // Prefer mfeResults with real MFE data
+    const mfeMap = {}
+    for (const t of (mfeResults || [])) {
+      if (t._mfe > 0) mfeMap[t.id] = t._mfe
+    }
+
+    // Use filtered trades as base
+    const base = trades.filter(t => t.result != null && t.entry && t.sl)
+    return base.map(t => {
+      const risk = Math.abs(t.entry - (t.sl || t.entry))
+      // Real MFE from TwelveData if available and > 0
+      if (mfeMap[t.id]) return { ...t, _mfe: mfeMap[t.id] }
+      // Proxy: for wins, MFE >= result (it reached TP or actual exit)
+      if (t.outcome === 'W' && t.result > 0) return { ...t, _mfe: t.result }
+      // Loss: conservative, assume MFE = 0
+      return { ...t, _mfe: 0 }
+    })
+  }
+
+  const dataset = buildDataset()
+  const valid = dataset.filter(t => t._mfe != null)
 
   if (!valid.length) return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
-        <p style={{ fontSize: 13, color: 'var(--text3)' }}>Kräver MFE-data. Hämta MFE/MAE-data ovan först.</p>
+        <p style={{ fontSize: 13, color: 'var(--text3)' }}>Logga trades med entry, SL och utfall för att se RR-analys.</p>
       </div>
     </div>
   )
 
-  // RR levels 0.5 to 8.0
+  const usingProxy = (mfeResults || []).filter(t => t._mfe > 0).length < valid.length
   const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0]
 
-  // Current avg RR from actual winning trades
-  const winningTrades = valid.filter(t => t.result > 0)
+  const winningTrades = valid.filter(t => t.outcome === 'W')
   const currentAvgRR = winningTrades.length
-    ? parseFloat((winningTrades.reduce((a, t) => a + t.result, 0) / winningTrades.length).toFixed(2))
+    ? parseFloat((winningTrades.reduce((a, t) => a + (t.result || 0), 0) / winningTrades.length).toFixed(2))
     : 0
 
   const simData = rrLevels.map(rr => {
-    // A trade is a "win" at this RR if MFE reached the target
     const wins = valid.filter(t => t._mfe >= rr)
     const wr = wins.length / valid.length
     const expectancy = parseFloat((wr * rr - (1 - wr) * 1).toFixed(3))
@@ -266,12 +290,17 @@ function RROptimizer({ mfeResults }) {
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
+        {usingProxy && (
+          <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
+            ⚠ MFE-data saknas eller är 0 för vissa trades. Analys baseras på loggat utfall (R) som konservativ undre gräns – hämta MFE-data ovan för exaktare resultat.
+          </div>
+        )}
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, padding: '10px 14px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', lineHeight: 1.6 }}>
-          Baserat på {valid.length} trades med MFE-data. Optimalt RR är{' '}
+          Baserat på {valid.length} trades. Optimalt RR är{' '}
           <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong>{' '}
-          (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, WR {best['Win Rate']}%).
+          (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, simulerad WR {best['Win Rate']}%).
           {currentAvgRR > 0 && best.rrVal !== current.rrVal && (
-            <> Ditt nuvarande snitt-RR är ~{currentAvgRR}R – {best.rrVal > currentAvgRR ? `överväg att öka till ${best.rr}` : `${best.rr} ger bäst expectancy`}.</>
+            <> Nuvarande snitt-RR: ~{currentAvgRR}R – {best.rrVal > currentAvgRR ? `överväg att öka till ${best.rr}` : `${best.rr} ger bäst expectancy`}.</>
           )}
         </div>
 
@@ -306,7 +335,7 @@ function RROptimizer({ mfeResults }) {
                   <td className="mono" style={{ color: d.Expectancy > 0 ? 'var(--green)' : 'var(--red)' }}>
                     {d.Expectancy > 0 ? '+' : ''}{d.Expectancy}R
                   </td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {d.rr === best.rr && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}
                     {d.rrVal === currentAvgRR && d.rr !== best.rr && <span style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 600 }}>← nu</span>}
                   </td>
@@ -579,7 +608,7 @@ export default function Analytics() {
       id: 'rr',
       title: 'RR-optimerare',
       span: 2,
-      content: <RROptimizer mfeResults={mfeResults} />
+      content: <RROptimizer mfeResults={mfeResults} trades={filtered} />
     },
     {
       id: 'ai',
