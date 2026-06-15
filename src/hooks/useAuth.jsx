@@ -27,8 +27,13 @@ export function AuthProvider({ children }) {
 
   async function loadSettings(userId) {
     try {
-      const { data } = await sb.from('user_settings').select('settings').eq('user_id', userId).single()
-      if (data?.settings) setUserSettings(data.settings)
+      const { data, error } = await sb.from('user_settings').select('settings').eq('user_id', userId).maybeSingle()
+      if (data?.settings) {
+        setUserSettings(data.settings)
+      } else if (error || !data) {
+        // No row exists yet – create one silently
+        await sb.from('user_settings').upsert({ user_id: userId, settings: {}, updated_at: new Date().toISOString() })
+      }
     } catch (e) {
       console.warn('loadSettings:', e)
     } finally {
@@ -50,33 +55,20 @@ export function AuthProvider({ children }) {
   const refreshUnread = useCallback(async (userId) => {
     if (!userId) return
     try {
-      const { data: flagData } = await sb.from('admin_flags').select('is_admin').eq('user_id', userId).maybeSingle()
-      const isAdminUser = flagData?.is_admin === true
-
-      if (isAdminUser) {
-        // Admin: count inbox messages from users not yet read by admin
-        const { data: unreadAdmin } = await sb
-          .from('inbox_messages')
-          .select('id')
-          .neq('sender_id', userId)
-          .is('read_at', null)
-        setUnreadCount((unreadAdmin || []).length)
-      } else {
-        // User: unread broadcast + unread inbox replies from admin
-        const { data: published } = await sb.from('messages').select('id').eq('is_published', true)
-        const { data: reads } = await sb.from('message_reads').select('message_id').eq('user_id', userId)
-        const readIds = new Set((reads || []).map(r => r.message_id))
-        const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
-
-        const { data: unreadInbox } = await sb
-          .from('inbox_messages')
+      // Always check both broadcast and inbox regardless of role
+      // Admin will have 0 broadcast unread naturally (they publish them)
+      const [{ data: published }, { data: reads }, { data: unreadInbox }] = await Promise.all([
+        sb.from('messages').select('id').eq('is_published', true),
+        sb.from('message_reads').select('message_id').eq('user_id', userId),
+        sb.from('inbox_messages')
           .select('id, inbox_threads!inner(user_id)')
           .eq('inbox_threads.user_id', userId)
           .neq('sender_id', userId)
           .is('read_at', null)
-
-        setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
-      }
+      ])
+      const readIds = new Set((reads || []).map(r => r.message_id))
+      const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+      setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
     } catch (e) {
       console.warn('refreshUnread:', e)
     }
