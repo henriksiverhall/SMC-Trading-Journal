@@ -3,7 +3,7 @@ import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Topbar from '../components/Topbar'
 
-const MAX_WIDTH = 600
+const MAX_WIDTH = 860
 
 function formatTime(iso) {
   if (!iso) return ''
@@ -283,7 +283,7 @@ export default function Messages() {
     <div style={{ flex: 1 }}>
       <Topbar title="Meddelanden" />
       <div className="page-content">
-        <div style={{ maxWidth: MAX_WIDTH, margin: '0 auto' }}>
+        <div style={{ maxWidth: MAX_WIDTH }}>
 
           <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
             {[
