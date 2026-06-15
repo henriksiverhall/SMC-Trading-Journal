@@ -50,12 +50,14 @@ export function AuthProvider({ children }) {
   const refreshUnread = useCallback(async (userId) => {
     if (!userId) return
     try {
-      const isAdminUser = (await sb.from('admin_flags').select('is_admin').eq('user_id', userId).single())?.data?.is_admin
+      const { data: flagData } = await sb.from('admin_flags').select('is_admin').eq('user_id', userId).maybeSingle()
+      const isAdminUser = flagData?.is_admin === true
 
       if (isAdminUser) {
-        // Admin: count unread messages from users (not read by admin)
-        const { data: unreadAdmin } = await sb.from('inbox_messages')
-          .select('id, sender_id, inbox_threads!inner(user_id)')
+        // Admin: count inbox messages from users not yet read by admin
+        const { data: unreadAdmin } = await sb
+          .from('inbox_messages')
+          .select('id')
           .neq('sender_id', userId)
           .is('read_at', null)
         setUnreadCount((unreadAdmin || []).length)
@@ -68,7 +70,7 @@ export function AuthProvider({ children }) {
 
         const { data: unreadInbox } = await sb
           .from('inbox_messages')
-          .select('id, thread_id, sender_id, inbox_threads!inner(user_id)')
+          .select('id, inbox_threads!inner(user_id)')
           .eq('inbox_threads.user_id', userId)
           .neq('sender_id', userId)
           .is('read_at', null)
