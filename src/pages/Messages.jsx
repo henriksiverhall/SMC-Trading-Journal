@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Topbar from '../components/Topbar'
+
+const MAX_WIDTH = 600
 
 function formatTime(iso) {
   if (!iso) return ''
@@ -14,19 +16,8 @@ function formatTime(iso) {
   return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
-function Badge({ count }) {
-  if (!count) return null
-  return (
-    <span style={{
-      background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 700,
-      borderRadius: 20, padding: '1px 6px', minWidth: 18, textAlign: 'center',
-      lineHeight: '16px', display: 'inline-block'
-    }}>{count > 99 ? '99+' : count}</span>
-  )
-}
-
 // ── Broadcast tab ─────────────────────────────────────────────────────────────
-function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
+function BroadcastTab({ user, refreshUnread }) {
   const [messages, setMessages] = useState([])
   const [readIds, setReadIds] = useState(new Set())
   const [expanded, setExpanded] = useState(null)
@@ -39,12 +30,8 @@ function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
       sb.from('messages').select('*').eq('is_published', true).order('published_at', { ascending: false }),
       sb.from('message_reads').select('message_id').eq('user_id', user.id)
     ])
-    const msgs_ = msgs || []
-    const ids = new Set((reads || []).map(r => r.message_id))
-    setMessages(msgs_)
-    setReadIds(ids)
-    const unread = msgs_.filter(m => !ids.has(m.id)).length
-    onUnreadChange(unread)
+    setMessages(msgs || [])
+    setReadIds(new Set((reads || []).map(r => r.message_id)))
     setLoading(false)
   }
 
@@ -53,9 +40,7 @@ function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
     await sb.from('message_reads').upsert({ user_id: user.id, message_id: msgId })
     const next = new Set([...readIds, msgId])
     setReadIds(next)
-    // Update badge counts immediately
-    const unread = messages.filter(m => !next.has(m.id)).length
-    onUnreadChange(unread)
+    // Trigger global sidebar badge refresh
     refreshUnread(user.id)
   }
 
@@ -66,9 +51,7 @@ function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
 
   if (loading) return <div style={{ padding: 32, color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
   if (!messages.length) return (
-    <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-      Inga meddelanden ännu.
-    </div>
+    <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga meddelanden ännu.</div>
   )
 
   return (
@@ -82,7 +65,6 @@ function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
               background: 'var(--bg2)', border: `1px solid ${!isRead ? 'rgba(0,212,170,0.3)' : 'var(--border)'}`,
               borderRadius: 'var(--r2)', padding: '14px 18px', cursor: 'pointer',
               transition: 'border-color 0.15s',
-              boxShadow: !isRead ? '0 0 0 1px rgba(0,212,170,0.08)' : 'none',
             }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = !isRead ? 'rgba(0,212,170,0.3)' : 'var(--border)'}
@@ -106,7 +88,7 @@ function BroadcastTab({ user, onUnreadChange, refreshUnread }) {
 }
 
 // ── Inbox tab ─────────────────────────────────────────────────────────────────
-function InboxTab({ user, onUnreadChange, refreshUnread }) {
+function InboxTab({ user, refreshUnread }) {
   const [threads, setThreads] = useState([])
   const [activeThread, setActiveThread] = useState(null)
   const [threadMessages, setThreadMessages] = useState([])
@@ -118,24 +100,13 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
   const [sending, setSending] = useState(false)
 
   useEffect(() => { loadThreads() }, [])
-  useEffect(() => { if (activeThread) loadMessages(activeThread.id) }, [activeThread])
+  useEffect(() => { if (activeThread) loadMessages(activeThread.id) }, [activeThread?.id])
 
   async function loadThreads() {
     const { data } = await sb.from('inbox_threads')
       .select('*').eq('user_id', user.id).order('updated_at', { ascending: false })
     setThreads(data || [])
     setLoading(false)
-    // Count unread by fetching unread messages
-    await calcInboxUnread()
-  }
-
-  async function calcInboxUnread() {
-    const { data } = await sb.from('inbox_messages')
-      .select('id, thread_id, sender_id, inbox_threads!inner(user_id)')
-      .eq('inbox_threads.user_id', user.id)
-      .neq('sender_id', user.id)
-      .is('read_at', null)
-    onUnreadChange((data || []).length)
   }
 
   async function loadMessages(threadId) {
@@ -143,17 +114,15 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
       .select('*').eq('thread_id', threadId).order('created_at', { ascending: true })
     setThreadMessages(data || [])
 
-    // Mark unread messages from admin as read + update state locally
+    // Mark unread admin messages as read
     const unread = (data || []).filter(m => m.sender_id !== user.id && !m.read_at)
     if (unread.length > 0) {
-      await Promise.all(
-        unread.map(m => sb.from('inbox_messages').update({ read_at: new Date().toISOString() }).eq('id', m.id))
-      )
-      // Update local state so plupp disappears immediately
+      await Promise.all(unread.map(m =>
+        sb.from('inbox_messages').update({ read_at: new Date().toISOString() }).eq('id', m.id)
+      ))
       setThreadMessages(prev => prev.map(m =>
         unread.find(u => u.id === m.id) ? { ...m, read_at: new Date().toISOString() } : m
       ))
-      await calcInboxUnread()
       refreshUnread(user.id)
     }
   }
@@ -188,20 +157,17 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
 
   if (activeThread) return (
     <div>
-      <button onClick={() => { setActiveThread(null); setThreadMessages([]); loadThreads() }}
+      <button onClick={() => { setActiveThread(null); setThreadMessages([]) }}
         style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, fontFamily: 'var(--font)' }}>
         ← Tillbaka
       </button>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{activeThread.subject}</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-            background: activeThread.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)',
-            color: activeThread.status === 'open' ? 'var(--green)' : 'var(--text4)'
-          }}>{activeThread.status === 'open' ? '● Öppet' : '✓ Stängt'}</span>
-          <span style={{ fontSize: 11, color: 'var(--text4)' }}>{formatTime(activeThread.created_at)}</span>
-        </div>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+          background: activeThread.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)',
+          color: activeThread.status === 'open' ? 'var(--green)' : 'var(--text4)'
+        }}>{activeThread.status === 'open' ? '● Öppet' : '✓ Stängt'}</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -210,7 +176,7 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
               <div style={{
-                maxWidth: '80%', padding: '10px 14px',
+                maxWidth: '70%', padding: '10px 14px',
                 background: isMe ? 'var(--accent-dim)' : 'var(--bg3)',
                 border: `1px solid ${isMe ? 'rgba(0,212,170,0.2)' : 'var(--border)'}`,
                 borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
@@ -236,9 +202,7 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
           </button>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: 'var(--text4)', textAlign: 'center', padding: '12px 0' }}>
-          Detta ärende är stängt.
-        </div>
+        <div style={{ fontSize: 12, color: 'var(--text4)', textAlign: 'center', padding: '12px 0' }}>Detta ärende är stängt.</div>
       )}
     </div>
   )
@@ -256,16 +220,14 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>Skapa support-ärende</div>
           <div className="form-group" style={{ marginBottom: 10 }}>
             <label className="form-label">Ämne</label>
-            <input className="form-control" placeholder="Beskriv ditt ärende kort…"
-              value={newSubject} onChange={e => setNewSubject(e.target.value)} />
+            <input className="form-control" placeholder="Beskriv ditt ärende kort…" value={newSubject} onChange={e => setNewSubject(e.target.value)} />
           </div>
           <div className="form-group" style={{ marginBottom: 12 }}>
             <label className="form-label">Meddelande</label>
             <textarea className="form-control" rows={4} placeholder="Beskriv ditt ärende i detalj…"
               value={newBody} onChange={e => setNewBody(e.target.value)} style={{ resize: 'vertical' }} />
           </div>
-          <button className="btn btn-primary" onClick={createThread}
-            disabled={sending || !newSubject.trim() || !newBody.trim()}>
+          <button className="btn btn-primary" onClick={createThread} disabled={sending || !newSubject.trim() || !newBody.trim()}>
             {sending ? 'Skickar…' : 'Skicka ärende'}
           </button>
         </div>
@@ -281,9 +243,9 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
           {threads.map(t => (
             <div key={t.id} onClick={() => setActiveThread(t)}
               style={{
-                background: 'var(--bg2)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r2)', padding: '12px 16px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
+                background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)',
+                padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                transition: 'border-color 0.15s',
               }}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -310,55 +272,41 @@ function InboxTab({ user, onUnreadChange, refreshUnread }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Messages() {
-  const { user, refreshUnread } = useAuth()
+  const { user, unreadCount, refreshUnread } = useAuth()
   const [tab, setTab] = useState('broadcast')
-  const [broadcastUnread, setBroadcastUnread] = useState(0)
-  const [inboxUnread, setInboxUnread] = useState(0)
+
+  // Derive tab-level unread from global count on mount
+  // We don't maintain separate per-tab counts here – sidebar badge is the source of truth
+  // Tab badges are shown only if there's something unread globally
 
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Meddelanden" />
-      <div className="page-content" style={{ maxWidth: 720 }}>
+      <div className="page-content">
+        <div style={{ maxWidth: MAX_WIDTH, margin: '0 auto' }}>
 
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
-          {[
-            { id: 'broadcast', label: 'Allmänt',      count: broadcastUnread },
-            { id: 'inbox',     label: 'Mina ärenden', count: inboxUnread },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-                color: tab === t.id ? 'var(--text)' : 'var(--text3)',
-                padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8,
-                borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`,
-                marginBottom: -1, transition: 'color 0.15s',
-              }}>
-              {t.label}
-              {t.count > 0 && (
-                <span style={{
-                  background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 700,
-                  borderRadius: 20, padding: '1px 6px', lineHeight: '16px'
-                }}>{t.count}</span>
-              )}
-            </button>
-          ))}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
+            {[
+              { id: 'broadcast', label: 'Allmänt' },
+              { id: 'inbox',     label: 'Mina ärenden' },
+            ].map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
+                  color: tab === t.id ? 'var(--text)' : 'var(--text3)',
+                  padding: '10px 16px',
+                  borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`,
+                  marginBottom: -1, transition: 'color 0.15s',
+                }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'broadcast' && <BroadcastTab user={user} refreshUnread={refreshUnread} />}
+          {tab === 'inbox'     && <InboxTab user={user} refreshUnread={refreshUnread} />}
         </div>
-
-        {tab === 'broadcast' && (
-          <BroadcastTab
-            user={user}
-            onUnreadChange={setBroadcastUnread}
-            refreshUnread={refreshUnread}
-          />
-        )}
-        {tab === 'inbox' && (
-          <InboxTab
-            user={user}
-            onUnreadChange={setInboxUnread}
-            refreshUnread={refreshUnread}
-          />
-        )}
       </div>
     </div>
   )
