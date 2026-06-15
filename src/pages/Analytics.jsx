@@ -109,21 +109,22 @@ function EquityCurve({ trades }) {
 }
 
 // ── MFE/MAE Section ───────────────────────────────────────────────────────────
-function MFESection({ trades }) {
-  const [status, setStatus] = useState('idle') // idle | loading | done | error
+function MFESection({ trades, onFetched }) {
+  const [status, setStatus] = useState('idle')
   const [results, setResults] = useState([])
   const [fetchedAt, setFetchedAt] = useState(null)
 
   const candidates = trades.filter(t => t.entry && t.sl && t.date && t.direction && getTwelveSymbol(t.symbol))
 
   useEffect(() => {
-    // Load from cache on mount
-    const cached = candidates.filter(t => t.custom_data?._mfe != null)
+    const cached = candidates
+      .filter(t => t.custom_data?._mfe != null)
       .map(t => ({ ...t, _mfe: t.custom_data._mfe, _mae: t.custom_data._mae }))
     if (cached.length > 0) {
       setResults(cached)
       setFetchedAt(cached[0]?.custom_data?._mfe_fetched_at)
       setStatus('done')
+      onFetched?.(cached)
     }
   }, [trades.length])
 
@@ -140,8 +141,12 @@ function MFESection({ trades }) {
         out.push({ ...t, _mfe: md.mfe, _mae: md.mae })
       }
     }
-    if (out.length) { setResults(out); setFetchedAt(now); setStatus('done') }
-    else setStatus('error')
+    if (out.length) {
+      setResults(out)
+      setFetchedAt(now)
+      setStatus('done')
+      onFetched?.(out)
+    } else setStatus('error')
   }
 
   const avgMFE = results.length ? (results.reduce((a, t) => a + (t._mfe || 0), 0) / results.length).toFixed(2) : null
@@ -215,9 +220,11 @@ function MFESection({ trades }) {
 }
 
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
-function RROptimizer({ trades }) {
-  const withMFE = trades.filter(t => t.custom_data?._mfe != null && t.result != null && t.entry && t.sl)
-  if (!withMFE.length) return (
+function RROptimizer({ mfeResults }) {
+  // mfeResults = array of trades with _mfe and _mae from MFESection
+  const valid = (mfeResults || []).filter(t => t._mfe != null && t.result != null)
+
+  if (!valid.length) return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
@@ -226,12 +233,19 @@ function RROptimizer({ trades }) {
     </div>
   )
 
-  const rrLevels = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
-  const currentAvgRR = parseFloat((withMFE.filter(t => t.result > 0).reduce((a, t) => a + t.result, 0) / Math.max(withMFE.filter(t => t.result > 0).length, 1)).toFixed(2))
+  // RR levels 0.5 to 8.0
+  const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0]
+
+  // Current avg RR from actual winning trades
+  const winningTrades = valid.filter(t => t.result > 0)
+  const currentAvgRR = winningTrades.length
+    ? parseFloat((winningTrades.reduce((a, t) => a + t.result, 0) / winningTrades.length).toFixed(2))
+    : 0
 
   const simData = rrLevels.map(rr => {
-    const wins = withMFE.filter(t => (t.custom_data._mfe || 0) >= rr)
-    const wr = wins.length / withMFE.length
+    // A trade is a "win" at this RR if MFE reached the target
+    const wins = valid.filter(t => t._mfe >= rr)
+    const wr = wins.length / valid.length
     const expectancy = parseFloat((wr * rr - (1 - wr) * 1).toFixed(3))
     return {
       rr: rr + 'R',
@@ -239,34 +253,40 @@ function RROptimizer({ trades }) {
       'Win Rate': parseFloat((wr * 100).toFixed(1)),
       Expectancy: expectancy,
       wins: wins.length,
-      total: withMFE.length,
+      total: valid.length,
     }
   })
 
-  const best = simData.reduce((a, b) => b.Expectancy > a.Expectancy ? b : a)
-  const current = simData.reduce((a, b) => Math.abs(b.rrVal - currentAvgRR) < Math.abs(a.rrVal - currentAvgRR) ? b : a)
+  const best    = simData.reduce((a, b) => b.Expectancy > a.Expectancy ? b : a)
+  const current = simData.reduce((a, b) =>
+    Math.abs(b.rrVal - currentAvgRR) < Math.abs(a.rrVal - currentAvgRR) ? b : a
+  )
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, padding: '10px 14px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', lineHeight: 1.6 }}>
-          Baserat på {withMFE.length} trades med MFE-data: optimalt RR är <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong> (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R per trade).
-          {best.rrVal !== current.rrVal && (
-            <> Ditt nuvarande snitt-RR är ~{currentAvgRR}R – {best.Expectancy > current.Expectancy ? `öka till ${best.rr} för bättre expectancy` : 'du är nära optimalt'}.</>
+          Baserat på {valid.length} trades med MFE-data. Optimalt RR är{' '}
+          <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong>{' '}
+          (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, WR {best['Win Rate']}%).
+          {currentAvgRR > 0 && best.rrVal !== current.rrVal && (
+            <> Ditt nuvarande snitt-RR är ~{currentAvgRR}R – {best.rrVal > currentAvgRR ? `överväg att öka till ${best.rr}` : `${best.rr} ger bäst expectancy`}.</>
           )}
         </div>
 
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={220}>
           <BarChart data={simData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="rr" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
+            <XAxis dataKey="rr" stroke="var(--text4)" tick={{ fontSize: 10, fill: 'var(--text4)' }} />
             <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="var(--border2)" />
             <Bar dataKey="Expectancy" name="Expectancy" radius={[4, 4, 0, 0]}>
               {simData.map(d => (
-                <Cell key={d.rr} fill={d.rr === best.rr ? 'var(--accent)' : d.Expectancy > 0 ? 'var(--green)' : 'var(--red)'} fillOpacity={0.8} />
+                <Cell key={d.rr}
+                  fill={d.rr === best.rr ? 'var(--accent)' : d.Expectancy > 0 ? 'var(--green)' : 'var(--red)'}
+                  fillOpacity={0.85} />
               ))}
             </Bar>
           </BarChart>
@@ -275,7 +295,7 @@ function RROptimizer({ trades }) {
         <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="journal-table">
             <thead><tr>
-              <th>RR</th><th>Wins</th><th>Win Rate</th><th>Expectancy/trade</th><th></th>
+              <th>RR-nivå</th><th>Trades som nådde dit</th><th>Simulerad WR</th><th>Expectancy/trade</th><th></th>
             </tr></thead>
             <tbody>
               {simData.map(d => (
@@ -283,8 +303,13 @@ function RROptimizer({ trades }) {
                   <td className="mono" style={{ fontWeight: d.rr === best.rr ? 700 : 400 }}>{d.rr}</td>
                   <td className="mono">{d.wins}/{d.total}</td>
                   <td className="mono" style={{ color: d['Win Rate'] >= 50 ? 'var(--green)' : 'var(--red)' }}>{d['Win Rate']}%</td>
-                  <td className="mono" style={{ color: d.Expectancy > 0 ? 'var(--green)' : 'var(--red)' }}>{d.Expectancy > 0 ? '+' : ''}{d.Expectancy}R</td>
-                  <td>{d.rr === best.rr && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>OPTIMALT</span>}</td>
+                  <td className="mono" style={{ color: d.Expectancy > 0 ? 'var(--green)' : 'var(--red)' }}>
+                    {d.Expectancy > 0 ? '+' : ''}{d.Expectancy}R
+                  </td>
+                  <td>
+                    {d.rr === best.rr && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}
+                    {d.rrVal === currentAvgRR && d.rr !== best.rr && <span style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 600 }}>← nu</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -382,6 +407,7 @@ export default function Analytics() {
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '' })
+  const [mfeResults, setMfeResults] = useState([])
 
   useEffect(() => {
     if (!user) return
@@ -547,13 +573,13 @@ export default function Analytics() {
       id: 'mfe',
       title: 'MFE / MAE',
       span: 2,
-      content: <MFESection trades={filtered} />
+      content: <MFESection trades={filtered} onFetched={setMfeResults} />
     },
     {
       id: 'rr',
       title: 'RR-optimerare',
       span: 2,
-      content: <RROptimizer trades={filtered} />
+      content: <RROptimizer mfeResults={mfeResults} />
     },
     {
       id: 'ai',
