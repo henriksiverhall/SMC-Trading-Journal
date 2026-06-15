@@ -8,12 +8,13 @@ import Analytics from './pages/Analytics'
 import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import Roadmap from './pages/Roadmap'
+import Changelog from './pages/Changelog'
 import Sidebar from './components/Sidebar'
 
-const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap']
+const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog']
 
 export default function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const [page, setPage] = useState(() => {
     const saved = sessionStorage.getItem('tl_page')
     return VALID_PAGES.includes(saved) ? saved : 'dashboard'
@@ -41,6 +42,7 @@ export default function App() {
     profile:   <Profile />,
     admin:     <Admin />,
     roadmap:   <Roadmap />,
+    changelog: isAdmin ? <Changelog /> : <Dashboard onNavigate={setPage} />,
   }
 
   return (
