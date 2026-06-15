@@ -50,21 +50,31 @@ export function AuthProvider({ children }) {
   const refreshUnread = useCallback(async (userId) => {
     if (!userId) return
     try {
-      // Unread broadcast messages
-      const { data: published } = await sb.from('messages').select('id').eq('is_published', true)
-      const { data: reads } = await sb.from('message_reads').select('message_id').eq('user_id', userId)
-      const readIds = new Set((reads || []).map(r => r.message_id))
-      const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+      const isAdminUser = (await sb.from('admin_flags').select('is_admin').eq('user_id', userId).single())?.data?.is_admin
 
-      // Unread inbox messages (messages sent by admin that user hasn't read)
-      const { data: unreadInbox } = await sb
-        .from('inbox_messages')
-        .select('id, thread_id, sender_id, inbox_threads!inner(user_id)')
-        .eq('inbox_threads.user_id', userId)
-        .neq('sender_id', userId)
-        .is('read_at', null)
+      if (isAdminUser) {
+        // Admin: count unread messages from users (not read by admin)
+        const { data: unreadAdmin } = await sb.from('inbox_messages')
+          .select('id, sender_id, inbox_threads!inner(user_id)')
+          .neq('sender_id', userId)
+          .is('read_at', null)
+        setUnreadCount((unreadAdmin || []).length)
+      } else {
+        // User: unread broadcast + unread inbox replies from admin
+        const { data: published } = await sb.from('messages').select('id').eq('is_published', true)
+        const { data: reads } = await sb.from('message_reads').select('message_id').eq('user_id', userId)
+        const readIds = new Set((reads || []).map(r => r.message_id))
+        const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
 
-      setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
+        const { data: unreadInbox } = await sb
+          .from('inbox_messages')
+          .select('id, thread_id, sender_id, inbox_threads!inner(user_id)')
+          .eq('inbox_threads.user_id', userId)
+          .neq('sender_id', userId)
+          .is('read_at', null)
+
+        setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
+      }
     } catch (e) {
       console.warn('refreshUnread:', e)
     }
