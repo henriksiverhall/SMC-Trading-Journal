@@ -105,6 +105,7 @@ function BroadcastTab({ adminId }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
@@ -117,19 +118,36 @@ function BroadcastTab({ adminId }) {
     setLoading(false)
   }
 
+  function startEdit(m) {
+    setEditingId(m.id)
+    setTitle(m.title)
+    setBody(m.body)
+    setShowNew(false)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setTitle('')
+    setBody('')
+  }
+
   async function create(publish) {
     if (!title.trim() || !body.trim()) return
     setSaving(true)
     await sb.from('messages').insert({
-      title: title.trim(),
-      body: body.trim(),
-      created_by: adminId,
-      is_published: publish,
-      published_at: publish ? new Date().toISOString() : null,
+      title: title.trim(), body: body.trim(), created_by: adminId,
+      is_published: publish, published_at: publish ? new Date().toISOString() : null,
     })
     setTitle(''); setBody(''); setShowNew(false)
-    await load()
-    setSaving(false)
+    await load(); setSaving(false)
+  }
+
+  async function saveEdit() {
+    if (!title.trim() || !body.trim()) return
+    setSaving(true)
+    await sb.from('messages').update({ title: title.trim(), body: body.trim() }).eq('id', editingId)
+    cancelEdit()
+    await load(); setSaving(false)
   }
 
   async function publish(id) {
@@ -151,11 +169,12 @@ function BroadcastTab({ adminId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowNew(s => !s)}>
+        <button className="btn btn-primary btn-sm" onClick={() => { setShowNew(s => !s); cancelEdit() }}>
           {showNew ? 'Avbryt' : '+ Nytt meddelande'}
         </button>
       </div>
 
+      {/* New message form */}
       {showNew && (
         <div className="card">
           <div className="card-header"><div className="card-title">Nytt broadcast-meddelande</div></div>
@@ -170,12 +189,8 @@ function BroadcastTab({ adminId }) {
                 value={body} onChange={e => setBody(e.target.value)} style={{ resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary" onClick={() => create(true)} disabled={saving}>
-                {saving ? '…' : '📢 Publicera nu'}
-              </button>
-              <button className="btn btn-ghost" onClick={() => create(false)} disabled={saving}>
-                Spara som utkast
-              </button>
+              <button className="btn btn-primary" onClick={() => create(true)} disabled={saving}>📢 Publicera nu</button>
+              <button className="btn btn-ghost" onClick={() => create(false)} disabled={saving}>Spara som utkast</button>
             </div>
           </div>
         </div>
@@ -185,10 +200,27 @@ function BroadcastTab({ adminId }) {
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
       ) : messages.length === 0 ? (
         <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga meddelanden ännu.</div>
-      ) : (
-        messages.map(m => (
-          <div key={m.id} className="card">
-            <div className="card-body">
+      ) : messages.map(m => (
+        <div key={m.id} className="card">
+          <div className="card-body">
+            {editingId === m.id ? (
+              /* Edit form inline */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', marginBottom: 4 }}>Redigerar meddelande</div>
+                <div className="form-group">
+                  <label className="form-label">Titel</label>
+                  <input className="form-control" value={title} onChange={e => setTitle(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Innehåll</label>
+                  <textarea className="form-control" rows={5} value={body} onChange={e => setBody(e.target.value)} style={{ resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={saving}>💾 Spara</button>
+                  <button className="btn btn-ghost btn-sm" onClick={cancelEdit}>Avbryt</button>
+                </div>
+              </div>
+            ) : (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -197,7 +229,7 @@ function BroadcastTab({ adminId }) {
                       background: m.is_published ? 'var(--green-dim)' : 'var(--bg4)',
                       color: m.is_published ? 'var(--green)' : 'var(--text4)'
                     }}>{m.is_published ? '● Publicerat' : 'Utkast'}</span>
-                    {m.published_at && <span style={{ fontSize: 11, color: 'var(--text4)' }}>{formatFull(m.published_at)}</span>}
+                    {m.published_at && <span style={{ fontSize: 11, color: 'var(--text4)' }}>{new Date(m.published_at).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{m.title}</div>
                   <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</div>
@@ -207,16 +239,17 @@ function BroadcastTab({ adminId }) {
                     ? <button className="btn btn-primary btn-sm" onClick={() => publish(m.id)}>Publicera</button>
                     : <button className="btn btn-ghost btn-sm" onClick={() => unpublish(m.id)}>Avpublicera</button>
                   }
+                  <button className="btn btn-ghost btn-sm" onClick={() => startEdit(m)}>✏️ Redigera</button>
                   <button className="btn btn-sm" onClick={() => deleteMsg(m.id)}
                     style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>
                     Ta bort
                   </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        ))
-      )}
+        </div>
+      ))}
     </div>
   )
 }
