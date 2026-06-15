@@ -449,39 +449,6 @@ export default function Analytics() {
     </div>
   )
 
-  return (
-    <div style={{ flex: 1 }}>
-      <Topbar title="Analytics" />
-      <div className="page-content">
-
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
-            value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
-            <option value="">Alla utfall</option>
-            <option value="W">Vinster</option>
-            <option value="L">Förluster</option>
-            <option value="BE">Break Even</option>
-          </select>
-          <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
-            value={filter.direction} onChange={e => setFilter(f => ({ ...f, direction: e.target.value }))}>
-            <option value="">Alla riktningar</option>
-            <option value="Long">Long</option>
-            <option value="Short">Short</option>
-          </select>
-          {strategies.length > 0 && (
-            <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
-              value={filter.strategy} onChange={e => setFilter(f => ({ ...f, strategy: e.target.value }))}>
-              <option value="">Alla strategier</option>
-              {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          )}
-          {(filter.outcome || filter.direction || filter.strategy) && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '' })}>✕ Rensa</button>
-          )}
-          <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
-        </div>
-
   const widgets = [
     {
       id: 'stats',
