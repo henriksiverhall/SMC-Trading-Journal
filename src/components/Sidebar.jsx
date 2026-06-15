@@ -7,6 +7,7 @@ const icons = {
   journal:   (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>),
   checklist: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>),
   analytics: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>),
+  messages:  (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>),
   profile:   (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>),
   admin:     (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>),
   roadmap:   (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>),
@@ -18,7 +19,7 @@ const icons = {
 
 export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
   const [open, setOpen] = useState(true)
-  const { isAdmin, signOut } = useAuth()
+  const { isAdmin, signOut, unreadCount } = useAuth()
 
   function toggle() {
     const next = !open
@@ -31,6 +32,7 @@ export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
     { id: 'journal',   label: 'Journal',   icon: icons.journal },
     { id: 'checklist', label: 'Checklist', icon: icons.checklist },
     { id: 'analytics', label: 'Analytics', icon: icons.analytics },
+    { id: 'messages',  label: 'Meddelanden', icon: icons.messages, badge: unreadCount },
   ]
 
   return (
@@ -49,9 +51,26 @@ export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
         <div className="sidebar-section-label">Navigation</div>
         {navItems.map(item => (
           <button key={item.id} className={`nav-item ${activePage === item.id ? 'active' : ''}`}
-            onClick={() => onNavigate(item.id)} title={!open ? item.label : undefined}>
-            {item.icon}
+            onClick={() => onNavigate(item.id)} title={!open ? item.label : undefined}
+            style={{ position: 'relative' }}>
+            <span style={{ position: 'relative', flexShrink: 0 }}>
+              {item.icon}
+              {item.badge > 0 && !open && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'var(--red)', border: '1px solid var(--bg2)'
+                }} />
+              )}
+            </span>
             <span className="nav-label">{item.label}</span>
+            {item.badge > 0 && open && (
+              <span style={{
+                marginLeft: 'auto', background: 'var(--red)', color: '#fff',
+                fontSize: 10, fontWeight: 700, borderRadius: 20,
+                padding: '1px 6px', minWidth: 18, textAlign: 'center', lineHeight: '16px'
+              }}>{item.badge > 99 ? '99+' : item.badge}</span>
+            )}
           </button>
         ))}
 
