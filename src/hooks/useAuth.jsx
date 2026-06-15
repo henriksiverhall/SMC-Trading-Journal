@@ -47,6 +47,7 @@ export function AuthProvider({ children }) {
       ])
       const readIds = new Set((reads || []).map(r => r.message_id))
       const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+      console.log('[unread] published:', published?.length, 'reads:', reads?.length, 'readIds:', [...readIds], 'unreadBroadcast:', unreadBroadcast, 'unreadInbox:', unreadInbox?.length)
       setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
     } catch (e) {
       console.warn('fetchUnread:', e)
