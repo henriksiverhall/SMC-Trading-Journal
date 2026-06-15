@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { sb } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userSettings, setUserSettings] = useState({})
   const [loading, setLoading] = useState(true)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
@@ -18,7 +19,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) loadSettings(session.user.id)
-      else { setUserSettings({}); setLoading(false) }
+      else { setUserSettings({}); setLoading(false); setUnreadCount(0) }
     })
 
     return () => subscription.unsubscribe()
@@ -46,17 +47,49 @@ export function AuthProvider({ children }) {
     })
   }
 
+  const refreshUnread = useCallback(async (userId) => {
+    if (!userId) return
+    try {
+      // Unread broadcast messages
+      const { data: published } = await sb.from('messages').select('id').eq('is_published', true)
+      const { data: reads } = await sb.from('message_reads').select('message_id').eq('user_id', userId)
+      const readIds = new Set((reads || []).map(r => r.message_id))
+      const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+
+      // Unread inbox messages (messages sent by admin that user hasn't read)
+      const { data: unreadInbox } = await sb
+        .from('inbox_messages')
+        .select('id, thread_id, sender_id, inbox_threads!inner(user_id)')
+        .eq('inbox_threads.user_id', userId)
+        .neq('sender_id', userId)
+        .is('read_at', null)
+
+      setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
+    } catch (e) {
+      console.warn('refreshUnread:', e)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user) refreshUnread(user.id)
+  }, [user, refreshUnread])
+
   async function signOut() {
     await sb.auth.signOut()
     setUser(null)
     setUserSettings({})
+    setUnreadCount(0)
   }
 
   const isAdmin = userSettings?.is_admin === true
   const aiEnabled = userSettings?.ai_enabled === true || isAdmin
 
   return (
-    <AuthContext.Provider value={{ user, userSettings, loading, isAdmin, aiEnabled, saveSettings, signOut, loadSettings }}>
+    <AuthContext.Provider value={{
+      user, userSettings, loading, isAdmin, aiEnabled,
+      saveSettings, signOut, loadSettings,
+      unreadCount, refreshUnread
+    }}>
       {children}
     </AuthContext.Provider>
   )
