@@ -504,50 +504,50 @@ export default function Analytics() {
       content: <EquityCurve trades={filtered} />
     },
     {
-      id: 'grade',
-      title: 'Win Rate per Grade',
-      content: gradeData.length > 0 ? (
-        <div className="card">
-          <div className="card-header"><div className="card-title">Win Rate per Grade</div></div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={gradeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="grade" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
-                <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} domain={[0, 100]} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="wr" name="Win Rate" radius={[4, 4, 0, 0]}>
-                  {gradeData.map(e => <Cell key={e.grade} fill={gradeColor(e.grade)} fillOpacity={0.8} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      id: 'grade_emotion',
+      title: 'Grade & Emotion',
+      content: (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="card">
+            <div className="card-header"><div className="card-title">Win Rate per Grade</div></div>
+            <div className="card-body">
+              {gradeData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={gradeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="grade" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
+                    <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} domain={[0, 100]} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="wr" name="Win Rate" radius={[4, 4, 0, 0]}>
+                      {gradeData.map(e => <Cell key={e.grade} fill={gradeColor(e.grade)} fillOpacity={0.8} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : <div style={{ color: 'var(--text3)', fontSize: 13 }}>Inga grade-data ännu.</div>}
+            </div>
           </div>
-        </div>
-      ) : <div className="card"><div className="card-body" style={{ color: 'var(--text3)', fontSize: 13 }}>Inga grade-data ännu.</div></div>
-    },
-    {
-      id: 'emotion',
-      title: 'Win Rate per Emotion',
-      content: emotionData.length > 0 ? (
-        <div className="card">
-          <div className="card-header"><div className="card-title">Win Rate per Emotion</div></div>
-          <div className="card-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {emotionData.map(e => (
-                <div key={e.emotion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 110, fontSize: 12, color: 'var(--text2)' }}>{e.emotion}</div>
-                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 4, width: e.wr + '%', background: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', transition: 'width 0.5s ease' }} />
-                  </div>
-                  <div style={{ width: 60, fontSize: 12, fontFamily: 'var(--mono)', color: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', textAlign: 'right' }}>
-                    {e.wr}% <span style={{ color: 'var(--text4)' }}>({e.trades})</span>
-                  </div>
+          <div className="card">
+            <div className="card-header"><div className="card-title">Win Rate per Emotion</div></div>
+            <div className="card-body">
+              {emotionData.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {emotionData.map(e => (
+                    <div key={e.emotion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 110, fontSize: 12, color: 'var(--text2)' }}>{e.emotion}</div>
+                      <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 4, width: e.wr + '%', background: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', transition: 'width 0.5s ease' }} />
+                      </div>
+                      <div style={{ width: 60, fontSize: 12, fontFamily: 'var(--mono)', color: e.wr >= 60 ? 'var(--green)' : e.wr >= 40 ? 'var(--amber)' : 'var(--red)', textAlign: 'right' }}>
+                        {e.wr}% <span style={{ color: 'var(--text4)' }}>({e.trades})</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : <div style={{ color: 'var(--text3)', fontSize: 13 }}>Inga emotion-data ännu.</div>}
             </div>
           </div>
         </div>
-      ) : <div className="card"><div className="card-body" style={{ color: 'var(--text3)', fontSize: 13 }}>Inga emotion-data ännu.</div></div>
+      )
     },
     {
       id: 'strategy',
@@ -628,7 +628,7 @@ export default function Analytics() {
           <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
         </div>
 
-        <DragGrid pageKey="analytics" widgets={widgets} columns={2} />
+        <DragGrid pageKey="analytics" widgets={widgets} />
 
         {withR.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontSize: 14 }}>
