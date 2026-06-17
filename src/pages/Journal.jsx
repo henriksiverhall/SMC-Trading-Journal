@@ -738,7 +738,12 @@ export default function Journal() {
         <div style={{ display: 'grid', gridTemplateColumns: 'clamp(420px, 27vw, 520px) 1fr', gap: 20, alignItems: 'start' }}>
 
           {/* ── Form ── */}
-          <div className="card" style={{ position: 'sticky', top: 'calc(var(--topbar-h) + 24px)' }} ref={formRef}>
+          <div className="card" style={{
+            position: 'sticky',
+            top: 'calc(var(--topbar-h) + 24px)',
+            maxHeight: 'calc(100vh - var(--topbar-h) - 48px)',
+            overflowY: 'auto',
+          }} ref={formRef}>
             <div className="card-header">
               <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Log Trade'}</div>
               <div style={{ display: 'flex', gap: 8 }}>
