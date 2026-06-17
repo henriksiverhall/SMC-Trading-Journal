@@ -27,6 +27,19 @@ const DEFAULT_FIELD_ROWS = [
 // saved layouts if a field is ever added/removed from the app in the future.
 const ALL_FIELD_IDS = DEFAULT_FIELD_ROWS.flat()
 
+// Fields that can be marked "obligatorisk" (required). Excludes r_display
+// (computed, not an input) and custom (multiple sub-fields, ambiguous as one toggle).
+const REQUIRABLE_FIELD_IDS = ALL_FIELD_IDS.filter(id => id !== 'r_display' && id !== 'custom')
+const DEFAULT_REQUIRED_FIELDS = ['outcome'] // preserves pre-existing hardcoded behavior
+// Maps a field id to its key in the `form` state, where it differs from the id itself.
+const FIELD_FORM_KEY = { chart: 'chart_link' }
+const FIELD_LABELS = {
+  strategy: 'Strategi', date: 'Datum', time: 'Tid', symbol: 'Instrument', direction: 'Riktning',
+  entry: 'Entry', contracts: 'Kontrakt', sl: 'Stop Loss', tp: 'Take Profit', actual_exit: 'Faktisk exit',
+  outcome: 'Utfall', risk_pct: 'Risk %', account_size: 'Kontostorlek', grade: 'Grade',
+  emotion: 'Känsla', chart: 'Chart/Skärmbild', notes: 'Noteringar',
+}
+
 function normalizeRows(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return DEFAULT_FIELD_ROWS
   const seen = new Set()
@@ -149,6 +162,7 @@ export default function Journal() {
   const [scaleIns, setScaleIns] = useState([])
   const [targets, setTargets] = useState([])
   const [fieldRows, setFieldRowsState] = useState(DEFAULT_FIELD_ROWS)
+  const [requiredFields, setRequiredFieldsState] = useState(DEFAULT_REQUIRED_FIELDS)
   const [customFields, setCustomFieldsState] = useState(getCustomFields)
   const [customValues, setCustomValues] = useState({})
   const [showFieldMgr, setShowFieldMgr] = useState(false)
@@ -161,12 +175,31 @@ export default function Journal() {
   // Load field layout from userSettings (synced across devices)
   useEffect(() => {
     setFieldRowsState(normalizeRows(userSettings?.widgets?.journal_fields?.rows))
-  }, [userSettings?.widgets?.journal_fields?.rows])
+    const saved = userSettings?.widgets?.journal_fields?.requiredFields
+    setRequiredFieldsState(Array.isArray(saved) ? saved.filter(id => REQUIRABLE_FIELD_IDS.includes(id)) : DEFAULT_REQUIRED_FIELDS)
+  }, [userSettings?.widgets?.journal_fields?.rows, userSettings?.widgets?.journal_fields?.requiredFields])
 
   function persistFieldRows(rows) {
     setFieldRowsState(rows)
     const current = userSettings?.widgets || {}
-    saveSettings({ widgets: { ...current, journal_fields: { rows } } })
+    saveSettings({ widgets: { ...current, journal_fields: { ...(current.journal_fields || {}), rows } } })
+  }
+
+  function persistRequiredFields(fields) {
+    setRequiredFieldsState(fields)
+    const current = userSettings?.widgets || {}
+    saveSettings({ widgets: { ...current, journal_fields: { ...(current.journal_fields || {}), requiredFields: fields } } })
+  }
+
+  function toggleRequired(id) {
+    const next = requiredFields.includes(id) ? requiredFields.filter(f => f !== id) : [...requiredFields, id]
+    persistRequiredFields(next)
+  }
+
+  function isFieldFilled(id) {
+    const key = FIELD_FORM_KEY[id] || id
+    const v = form[key]
+    return v !== undefined && v !== null && String(v).trim() !== ''
   }
 
   // Load account/risk settings from userSettings
@@ -302,11 +335,12 @@ export default function Journal() {
   const riskPct = parseFloat(form.risk_pct)
   const accountSize = parseFloat(form.account_size)
   const riskDollar = (riskPct && accountSize) ? parseFloat((accountSize * riskPct / 100).toFixed(2)) : null
+  const missingRequiredFields = requiredFields.filter(id => !isFieldFilled(id))
 
   // Save
   async function handleSave(e) {
     e.preventDefault()
-    if (!form.outcome) return
+    if (missingRequiredFields.length > 0) return
     setSaving(true)
 
     const entry = weightedEntry || parseFloat(form.entry)
@@ -704,7 +738,7 @@ export default function Journal() {
                   <button type="button" className="btn btn-primary btn-sm" onClick={addCustomField}>+</button>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>
-                  Dra ⠿⠿-handtagen för att flytta fält. Släpp på ett ensamt fält för att dela raden, eller på ett redan ihopparat fält för att byta plats.
+                  Dra ⠿⠿-handtagen för att flytta fält. Släpp på ett ensamt fält för att dela raden, eller på ett redan ihopparat fält för att byta plats. Klicka * uppe till vänster på ett fält för att göra det obligatoriskt – "Spara trade" låses tills alla obligatoriska fält är ifyllda.
                 </div>
               </div>
             )}
@@ -723,6 +757,8 @@ export default function Journal() {
                       {cells.map(({ id, content }) => {
                         const isDragging = draggingField === id
                         const hint = dropHint?.id === id ? dropHint.mode : null
+                        const isRequired = requiredFields.includes(id)
+                        const missing = isRequired && !isFieldFilled(id)
                         return (
                           <div key={id}
                             draggable
@@ -737,6 +773,7 @@ export default function Journal() {
                               outline: (hint === 'pair' || hint === 'swap') ? '2px dashed var(--accent)' : '2px solid transparent',
                               outlineOffset: 4,
                               borderRadius: 'var(--r2)',
+                              boxShadow: missing ? 'inset 2px 0 0 0 var(--red)' : 'none',
                             }}
                           >
                             {hint === 'before' && (
@@ -750,6 +787,19 @@ export default function Journal() {
                               color: 'var(--text4)', fontSize: 12, cursor: 'grab',
                               opacity: 0.35, userSelect: 'none', lineHeight: 1,
                             }} title="Dra för att flytta">⠿⠿</div>
+                            {REQUIRABLE_FIELD_IDS.includes(id) && (
+                              <button type="button"
+                                onClick={e => { e.stopPropagation(); toggleRequired(id) }}
+                                title={isRequired ? 'Obligatoriskt – klicka för att ta bort' : 'Klicka för att göra obligatoriskt'}
+                                style={{
+                                  position: 'absolute', top: -1, left: 2, zIndex: 5,
+                                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                  fontSize: 14, lineHeight: 1, fontWeight: 700,
+                                  color: isRequired ? 'var(--red)' : 'var(--text4)',
+                                  opacity: isRequired ? 1 : 0.3,
+                                }}
+                              >*</button>
+                            )}
                             {content}
                           </div>
                         )
@@ -759,11 +809,16 @@ export default function Journal() {
                 })}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={saving || !form.outcome}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={saving || missingRequiredFields.length > 0}>
                     {saving ? 'Sparar…' : editingId ? '💾 Spara ändringar' : '🔖 Spara trade'}
                   </button>
                   {editingId && <button type="button" className="btn btn-ghost" onClick={resetForm}>Avbryt</button>}
                 </div>
+                {missingRequiredFields.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>
+                    Fyll i: {missingRequiredFields.map(id => FIELD_LABELS[id] || id).join(', ')}
+                  </div>
+                )}
               </form>
             </div>
           </div>
