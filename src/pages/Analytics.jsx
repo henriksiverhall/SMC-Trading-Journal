@@ -124,6 +124,7 @@ function MFESection({ trades, onFetched }) {
   const [status, setStatus] = useState('idle')
   const [results, setResults] = useState([])
   const [fetchedAt, setFetchedAt] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const candidates = trades.filter(t => t.entry && t.sl && t.date && t.direction)
 
@@ -173,12 +174,30 @@ function MFESection({ trades, onFetched }) {
     onFetched?.(enriched)
   }
 
+  const sortedResults = [...results].sort((a, b) => new Date(b.date) - new Date(a.date))
+  const visibleResults = showAll ? sortedResults : sortedResults.slice(0, 10)
+
   const avgMFE = results.length ? (results.reduce((a, t) => a + (t._mfe || 0), 0) / results.length).toFixed(2) : null
   const avgMAE = results.length ? Math.abs(results.reduce((a, t) => a + (t._mae || 0), 0) / results.length).toFixed(2) : null
   const avgR   = results.filter(t => t.result != null).length
     ? (results.filter(t => t.result != null).reduce((a, t) => a + t.result, 0) / results.filter(t => t.result != null).length).toFixed(2)
     : null
   const leftOnTable = avgMFE != null && avgR != null ? (parseFloat(avgMFE) - parseFloat(avgR)).toFixed(2) : null
+
+  // Capture rate: av den rörelse som faktiskt fanns (MFE), hur stor andel fångade du
+  // i resultatet? Ett mått på exit-disciplin snarare än om strategin har edge.
+  const captureable = results.filter(t => t._mfe != null && t._mfe > 0 && t.result != null)
+  const avgCaptureRate = captureable.length
+    ? (captureable.reduce((a, t) => a + Math.min(t.result / t._mfe, 1.5), 0) / captureable.length * 100).toFixed(0)
+    : null
+
+  // Bästa missade trade: den med mest R kvar på bordet (störst gap mellan MFE och utfall).
+  const bestMissed = results
+    .filter(t => t._mfe != null && t.result != null)
+    .reduce((best, t) => {
+      const gap = t._mfe - t.result
+      return (!best || gap > best.gap) ? { ...t, gap } : best
+    }, null)
 
   const missingCount = candidates.filter(t => t.custom_data?._mfe == null).length
 
@@ -204,14 +223,24 @@ function MFESection({ trades, onFetched }) {
         {status === 'error' && <p style={{ fontSize: 13, color: 'var(--amber)' }}>⚠ Ingen data cachad för detta instrument/datum ännu. Kontrollera att symbolen finns i Workerns instrumentlista och att daglig synk har körts.</p>}
         {results.length > 0 && (
           <>
-            <div className="stats-grid" style={{ marginBottom: 16 }}>
+            <div className="stats-grid" style={{ marginBottom: 8 }}>
               {[
                 { label: 'Avg MFE', value: avgMFE != null ? '+' + avgMFE + 'R' : '—', cls: 'positive' },
                 { label: 'Avg MAE', value: avgMAE != null ? '-' + avgMAE + 'R' : '—', cls: 'negative' },
                 { label: 'Avg Utfall', value: avgR != null ? (parseFloat(avgR) >= 0 ? '+' : '') + avgR + 'R' : '—', cls: parseFloat(avgR) >= 0 ? 'positive' : 'negative' },
                 { label: 'Lämnat på bordet', value: leftOnTable != null ? '+' + leftOnTable + 'R' : '—', cls: 'accent' },
+                { label: 'Fångad andel', value: avgCaptureRate != null ? avgCaptureRate + '%' : '—', cls: avgCaptureRate >= 50 ? 'positive' : 'negative' },
               ].map(s => <StatCard key={s.label} {...s} />)}
             </div>
+            <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 16 }}>
+              Du fångar i snitt <strong>{avgCaptureRate}%</strong> av den rörelse som fanns tillgänglig samma session.
+              {leftOnTable != null && parseFloat(leftOnTable) > 0 && (
+                <> Du lämnar i snitt <strong>{leftOnTable}R</strong> per trade på bordet – {parseFloat(leftOnTable) > parseFloat(avgR || 0) ? 'mer än ditt faktiska snittutfall, vilket pekar på att TP/exit ofta sätts för nära entry snarare än att strategin saknar edge' : 'en del av detta är naturligt eftersom du inte kan tajma exakt topp/botten'}.</>
+              )}
+              {bestMissed && parseFloat(bestMissed.gap) > 0 && (
+                <> Största enskilda missen: <strong>{bestMissed.date}</strong> ({bestMissed.symbol}) där {bestMissed.gap.toFixed(2)}R lämnades på bordet.</>
+              )}
+            </p>
             <div style={{ overflowX: 'auto' }}>
               <table className="journal-table">
                 <thead><tr>
@@ -221,7 +250,7 @@ function MFESection({ trades, onFetched }) {
                   <th style={{ color: 'var(--amber)' }}>På bordet</th>
                 </tr></thead>
                 <tbody>
-                  {results.map(t => {
+                  {visibleResults.map(t => {
                     const left = t._mfe != null && t.result != null ? (t._mfe - t.result).toFixed(2) : null
                     return (
                       <tr key={t.id}>
@@ -238,6 +267,15 @@ function MFESection({ trades, onFetched }) {
                 </tbody>
               </table>
             </div>
+            {sortedResults.length > 10 && (
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 10 }}
+                onClick={() => setShowAll(!showAll)}
+              >
+                {showAll ? '▲ Visa färre' : `▼ Visa alla ${sortedResults.length} trades`}
+              </button>
+            )}
           </>
         )}
       </div>
