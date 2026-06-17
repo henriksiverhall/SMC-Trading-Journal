@@ -21,9 +21,14 @@ function UsersTab({ currentUserId }) {
 
   async function loadUsers() {
     setLoading(true)
-    const { data } = await sb.from('admin_users').select('*').order('created_at', { ascending: false })
+    // OBS: get_admin_users() är en SECURITY DEFINER-funktion (inte längre en
+    // direkt-läsbar vy) - den kollar internt att frågande user är admin via
+    // admin_flags innan den returnerar något från auth.users.
+    const { data, error } = await sb.rpc('get_admin_users')
+    if (error) { console.error('get_admin_users failed:', error); setLoading(false); return }
     if (!data) { setLoading(false); return }
-    const ids = data.map(u => u.user_id)
+    const sorted = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    const ids = sorted.map(u => u.user_id)
     const [settingsRes, tradesRes, flagsRes] = await Promise.all([
       sb.from('user_settings').select('user_id, settings').in('user_id', ids),
       sb.from('trades').select('user_id').in('user_id', ids),
@@ -32,7 +37,7 @@ function UsersTab({ currentUserId }) {
     const settingsMap = {}; settingsRes.data?.forEach(s => settingsMap[s.user_id] = s.settings)
     const tradeCount = {}; tradesRes.data?.forEach(t => tradeCount[t.user_id] = (tradeCount[t.user_id] || 0) + 1)
     const flagMap = {}; flagsRes.data?.forEach(f => flagMap[f.user_id] = f.is_admin)
-    setUsers(data.map(u => ({ ...u, settings: settingsMap[u.user_id] || {}, trade_count: tradeCount[u.user_id] || 0, is_admin: flagMap[u.user_id] || false })))
+    setUsers(sorted.map(u => ({ ...u, settings: settingsMap[u.user_id] || {}, trade_count: tradeCount[u.user_id] || 0, is_admin: flagMap[u.user_id] || false })))
     setLoading(false)
   }
 
@@ -272,7 +277,10 @@ function SupportTab({ adminId }) {
     setLoading(true)
     const { data: threadData } = await sb.from('inbox_threads')
       .select('*').order('updated_at', { ascending: false })
-    const { data: userData } = await sb.from('admin_users').select('user_id, email')
+    // get_admin_users() istället för sb.from('admin_users') - vyn är borttagen,
+    // se UsersTab.loadUsers() för bakgrund.
+    const { data: userData, error: userError } = await sb.rpc('get_admin_users')
+    if (userError) console.error('get_admin_users failed:', userError)
     const userMap = {}; userData?.forEach(u => userMap[u.user_id] = u.email)
     setUsers(userMap)
     setThreads(threadData || [])
