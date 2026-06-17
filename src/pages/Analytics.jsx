@@ -579,6 +579,26 @@ export default function Analytics() {
   const lossR   = Math.abs(losses.reduce((a, t) => a + (t.result || 0), 0))
   const pf      = lossR > 0 ? winR / lossR : 0
 
+  // Max Drawdown: largest peak-to-trough fall in cumulative R, regardless of how
+  // many trades it takes to claw back to a new equity high. Needs strict
+  // chronological order (oldest first) - the trades list itself is fetched
+  // newest-first for display, so this re-sorts a copy rather than relying on it.
+  const maxDD = (() => {
+    const chrono = [...withR].sort((a, b) => {
+      const da = `${a.date}T${a.time || '00:00'}`
+      const db = `${b.date}T${b.time || '00:00'}`
+      return da < db ? -1 : da > db ? 1 : 0
+    })
+    let equity = 0, peak = 0, worst = 0
+    for (const t of chrono) {
+      equity += t.result || 0
+      if (equity > peak) peak = equity
+      const dd = peak - equity
+      if (dd > worst) worst = dd
+    }
+    return worst
+  })()
+
   const gradeMap = {}
   withR.forEach(t => {
     const g = t.grade || 'No grade'
@@ -634,6 +654,7 @@ export default function Analytics() {
           <StatCard label="Win Rate"      value={winRate.toFixed(1) + '%'}                             cls={winRate >= 50 ? 'positive' : 'negative'} />
           <StatCard label="Total R"       value={(totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R'}   cls={totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : ''} />
           <StatCard label="Profit Factor" value={pf.toFixed(2)}                                        cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
+          <StatCard label="Max DD"        value={maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R'}    cls={maxDD > 0 ? 'negative' : ''} />
           <StatCard label="Avg Vinst"     value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
         </div>
       )

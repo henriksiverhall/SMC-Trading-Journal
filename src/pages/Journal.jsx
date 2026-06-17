@@ -14,6 +14,7 @@ const DEFAULT_FIELD_ROWS = [
   ['entry', 'contracts'],
   ['sl', 'tp'],
   ['actual_exit'],
+  ['exit_date', 'exit_time'],
   ['outcome'],
   ['r_display'],
   ['risk_pct', 'account_size'],
@@ -36,6 +37,7 @@ const FIELD_FORM_KEY = { chart: 'chart_link' }
 const FIELD_LABELS = {
   strategy: 'Strategi', date: 'Datum', time: 'Tid', symbol: 'Instrument', direction: 'Riktning',
   entry: 'Entry', contracts: 'Kontrakt', sl: 'Stop Loss', tp: 'Take Profit', actual_exit: 'Faktisk exit',
+  exit_date: 'Exit datum', exit_time: 'Exit tid (ET)',
   outcome: 'Utfall', risk_pct: 'Risk %', account_size: 'Kontostorlek', grade: 'Grade',
   emotion: 'Känsla', chart: 'Chart/Skärmbild', notes: 'Noteringar',
 }
@@ -71,6 +73,8 @@ const DEFAULT_FORM = {
   sl: '',
   tp: '',
   actual_exit: '',
+  exit_date: '',
+  exit_time: '',
   outcome: '',
   grade: '',
   emotion: '',
@@ -367,6 +371,8 @@ export default function Journal() {
       custom_data: {
         ...(spec ? { _futures: true } : {}),
         ...(form.actual_exit ? { _actual_exit: parseFloat(form.actual_exit) } : {}),
+        ...(form.exit_date ? { _exit_date: form.exit_date } : {}),
+        ...(form.exit_time ? { _exit_time: form.exit_time } : {}),
         ...(scaleIns.length > 0 ? { _scaleIns: scaleIns, _totalContracts: totalC, _weightedEntry: entry } : {}),
         ...(targets.length > 0 ? { _targets: targets } : {}),
         ...(riskPct ? { _risk_pct: riskPct } : {}),
@@ -428,6 +434,8 @@ export default function Journal() {
       sl: trade.sl ?? '',
       tp: trade.tp ?? '',
       actual_exit: cd._actual_exit ?? '',
+      exit_date: cd._exit_date ?? '',
+      exit_time: cd._exit_time ?? '',
       outcome: trade.outcome || '',
       grade: trade.grade || '',
       emotion: trade.emotion || '',
@@ -578,6 +586,20 @@ export default function Journal() {
             <label className="form-label">Faktisk exit{reqMark('actual_exit')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
             <input type="number" step="0.01" className="form-control" placeholder="Om ej exakt TP/SL"
               value={form.actual_exit} onChange={e => updateForm('actual_exit', e.target.value)} />
+          </div>
+        )
+      case 'exit_date':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Exit datum{reqMark('exit_date')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
+            <input type="date" className="form-control" value={form.exit_date} onChange={e => updateForm('exit_date', e.target.value)} />
+          </div>
+        )
+      case 'exit_time':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Exit tid (ET){reqMark('exit_time')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
+            <input type="time" className="form-control" value={form.exit_time} onChange={e => updateForm('exit_time', e.target.value)} />
           </div>
         )
       case 'outcome':
@@ -889,6 +911,8 @@ export default function Journal() {
                   ['Stop Loss', selectedModal.sl],
                   ['Take Profit', selectedModal.tp],
                   ['Faktisk exit', selectedModal.custom_data?._actual_exit],
+                  ['Exit datum', selectedModal.custom_data?._exit_date],
+                  ['Exit tid', selectedModal.custom_data?._exit_time],
                   ['Utfall', selectedModal.outcome],
                   ['R', formatR(selectedModal.result)],
                   ['Grade', selectedModal.grade],
