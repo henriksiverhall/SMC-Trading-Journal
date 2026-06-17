@@ -253,6 +253,13 @@ export default function Roadmap() {
   const [addingIn, setAddingIn] = useState(null)
   const [detailCard, setDetailCard] = useState(null)
   const dragCard = useRef(null)
+  // All persist() calls are chained onto this so each one's full read-modify-write
+  // cycle completes before the next one starts reading. Without this, two rapid
+  // moves (e.g. dragging card A then immediately card B) can race: the second
+  // call's "fresh read" can land before the first call's write finishes, so the
+  // second write silently overwrites the first move - exactly the "only one of
+  // two moves stuck" symptom.
+  const persistQueue = useRef(Promise.resolve())
   const [dragOverCol, setDragOverCol] = useState(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -278,17 +285,20 @@ export default function Roadmap() {
   // silently overwritten - the exact bug where moved/edited cards "reverted" on
   // refresh. `updaterFn` describes the change as a pure function so it can be
   // re-applied against fresh data instead of a stale local snapshot.
-  async function persist(updaterFn) {
-    setSaving(true)
-    const { data } = await sbProd.from('user_settings').select('settings').eq('user_id', PROD_ADMIN_ID).single()
-    const freshSettings = data?.settings || {}
-    const rt = freshSettings.roadmapTasks
-    const freshTasks = (rt && typeof rt === 'object' && !Array.isArray(rt)) ? rt : tasks
-    const newTasks = updaterFn(freshTasks)
-    setTasks(newTasks)
-    const merged = { ...freshSettings, roadmapTasks: newTasks }
-    await sbProd.from('user_settings').upsert({ user_id: PROD_ADMIN_ID, settings: merged, updated_at: new Date().toISOString() })
-    setSaving(false)
+  function persist(updaterFn) {
+    persistQueue.current = persistQueue.current.catch(() => {}).then(async () => {
+      setSaving(true)
+      const { data } = await sbProd.from('user_settings').select('settings').eq('user_id', PROD_ADMIN_ID).single()
+      const freshSettings = data?.settings || {}
+      const rt = freshSettings.roadmapTasks
+      const freshTasks = (rt && typeof rt === 'object' && !Array.isArray(rt)) ? rt : tasks
+      const newTasks = updaterFn(freshTasks)
+      setTasks(newTasks)
+      const merged = { ...freshSettings, roadmapTasks: newTasks }
+      await sbProd.from('user_settings').upsert({ user_id: PROD_ADMIN_ID, settings: merged, updated_at: new Date().toISOString() })
+      setSaving(false)
+    })
+    return persistQueue.current
   }
 
   function toggleCollapse(colId) { setCollapsed(c => ({ ...c, [colId]: !c[colId] })) }

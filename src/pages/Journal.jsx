@@ -584,7 +584,7 @@ export default function Journal() {
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
             <label className="form-label">Utfall{reqMark('outcome')}</label>
-            <select className="form-control" value={form.outcome} onChange={e => updateForm('outcome', e.target.value)} required>
+            <select className="form-control" value={form.outcome} onChange={e => updateForm('outcome', e.target.value)}>
               <option value="">Välj…</option>
               <option value="W">Win</option>
               <option value="L">Loss</option>

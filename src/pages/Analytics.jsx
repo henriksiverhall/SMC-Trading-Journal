@@ -421,9 +421,12 @@ function RROptimizer({ mfeResults, trades }) {
 
 // ── AI Analysis ───────────────────────────────────────────────────────────────
 function AIAnalysis({ trades, aiEnabled }) {
+  const { userSettings, saveSettings } = useAuth()
   const [response, setResponse] = useState('')
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
+  const [generatedAt, setGeneratedAt] = useState(null)
+  const loadedRef = useRef(false)
 
   if (!aiEnabled) return null
 
@@ -436,6 +439,25 @@ function AIAnalysis({ trades, aiEnabled }) {
     const lossR = Math.abs(withR.filter(t => t.outcome === 'L').reduce((a, t) => a + t.result, 0))
     return lossR > 0 ? (winR / lossR).toFixed(2) : '∞'
   })()
+
+  // Fingerprint of the data the analysis is actually based on. Changes if a trade
+  // is added/removed, or if an existing trade's outcome/result is edited.
+  const fingerprint = withR.map(t => `${t.id}:${t.result}`).sort().join('|')
+
+  // Hydrate from userSettings once, on first load - don't keep re-syncing after
+  // that so we don't clobber a result the user just generated this session.
+  useEffect(() => {
+    if (loadedRef.current) return
+    const saved = userSettings?.aiAnalysis
+    if (saved?.text) {
+      setResponse(saved.text)
+      setHistory(saved.history || [])
+      setGeneratedAt(saved.generatedAt || null)
+    }
+    if (userSettings !== undefined) loadedRef.current = true
+  }, [userSettings])
+
+  const isCurrent = !!response && userSettings?.aiAnalysis?.fingerprint === fingerprint
 
   async function analyze() {
     setLoading(true)
@@ -473,8 +495,12 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
         return
       }
       const text = data.content?.find(c => c.type === 'text')?.text || 'Inget svar.'
+      const now = new Date().toISOString()
+      const newHistory = [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...history.slice(0, 4)]
       setResponse(text)
-      setHistory(h => [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...h.slice(0, 4)])
+      setHistory(newHistory)
+      setGeneratedAt(now)
+      saveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now } })
     } catch (err) {
       setResponse(`Kunde inte ansluta till AI-tjänsten: ${err.message}`)
     }
@@ -485,8 +511,8 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
         <div className="card-title">🤖 AI-analys</div>
-        <button className="btn btn-ghost btn-sm" onClick={analyze} disabled={loading || !withR.length}>
-          {loading ? 'Analyserar…' : '✨ Analysera'}
+        <button className="btn btn-ghost btn-sm" onClick={analyze} disabled={loading || !withR.length || isCurrent}>
+          {loading ? 'Analyserar…' : isCurrent ? '✓ Aktuell' : response ? '✨ Uppdatera analys' : '✨ Analysera'}
         </button>
       </div>
       <div className="card-body">
@@ -495,9 +521,17 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
         )}
         {loading && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Analyserar dina trades…</p>}
         {response && (
-          <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '14px 16px' }}>
-            {response}
-          </div>
+          <>
+            <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '14px 16px' }}>
+              {response}
+            </div>
+            {generatedAt && (
+              <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 8 }}>
+                Senast analyserad: {new Date(generatedAt).toLocaleString('sv-SE')}
+                {!isCurrent && <span style={{ color: 'var(--accent)', marginLeft: 8 }}>Ny data tillgänglig sedan dess</span>}
+              </div>
+            )}
+          </>
         )}
         {history.length > 1 && (
           <div style={{ marginTop: 16 }}>
