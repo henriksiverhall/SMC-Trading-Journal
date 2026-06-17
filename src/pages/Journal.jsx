@@ -4,16 +4,44 @@ import { useAuth } from '../hooks/useAuth'
 import { EMOTIONS, GRADES, getFuturesSpec, gradeColor, formatR } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
-// ── Field order & custom fields stored in localStorage ────────────────────────
-const DEFAULT_FIELD_ORDER = [
-  'strategy','datetime','symbol','prices','actual_exit',
-  'outcome','r_display','risk','grade','emotion','chart','notes','custom'
+// ── Field layout: rows of 1-2 field ids. Solo = full width, pair = 50/50 split.
+// Persisted in userSettings.widgets.journal_fields.rows (syncs across devices),
+// not localStorage.
+const DEFAULT_FIELD_ROWS = [
+  ['strategy'],
+  ['date', 'time'],
+  ['symbol', 'direction'],
+  ['entry', 'contracts'],
+  ['sl', 'tp'],
+  ['actual_exit'],
+  ['outcome'],
+  ['r_display'],
+  ['risk_pct', 'account_size'],
+  ['grade'],
+  ['emotion'],
+  ['chart'],
+  ['notes'],
+  ['custom'],
 ]
-function getFieldOrder() {
-  try { return JSON.parse(localStorage.getItem('tl_field_order')) || DEFAULT_FIELD_ORDER }
-  catch { return DEFAULT_FIELD_ORDER }
+// All field ids that must exist somewhere in the row layout. Used to repair
+// saved layouts if a field is ever added/removed from the app in the future.
+const ALL_FIELD_IDS = DEFAULT_FIELD_ROWS.flat()
+
+function normalizeRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return DEFAULT_FIELD_ROWS
+  const seen = new Set()
+  const cleaned = []
+  for (const row of rows) {
+    const r = (Array.isArray(row) ? row : [row]).filter(id => ALL_FIELD_IDS.includes(id) && !seen.has(id))
+    r.forEach(id => seen.add(id))
+    if (r.length) cleaned.push(r)
+  }
+  // Any field id missing from the saved layout (e.g. newly added field) gets its own row at the end
+  const missing = ALL_FIELD_IDS.filter(id => !seen.has(id))
+  missing.forEach(id => cleaned.push([id]))
+  return cleaned
 }
-function setFieldOrder(order) { localStorage.setItem('tl_field_order', JSON.stringify(order)) }
+
 function getCustomFields() {
   try { return JSON.parse(localStorage.getItem('tl_custom_fields')) || [] }
   catch { return [] }
@@ -107,20 +135,6 @@ function getTotalContracts(f, scales) {
   return (parseFloat(f.contracts) || 1) + scales.reduce((a, s) => a + (parseFloat(s.contracts) || 1), 0)
 }
 
-// ── Field section renderer ────────────────────────────────────────────────────
-function FieldSection({ fieldId, children, dragHandleProps }) {
-  return (
-    <div style={{ position: 'relative' }} {...dragHandleProps}>
-      <div style={{
-        position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)',
-        color: 'var(--border2)', fontSize: 12, cursor: 'grab', opacity: 0.5,
-        userSelect: 'none',
-      }} title="Dra för att flytta">⠿</div>
-      {children}
-    </div>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Journal() {
   const { user, userSettings, saveSettings } = useAuth()
@@ -134,14 +148,26 @@ export default function Journal() {
   const [editingId, setEditingId] = useState(null)
   const [scaleIns, setScaleIns] = useState([])
   const [targets, setTargets] = useState([])
-  const [fieldOrder, setFieldOrderState] = useState(getFieldOrder)
+  const [fieldRows, setFieldRowsState] = useState(DEFAULT_FIELD_ROWS)
   const [customFields, setCustomFieldsState] = useState(getCustomFields)
   const [customValues, setCustomValues] = useState({})
   const [showFieldMgr, setShowFieldMgr] = useState(false)
   const [newFieldName, setNewFieldName] = useState('')
   const [newFieldType, setNewFieldType] = useState('text')
-  const dragField = useRef(null)
+  const [draggingField, setDraggingField] = useState(null)
+  const [dropHint, setDropHint] = useState(null) // { id, mode: 'before'|'after'|'pair'|'swap' }
   const formRef = useRef(null)
+
+  // Load field layout from userSettings (synced across devices)
+  useEffect(() => {
+    setFieldRowsState(normalizeRows(userSettings?.widgets?.journal_fields?.rows))
+  }, [userSettings?.widgets?.journal_fields?.rows])
+
+  function persistFieldRows(rows) {
+    setFieldRowsState(rows)
+    const current = userSettings?.widgets || {}
+    saveSettings({ widgets: { ...current, journal_fields: { rows } } })
+  }
 
   // Load account/risk settings from userSettings
   useEffect(() => {
@@ -185,19 +211,75 @@ export default function Journal() {
   function removeTarget(id) { const n = targets.filter(t => t.id !== id); setTargets(n); recalc(form, scaleIns, n) }
   function updateTarget(id, field, val) { const n = targets.map(t => t.id === id ? { ...t, [field]: val } : t); setTargets(n); recalc(form, scaleIns, n) }
 
-  // Drag sort fields
-  function onFieldDragStart(e, id) { dragField.current = id; e.dataTransfer.effectAllowed = 'move' }
-  function onFieldDragOver(e, id) { e.preventDefault() }
-  function onFieldDrop(e, id) {
+  // ── Drag & drop for field layout ──────────────────────────────────────────
+  // Rules: drop on a solo field -> pair into a 2-col row. Drop on a field that
+  // already shares a row -> swap positions. Drop near the top/bottom edge of
+  // any field -> insert as a new full-width row before/after it.
+  function findFieldPos(rows, id) {
+    for (let r = 0; r < rows.length; r++) {
+      const c = rows[r].indexOf(id)
+      if (c !== -1) return [r, c]
+    }
+    return null
+  }
+
+  function onFieldDragStart(e, id) {
+    setDraggingField(id)
+    e.dataTransfer.effectAllowed = 'move'
+    const ghost = document.createElement('div')
+    ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px'
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 0, 0)
+    setTimeout(() => document.body.removeChild(ghost), 0)
+  }
+
+  function onFieldDragOver(e, id) {
     e.preventDefault()
-    if (!dragField.current || dragField.current === id) return
-    const order = [...fieldOrder]
-    const from = order.indexOf(dragField.current)
-    const to = order.indexOf(id)
-    if (from < 0 || to < 0) return
-    order.splice(from, 1); order.splice(to, 0, dragField.current)
-    setFieldOrderState(order); setFieldOrder(order)
-    dragField.current = null
+    if (id === draggingField) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const relY = (e.clientY - rect.top) / rect.height
+    const [r] = findFieldPos(fieldRows, id) ?? [null]
+    const rowLen = r != null ? fieldRows[r].length : 1
+    let mode
+    if (relY < 0.25) mode = 'before'
+    else if (relY > 0.75) mode = 'after'
+    else mode = rowLen === 1 ? 'pair' : 'swap'
+    setDropHint({ id, mode })
+  }
+
+  function onFieldDragEnd() {
+    if (draggingField && dropHint && dropHint.id !== draggingField) {
+      const fromId = draggingField, toId = dropHint.id, mode = dropHint.mode
+      let rows = fieldRows.map(r => [...r])
+
+      if (mode === 'swap') {
+        const fromPos = findFieldPos(rows, fromId)
+        const toPos = findFieldPos(rows, toId)
+        if (fromPos && toPos) {
+          rows[fromPos[0]][fromPos[1]] = toId
+          rows[toPos[0]][toPos[1]] = fromId
+        }
+      } else {
+        // Remove fromId from its current row first (drop empty rows)
+        const fromPos = findFieldPos(rows, fromId)
+        if (fromPos) {
+          rows[fromPos[0]].splice(fromPos[1], 1)
+          if (rows[fromPos[0]].length === 0) rows.splice(fromPos[0], 1)
+        }
+        const toPos = findFieldPos(rows, toId)
+        if (toPos) {
+          if (mode === 'pair') {
+            rows[toPos[0]] = [...rows[toPos[0]], fromId]
+          } else {
+            const insertAt = mode === 'before' ? toPos[0] : toPos[0] + 1
+            rows.splice(insertAt, 0, [fromId])
+          }
+        }
+      }
+      persistFieldRows(rows)
+    }
+    setDraggingField(null)
+    setDropHint(null)
   }
 
   // Custom fields
@@ -343,61 +425,52 @@ export default function Journal() {
               value={form.strategy} onChange={e => updateForm('strategy', e.target.value)} />
           </div>
         )
-      case 'datetime':
+      case 'date':
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <div className="form-group">
-              <label className="form-label">Datum</label>
-              <input type="date" className="form-control" value={form.date} onChange={e => updateForm('date', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tid (ET)</label>
-              <input type="time" className="form-control" value={form.time} onChange={e => updateForm('time', e.target.value)} />
-            </div>
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Datum</label>
+            <input type="date" className="form-control" value={form.date} onChange={e => updateForm('date', e.target.value)} />
+          </div>
+        )
+      case 'time':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Tid (ET)</label>
+            <input type="time" className="form-control" value={form.time} onChange={e => updateForm('time', e.target.value)} />
           </div>
         )
       case 'symbol':
         return (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-              <div className="form-group">
-                <label className="form-label">Instrument</label>
-                <input type="text" className="form-control" placeholder="NQ, ES, XAU…"
-                  value={form.symbol} onChange={e => updateForm('symbol', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Riktning</label>
-                <select className="form-control" value={form.direction} onChange={e => updateForm('direction', e.target.value)}>
-                  <option value="">Välj…</option>
-                  <option value="Long">Long</option>
-                  <option value="Short">Short</option>
-                </select>
-              </div>
-            </div>
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Instrument</label>
+            <input type="text" className="form-control" placeholder="NQ, ES, XAU…"
+              value={form.symbol} onChange={e => updateForm('symbol', e.target.value)} />
             {spec && (
-              <div style={{ background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', padding: '8px 12px', fontSize: 12, color: 'var(--accent)' }}>
+              <div style={{ background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', padding: '6px 10px', fontSize: 11, color: 'var(--accent)', marginTop: 6 }}>
                 🔷 {spec.name} · ${spec.pointValue}/point · {spec.exchange}
               </div>
             )}
           </div>
         )
-      case 'prices':
+      case 'direction':
         return (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 12, marginBottom: 8 }}>
-              <div className="form-group">
-                <label className="form-label">Entry</label>
-                <input type="number" step="0.01" className="form-control" placeholder="0.00"
-                  value={form.entry} onChange={e => updateForm('entry', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Kontrakt</label>
-                <input type="number" step="1" min="1" className="form-control" placeholder="1"
-                  value={form.contracts} onChange={e => updateForm('contracts', e.target.value)} />
-              </div>
-            </div>
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Riktning</label>
+            <select className="form-control" value={form.direction} onChange={e => updateForm('direction', e.target.value)}>
+              <option value="">Välj…</option>
+              <option value="Long">Long</option>
+              <option value="Short">Short</option>
+            </select>
+          </div>
+        )
+      case 'entry':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Entry</label>
+            <input type="number" step="0.01" className="form-control" placeholder="0.00"
+              value={form.entry} onChange={e => updateForm('entry', e.target.value)} />
             {scaleIns.map((s, i) => (
-              <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 28px', gap: 8, marginBottom: 6 }}>
+              <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 28px', gap: 8, marginTop: 6 }}>
                 <input type="number" step="0.01" className="form-control" placeholder={`Scale-in ${i + 2}`}
                   value={s.price} onChange={e => updateScaleIn(s.id, 'price', e.target.value)} />
                 <input type="number" step="1" min="1" className="form-control" placeholder="Ktr"
@@ -407,28 +480,40 @@ export default function Journal() {
               </div>
             ))}
             {scaleIns.length > 0 && weightedEntry && (
-              <div style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: 6 }}>
                 Weighted entry: {weightedEntry} · Total: {getTotalContracts(form, scaleIns)} ktr
               </div>
             )}
             <button type="button" onClick={addScaleIn}
-              style={{ background: 'none', border: '1px dashed var(--border2)', borderRadius: 'var(--r)', color: 'var(--text3)', cursor: 'pointer', fontSize: 12, padding: '4px 12px', width: '100%', marginBottom: 10 }}>
+              style={{ background: 'none', border: '1px dashed var(--border2)', borderRadius: 'var(--r)', color: 'var(--text3)', cursor: 'pointer', fontSize: 12, padding: '4px 12px', width: '100%', marginTop: 8 }}>
               + Lägg till scale-in entry
             </button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Stop Loss</label>
-                <input type="number" step="0.01" className="form-control" placeholder="0.00"
-                  value={form.sl} onChange={e => updateForm('sl', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Take Profit 1</label>
-                <input type="number" step="0.01" className="form-control" placeholder="0.00"
-                  value={form.tp} onChange={e => updateForm('tp', e.target.value)} />
-              </div>
-            </div>
+          </div>
+        )
+      case 'contracts':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Kontrakt</label>
+            <input type="number" step="1" min="1" className="form-control" placeholder="1"
+              value={form.contracts} onChange={e => updateForm('contracts', e.target.value)} />
+          </div>
+        )
+      case 'sl':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Stop Loss</label>
+            <input type="number" step="0.01" className="form-control" placeholder="0.00"
+              value={form.sl} onChange={e => updateForm('sl', e.target.value)} />
+          </div>
+        )
+      case 'tp':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Take Profit 1</label>
+            <input type="number" step="0.01" className="form-control" placeholder="0.00"
+              value={form.tp} onChange={e => updateForm('tp', e.target.value)} />
             {targets.length > 0 && (
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 6 }}>
                 {targets.map((t, i) => (
                   <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 28px', gap: 8, marginBottom: 6 }}>
                     <input type="number" step="0.01" className="form-control" placeholder={`TP ${i + 2}`}
@@ -486,17 +571,20 @@ export default function Journal() {
             )}
           </div>
         ) : null
-      case 'risk':
+      case 'risk_pct':
         return (
-          <div style={{ marginBottom: 14 }}>
+          <div className="form-group" style={{ marginBottom: 14 }}>
             <label className="form-label">Risk % av konto</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 24px 1fr', gap: 8, alignItems: 'center', marginTop: 6 }}>
-              <input type="number" step="0.1" min="0" className="form-control" placeholder="0.5"
-                value={form.risk_pct} onChange={e => updateForm('risk_pct', e.target.value)} />
-              <span style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>%</span>
-              <input type="number" step="1000" className="form-control" placeholder="50000"
-                value={form.account_size} onChange={e => updateForm('account_size', e.target.value)} />
-            </div>
+            <input type="number" step="0.1" min="0" className="form-control" placeholder="0.5"
+              value={form.risk_pct} onChange={e => updateForm('risk_pct', e.target.value)} />
+          </div>
+        )
+      case 'account_size':
+        return (
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label className="form-label">Kontostorlek</label>
+            <input type="number" step="1000" className="form-control" placeholder="50000"
+              value={form.account_size} onChange={e => updateForm('account_size', e.target.value)} />
             {riskDollar && (
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
                 ${riskDollar}/R
@@ -585,7 +673,7 @@ export default function Journal() {
     <div style={{ flex: 1 }}>
       <Topbar title={editingId ? 'Journal – Redigerar' : 'Journal'} />
       <div className="page-content">
-        <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'clamp(420px, 27vw, 520px) 1fr', gap: 20, alignItems: 'start' }}>
 
           {/* ── Form ── */}
           <div className="card" style={{ position: 'sticky', top: 'calc(var(--topbar-h) + 24px)' }} ref={formRef}>
@@ -615,30 +703,57 @@ export default function Journal() {
                   </select>
                   <button type="button" className="btn btn-primary btn-sm" onClick={addCustomField}>+</button>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>Dra ⠿-handtagen för att sortera formulärfälten.</div>
+                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>
+                  Dra ⠿⠿-handtagen för att flytta fält. Släpp på ett ensamt fält för att dela raden, eller på ett redan ihopparat fält för att byta plats.
+                </div>
               </div>
             )}
 
-            <div className="card-body" style={{ paddingLeft: 28 }}>
+            <div className="card-body">
               <form onSubmit={handleSave}>
-                {fieldOrder.map(id => {
-                  const content = renderField(id)
-                  if (!content) return null
+                {fieldRows.map(row => {
+                  const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
+                  if (cells.length === 0) return null
                   return (
-                    <div key={id}
-                      draggable
-                      onDragStart={e => onFieldDragStart(e, id)}
-                      onDragOver={e => onFieldDragOver(e, id)}
-                      onDrop={e => onFieldDrop(e, id)}
-                    >
-                      <div style={{ position: 'relative' }}>
-                        <div style={{
-                          position: 'absolute', left: -18, top: 8,
-                          color: 'var(--border2)', fontSize: 12, cursor: 'grab',
-                          userSelect: 'none', lineHeight: 1,
-                        }}>⠿</div>
-                        {content}
-                      </div>
+                    <div key={row.join('-')} style={{
+                      display: 'grid',
+                      gridTemplateColumns: cells.length === 2 ? '1fr 1fr' : '1fr',
+                      gap: 12,
+                    }}>
+                      {cells.map(({ id, content }) => {
+                        const isDragging = draggingField === id
+                        const hint = dropHint?.id === id ? dropHint.mode : null
+                        return (
+                          <div key={id}
+                            draggable
+                            onDragStart={e => onFieldDragStart(e, id)}
+                            onDragOver={e => onFieldDragOver(e, id)}
+                            onDragEnd={onFieldDragEnd}
+                            style={{
+                              position: 'relative',
+                              opacity: isDragging ? 0.35 : 1,
+                              transform: isDragging ? 'scale(0.98)' : 'scale(1)',
+                              transition: 'opacity 0.15s, transform 0.15s',
+                              outline: (hint === 'pair' || hint === 'swap') ? '2px dashed var(--accent)' : '2px solid transparent',
+                              outlineOffset: 4,
+                              borderRadius: 'var(--r2)',
+                            }}
+                          >
+                            {hint === 'before' && (
+                              <div style={{ position: 'absolute', top: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />
+                            )}
+                            {hint === 'after' && (
+                              <div style={{ position: 'absolute', bottom: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />
+                            )}
+                            <div style={{
+                              position: 'absolute', top: 0, right: 2, zIndex: 5,
+                              color: 'var(--text4)', fontSize: 12, cursor: 'grab',
+                              opacity: 0.35, userSelect: 'none', lineHeight: 1,
+                            }} title="Dra för att flytta">⠿⠿</div>
+                            {content}
+                          </div>
+                        )
+                      })}
                     </div>
                   )
                 })}
