@@ -454,14 +454,29 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
       const res = await fetch(`${WORKER_URL}/api/claude`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, max_tokens: 600 })
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 600,
+          messages: [{ role: 'user', content: prompt }],
+        })
       })
-      const data = await res.json()
-      const text = data.content?.[0]?.text || 'Inget svar.'
+      const rawText = await res.text()
+      if (!res.ok) {
+        setResponse(`Kunde inte ansluta till AI-tjänsten (HTTP ${res.status}): ${rawText.slice(0, 200)}`)
+        setLoading(false)
+        return
+      }
+      const data = JSON.parse(rawText)
+      if (data.error) {
+        setResponse(`AI-tjänsten svarade med fel: ${data.error.message || JSON.stringify(data.error)}`)
+        setLoading(false)
+        return
+      }
+      const text = data.content?.find(c => c.type === 'text')?.text || 'Inget svar.'
       setResponse(text)
       setHistory(h => [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...h.slice(0, 4)])
-    } catch {
-      setResponse('Kunde inte ansluta till AI-tjänsten.')
+    } catch (err) {
+      setResponse(`Kunde inte ansluta till AI-tjänsten: ${err.message}`)
     }
     setLoading(false)
   }

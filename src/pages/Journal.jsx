@@ -714,13 +714,27 @@ export default function Journal() {
             <div className="card-header">
               <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Log Trade'}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowFieldMgr(m => !m)} title="Hantera fält">⚙ Anpassa</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowFieldMgr(m => !m)} title="Hantera fält"
+                  style={showFieldMgr ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>
+                  ⚙ Anpassa
+                </button>
               </div>
             </div>
 
             {/* Field manager */}
             {showFieldMgr && (
               <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Obligatoriska fält</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 18 }}>
+                  {fieldRows.flat().filter(id => REQUIRABLE_FIELD_IDS.includes(id)).map(id => (
+                    <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={requiredFields.includes(id)} onChange={() => toggleRequired(id)}
+                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent)' }} />
+                      {FIELD_LABELS[id] || id}
+                    </label>
+                  ))}
+                </div>
+
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Egna fält</div>
                 {customFields.map((f, i) => (
                   <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -738,7 +752,7 @@ export default function Journal() {
                   <button type="button" className="btn btn-primary btn-sm" onClick={addCustomField}>+</button>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>
-                  Dra ⠿⠿-handtagen för att flytta fält. Släpp på ett ensamt fält för att dela raden, eller på ett redan ihopparat fält för att byta plats. Klicka * uppe till vänster på ett fält för att göra det obligatoriskt – "Spara trade" låses tills alla obligatoriska fält är ifyllda.
+                  I detta läge (Anpassa aktivt) kan du dra ⠿⠿-handtagen för att flytta fält – släpp på ett ensamt fält för att dela raden, eller på ett redan ihopparat fält för att byta plats. Stäng Anpassa när du är klar så går fälten tillbaka till normalt loggningsläge utan drag.
                 </div>
               </div>
             )}
@@ -761,44 +775,33 @@ export default function Journal() {
                         const missing = isRequired && !isFieldFilled(id)
                         return (
                           <div key={id}
-                            draggable
-                            onDragStart={e => onFieldDragStart(e, id)}
-                            onDragOver={e => onFieldDragOver(e, id)}
-                            onDragEnd={onFieldDragEnd}
+                            draggable={showFieldMgr}
+                            onDragStart={e => showFieldMgr && onFieldDragStart(e, id)}
+                            onDragOver={e => showFieldMgr && onFieldDragOver(e, id)}
+                            onDragEnd={() => showFieldMgr && onFieldDragEnd()}
                             style={{
                               position: 'relative',
                               opacity: isDragging ? 0.35 : 1,
                               transform: isDragging ? 'scale(0.98)' : 'scale(1)',
                               transition: 'opacity 0.15s, transform 0.15s',
-                              outline: (hint === 'pair' || hint === 'swap') ? '2px dashed var(--accent)' : '2px solid transparent',
+                              outline: showFieldMgr && (hint === 'pair' || hint === 'swap') ? '2px dashed var(--accent)' : '2px solid transparent',
                               outlineOffset: 4,
                               borderRadius: 'var(--r2)',
                               boxShadow: missing ? 'inset 2px 0 0 0 var(--red)' : 'none',
                             }}
                           >
-                            {hint === 'before' && (
+                            {showFieldMgr && hint === 'before' && (
                               <div style={{ position: 'absolute', top: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />
                             )}
-                            {hint === 'after' && (
+                            {showFieldMgr && hint === 'after' && (
                               <div style={{ position: 'absolute', bottom: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />
                             )}
-                            <div style={{
-                              position: 'absolute', top: 0, right: 2, zIndex: 5,
-                              color: 'var(--text4)', fontSize: 12, cursor: 'grab',
-                              opacity: 0.35, userSelect: 'none', lineHeight: 1,
-                            }} title="Dra för att flytta">⠿⠿</div>
-                            {REQUIRABLE_FIELD_IDS.includes(id) && (
-                              <button type="button"
-                                onClick={e => { e.stopPropagation(); toggleRequired(id) }}
-                                title={isRequired ? 'Obligatoriskt – klicka för att ta bort' : 'Klicka för att göra obligatoriskt'}
-                                style={{
-                                  position: 'absolute', top: -1, left: 2, zIndex: 5,
-                                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                                  fontSize: 14, lineHeight: 1, fontWeight: 700,
-                                  color: isRequired ? 'var(--red)' : 'var(--text4)',
-                                  opacity: isRequired ? 1 : 0.3,
-                                }}
-                              >*</button>
+                            {showFieldMgr && (
+                              <div style={{
+                                position: 'absolute', top: 0, right: 2, zIndex: 5,
+                                color: 'var(--text4)', fontSize: 12, cursor: 'grab',
+                                opacity: 0.5, userSelect: 'none', lineHeight: 1,
+                              }} title="Dra för att flytta">⠿⠿</div>
                             )}
                             {content}
                           </div>

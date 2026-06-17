@@ -271,11 +271,22 @@ export default function Roadmap() {
     load()
   }, [])
 
-  async function persist(newTasks) {
-    setTasks(newTasks)
+  // persist() always re-reads the CURRENT server state right before applying
+  // the change, then writes that back. This is critical: if it instead applied
+  // `tasks` (React's in-memory copy from page-load) as the base, any change made
+  // elsewhere since page-load (another tab, an admin SQL edit, etc.) would get
+  // silently overwritten - the exact bug where moved/edited cards "reverted" on
+  // refresh. `updaterFn` describes the change as a pure function so it can be
+  // re-applied against fresh data instead of a stale local snapshot.
+  async function persist(updaterFn) {
     setSaving(true)
     const { data } = await sbProd.from('user_settings').select('settings').eq('user_id', PROD_ADMIN_ID).single()
-    const merged = { ...(data?.settings || {}), roadmapTasks: newTasks }
+    const freshSettings = data?.settings || {}
+    const rt = freshSettings.roadmapTasks
+    const freshTasks = (rt && typeof rt === 'object' && !Array.isArray(rt)) ? rt : tasks
+    const newTasks = updaterFn(freshTasks)
+    setTasks(newTasks)
+    const merged = { ...freshSettings, roadmapTasks: newTasks }
     await sbProd.from('user_settings').upsert({ user_id: PROD_ADMIN_ID, settings: merged, updated_at: new Date().toISOString() })
     setSaving(false)
   }
@@ -288,31 +299,37 @@ export default function Roadmap() {
     e.preventDefault(); setDragOverCol(null)
     if (!dragCard.current) return
     const { id, fromCol } = dragCard.current
+    dragCard.current = null
     if (fromCol === toCol) return
-    const updated = { ...tasks }
-    const card = (updated[fromCol] || []).find(c => c.id === id)
-    if (!card) return
-    updated[fromCol] = (updated[fromCol] || []).filter(c => c.id !== id)
-    updated[toCol] = [...(updated[toCol] || []), card]
-    persist(updated); dragCard.current = null
+    persist(freshTasks => {
+      const updated = { ...freshTasks }
+      const card = (updated[fromCol] || []).find(c => c.id === id)
+      if (!card) return freshTasks
+      updated[fromCol] = (updated[fromCol] || []).filter(c => c.id !== id)
+      updated[toCol] = [...(updated[toCol] || []), card]
+      return updated
+    })
   }
 
   function handleAdd(colId, title, desc, priority) {
     const newCard = { id: crypto.randomUUID(), title, desc, priority, created_at: new Date().toISOString(), updated_at: '' }
-    persist({ ...tasks, [colId]: [...(tasks[colId] || []), newCard] })
+    persist(freshTasks => ({ ...freshTasks, [colId]: [...(freshTasks[colId] || []), newCard] }))
     setAddingIn(null)
   }
 
   function handleDelete(cardId, colId) {
-    persist({ ...tasks, [colId]: (tasks[colId] || []).filter(c => c.id !== cardId) })
+    persist(freshTasks => ({ ...freshTasks, [colId]: (freshTasks[colId] || []).filter(c => c.id !== cardId) }))
     setDetailCard(null)
   }
 
   function handleEditSave(cardId, fromCol, toCol, updated) {
-    const newTasks = { ...tasks }
-    newTasks[fromCol] = (newTasks[fromCol] || []).filter(c => c.id !== cardId)
-    newTasks[toCol] = [...(newTasks[toCol] || []), { ...updated, updated_at: new Date().toISOString() }]
-    persist(newTasks); setDetailCard(null)
+    persist(freshTasks => {
+      const newTasks = { ...freshTasks }
+      newTasks[fromCol] = (newTasks[fromCol] || []).filter(c => c.id !== cardId)
+      newTasks[toCol] = [...(newTasks[toCol] || []), { ...updated, updated_at: new Date().toISOString() }]
+      return newTasks
+    })
+    setDetailCard(null)
   }
 
   const totalCards = Object.values(tasks).flat().length
