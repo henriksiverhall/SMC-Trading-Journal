@@ -1,28 +1,29 @@
-export const APP_VERSION = 'v2.0.3-dev'
+export const APP_VERSION = 'v2.0.4-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
-export const TWELVE_KEY = '6834415a3a0745989f7ed475a5c7f418'
 
-export const TWELVE_SYMBOL_MAP = {
-  'NQ':'QQQ','NQ1!':'QQQ','MNQ':'QQQ',
-  'ES':'SPY','ES1!':'SPY','MES':'SPY',
-  'YM':'DIA','MYM':'DIA','RTY':'IWM',
-  'GC':'GLD','GC1!':'GLD','XAUUSD':'GLD',
-  'CL':'USO','SI':'SLV',
-  'EURUSD':'EUR/USD','EUR/USD':'EUR/USD',
-  'GBPUSD':'GBP/USD','GBP/USD':'GBP/USD',
-  'USDJPY':'USD/JPY','USD/JPY':'USD/JPY',
-  'AUDUSD':'AUD/USD','AUD/USD':'AUD/USD',
-  'USDCAD':'USD/CAD','USD/CAD':'USD/CAD',
-  'USDCHF':'USD/CHF','USD/CHF':'USD/CHF',
-  'NZDUSD':'NZD/USD','NZD/USD':'NZD/USD',
-  'EURGBP':'EUR/GBP','EUR/GBP':'EUR/GBP',
-  'EURJPY':'EUR/JPY','EUR/JPY':'EUR/JPY',
-  'GBPJPY':'GBP/JPY','GBP/JPY':'GBP/JPY',
+// Mappar instrument loggade i journalen till Yahoo Finance-symboler.
+// Måste matcha TRACKED_SYMBOLS i Worker-koden (tradelog-claude-api-dev) –
+// annars finns ingen cachad data att läsa för det instrumentet.
+export const YAHOO_SYMBOL_MAP = {
+  'NQ':'NQ=F','NQ1!':'NQ=F','MNQ':'NQ=F',
+  'ES':'ES=F','ES1!':'ES=F','MES':'ES=F',
+  'YM':'YM=F','MYM':'YM=F',
+  'RTY':'RTY=F','M2K':'RTY=F',
+  'EURUSD':'EURUSD=X','EUR/USD':'EURUSD=X',
+  'GBPUSD':'GBPUSD=X','GBP/USD':'GBPUSD=X',
+  'USDJPY':'USDJPY=X','USD/JPY':'USDJPY=X',
+  'AUDUSD':'AUDUSD=X','AUD/USD':'AUDUSD=X',
+  'USDCAD':'USDCAD=X','USD/CAD':'USDCAD=X',
+  'USDCHF':'USDCHF=X','USD/CHF':'USDCHF=X',
+  'NZDUSD':'NZDUSD=X','NZD/USD':'NZDUSD=X',
+  'EURGBP':'EURGBP=X','EUR/GBP':'EURGBP=X',
+  'EURJPY':'EURJPY=X','EUR/JPY':'EURJPY=X',
+  'GBPJPY':'GBPJPY=X','GBP/JPY':'GBPJPY=X',
 }
 
-export function getTwelveSymbol(instrument) {
+export function getYahooSymbol(instrument) {
   if (!instrument) return null
-  return TWELVE_SYMBOL_MAP[(instrument).toUpperCase().trim()] || null
+  return YAHOO_SYMBOL_MAP[(instrument).toUpperCase().trim()] || null
 }
 
 export const FUTURES_SPECS = {

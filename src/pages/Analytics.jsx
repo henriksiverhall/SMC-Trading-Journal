@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatR, gradeColor, WORKER_URL, TWELVE_KEY, getTwelveSymbol } from '../lib/constants'
+import { formatR, gradeColor, WORKER_URL, getYahooSymbol } from '../lib/constants'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
 import {
@@ -9,67 +9,55 @@ import {
   ResponsiveContainer, CartesianGrid, Cell, ReferenceLine
 } from 'recharts'
 
-// ── TwelveData helpers ────────────────────────────────────────────────────────
-const _mdCache = {}
+// ── Session-bound MFE/MAE ──────────────────────────────────────────────────────
+// MFE/MAE values are pre-computed and read in two ways:
+// 1) Already cached on the trade itself (trades.custom_data._mfe/_mae) – the
+//    common case once a trade has been processed once.
+// 2) On-demand from the Worker's /market-data endpoint, which serves daily-synced
+//    5-min bars from Supabase (filled nightly by a Cron Trigger – see
+//    tradelog-claude-api-dev). The frontend NEVER calls a market data provider
+//    directly; the Worker is the only thing that does, once per day per symbol.
+// All excursion math is strictly bounded to entry-time → 16:00 ET the same day,
+// so a session's MFE/MAE can never bleed into overnight or next-day movement.
 
-// Convert ET time to UTC for TwelveData API
-// ET = UTC-5 (EST) or UTC-4 (EDT). Use UTC-4 as default (most of trading year)
-function etToUtc(dateStr, timeStr) {
-  const time = timeStr || '09:30'
-  const [h, m] = time.split(':').map(Number)
-  const utcH = h + 4 // EDT offset (UTC-4); adjust to +5 for EST if needed
-  const utcTime = `${String(utcH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
-  return `${dateStr} ${utcTime}`
-}
+const _barsCache = {}
 
-async function fetchOHLC(symbol, dateStr, timeStr) {
-  const startDt = etToUtc(dateStr, timeStr)
-  const key = symbol + '_' + startDt
-  if (_mdCache[key]) return _mdCache[key]
+async function fetchSessionBars(symbol, dateStr) {
+  const key = symbol + '_' + dateStr
+  if (_barsCache[key]) return _barsCache[key]
   try {
-    const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=5min&start_date=${encodeURIComponent(startDt)}&outputsize=120&apikey=${TWELVE_KEY}`
+    const url = `${WORKER_URL}/market-data?symbol=${encodeURIComponent(symbol)}&from=${dateStr}&to=${dateStr}`
     const res = await fetch(url)
     const data = await res.json()
-    if (data.status === 'error' || !data.values) {
-      console.warn('TwelveData error for', symbol, startDt, ':', data.message || data.status)
-      return null
-    }
-    _mdCache[key] = data.values
-    return data.values
+    const bars = data?.days?.[0]?.bars || null
+    _barsCache[key] = bars
+    return bars
   } catch (e) {
-    console.warn('TwelveData fetch failed:', e)
+    console.warn('Market data fetch failed:', e)
     return null
   }
 }
 
+// Session-bound: only bars from entry time through 16:00 the SAME day are used.
 async function calcMFE_MAE(trade) {
   if (!trade.entry || !trade.sl || !trade.date || !trade.direction) return null
-  const sym = getTwelveSymbol(trade.symbol)
+  const sym = getYahooSymbol(trade.symbol)
   if (!sym) return null
 
-  const bars = await fetchOHLC(sym, trade.date, trade.time)
+  const bars = await fetchSessionBars(sym, trade.date)
   if (!bars?.length) return null
 
-  // TwelveData returns UTC timestamps – convert entry time to UTC for comparison
-  const entryUtc = etToUtc(trade.date, trade.time)
-  const entryTime = new Date(entryUtc.replace(' ', 'T') + 'Z').getTime()
-
-  const afterEntry = bars
-    .filter(b => new Date(b.datetime + ' UTC').getTime() >= entryTime - 300000) // 5min buffer
-    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
-
-  if (!afterEntry.length) {
-    console.warn('No bars after entry for', trade.symbol, trade.date, trade.time)
-    return null
-  }
+  const entryTime = trade.time || '09:30'
+  const sessionBars = bars.filter(b => b.time >= entryTime && b.time <= '16:00')
+  if (!sessionBars.length) return null
 
   const isLong = trade.direction === 'Long'
   const risk = Math.abs(trade.entry - trade.sl)
   if (risk === 0) return null
 
   let mfe = 0, mae = 0
-  afterEntry.forEach(b => {
-    const high = parseFloat(b.high), low = parseFloat(b.low)
+  sessionBars.forEach(b => {
+    const high = b.high, low = b.low
     if (isLong) {
       mfe = Math.max(mfe, (high - trade.entry) / risk)
       mae = Math.min(mae, (low - trade.entry) / risk)
@@ -155,22 +143,30 @@ function MFESection({ trades, onFetched }) {
     }
   }, [trades.length])
 
+  // Manual fallback for trades that don't yet have pre-computed MFE/MAE.
+  // Reads from the Worker's cached daily bars (Supabase), not a live provider call,
+  // so no rate-limit delay is needed here – only missing if the cron sync hasn't
+  // run yet for that symbol/date.
   async function fetchData() {
-    if (!candidates.length) return
+    const missing = candidates.filter(t => t.custom_data?._mfe == null)
+    if (!missing.length) return
     setStatus('loading')
     const now = new Date().toISOString()
-    const enriched = [...candidates]
-    for (let i = 0; i < enriched.length; i++) {
-      const t = enriched[i]
-      const sym = getTwelveSymbol(t.symbol)
-      if (!sym) continue
-      const md = await calcMFE_MAE(t)
-      if (md) {
-        const updated = { ...(t.custom_data || {}), _mfe: md.mfe, _mae: md.mae, _mfe_fetched_at: now }
-        await sb.from('trades').update({ custom_data: updated }).eq('id', t.id)
-        enriched[i] = { ...t, _mfe: md.mfe, _mae: md.mae, custom_data: updated }
+    const enriched = [...results]
+
+    for (const t of missing) {
+      const sym = getYahooSymbol(t.symbol)
+      if (sym) {
+        const md = await calcMFE_MAE(t)
+        if (md) {
+          const updated = { ...(t.custom_data || {}), _mfe: md.mfe, _mae: md.mae, _mfe_fetched_at: now }
+          await sb.from('trades').update({ custom_data: updated }).eq('id', t.id)
+          const idx = enriched.findIndex(e => e.id === t.id)
+          if (idx >= 0) enriched[idx] = { ...t, _mfe: md.mfe, _mae: md.mae, custom_data: updated }
+        }
       }
     }
+
     setResults(enriched)
     setFetchedAt(now)
     setStatus('done')
@@ -184,26 +180,28 @@ function MFESection({ trades, onFetched }) {
     : null
   const leftOnTable = avgMFE != null && avgR != null ? (parseFloat(avgMFE) - parseFloat(avgR)).toFixed(2) : null
 
+  const missingCount = candidates.filter(t => t.custom_data?._mfe == null).length
+
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
-        <div className="card-title">📐 MFE / MAE – Execution-analys</div>
+        <div className="card-title">📐 MFE / MAE – Execution-analys (samma session)</div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {fetchedAt && <span style={{ fontSize: 11, color: 'var(--text4)' }}>Hämtad {new Date(fetchedAt).toLocaleDateString('sv-SE')}</span>}
-          <button className="btn btn-ghost btn-sm" onClick={fetchData} disabled={status === 'loading' || !candidates.length}>
-            {status === 'loading' ? 'Hämtar…' : status === 'done' ? '↺ Uppdatera' : '▶ Hämta data'}
-          </button>
+          {missingCount > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={fetchData} disabled={status === 'loading'}>
+              {status === 'loading' ? 'Hämtar…' : `▶ Hämta ${missingCount} saknade`}
+            </button>
+          )}
         </div>
       </div>
       <div className="card-body">
-        {status === 'idle' && !results.length && (
-          <p style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6 }}>
-            Klicka "Hämta data" för att beräkna MFE/MAE för dina senaste trades via TwelveData.<br />
-            <strong>MFE</strong> = hur långt priset gick i din riktning · <strong>MAE</strong> = hur långt priset gick mot dig · <strong>Lämnat på bordet</strong> = MFE − utfall
-          </p>
-        )}
-        {status === 'loading' && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Hämtar marknadsdata – kan ta några sekunder…</p>}
-        {status === 'error' && <p style={{ fontSize: 13, color: 'var(--amber)' }}>⚠ Ingen data. Kontrollera instrument och tid för trades.</p>}
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
+          <strong>MFE</strong> = max gynnsam rörelse i R inom samma handelssession (entry → 16:00) ·{' '}
+          <strong>MAE</strong> = max ogynnsam rörelse ·{' '}
+          <strong>På bordet</strong> = MFE − faktiskt utfall. Övernattsrörelser räknas aldrig in.
+        </p>
+        {status === 'loading' && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Hämtar marknadsdata…</p>}
+        {status === 'error' && <p style={{ fontSize: 13, color: 'var(--amber)' }}>⚠ Ingen data cachad för detta instrument/datum ännu. Kontrollera att symbolen finns i Workerns instrumentlista och att daglig synk har körts.</p>}
         {results.length > 0 && (
           <>
             <div className="stats-grid" style={{ marginBottom: 16 }}>
@@ -248,24 +246,29 @@ function MFESection({ trades, onFetched }) {
 }
 
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
+// Answers: "Given how far price actually moved (MFE) within the same session
+// on every logged trade, what take-profit distance (in R) would have produced
+// the best expectancy?" This is a target-placement question, separate from
+// whether the entries/strategy itself has edge.
 function RROptimizer({ mfeResults, trades }) {
   const buildDataset = () => {
     const mfeMap = {}
     for (const t of (mfeResults || [])) {
-      if (t._mfe != null && t._mfe > 0) mfeMap[t.id] = t._mfe
+      if (t._mfe != null) mfeMap[t.id] = t._mfe
     }
     const base = trades.filter(t => t.result != null && t.entry && t.sl)
     return base.map(t => {
       if (mfeMap[t.id] != null) return { ...t, _mfe: mfeMap[t.id], _src: 'real' }
-      // Win proxy: price reached AT LEAST result R. Mark with sentinel so
-      // it counts at all RR levels <= result, but NOT above (unknown).
+      // Fallback only for trades genuinely missing session MFE data:
+      // a win proves price reached at least result R (honest lower bound).
       if (t.outcome === 'W' && t.result > 0) return { ...t, _mfe: t.result, _src: 'proxy_win' }
-      return { ...t, _mfe: 0, _src: 'proxy_loss' }
+      return { ...t, _mfe: null, _src: 'unknown' }
     })
   }
 
   const dataset = buildDataset()
   const valid = dataset.filter(t => t._mfe != null)
+  const missingMfeCount = dataset.length - valid.length
 
   if (!valid.length) return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -276,17 +279,17 @@ function RROptimizer({ mfeResults, trades }) {
     </div>
   )
 
-  const hasRealMFE = dataset.some(t => t._src === 'real')
-  const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0]
+  const hasAnyProxy = dataset.some(t => t._src === 'proxy_win')
+  const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0]
+
   const winningTrades = valid.filter(t => t.outcome === 'W')
   const currentAvgRR = winningTrades.length
     ? parseFloat((winningTrades.reduce((a, t) => a + (t.result || 0), 0) / winningTrades.length).toFixed(2))
     : 0
 
-  // Key insight: proxy wins have _mfe = result R (lower bound).
-  // A trade "reaches" RR level X if _mfe >= X.
-  // This means wins with result=3R count for 0.5R-3R but NOT 3.5R+ (honest).
-  // Real MFE data from TwelveData would show actual excursion beyond TP.
+  // For each candidate TP level, simulate: would this trade have won (MFE >= rr)
+  // or lost (stopped out before reaching rr)? Expectancy uses a fixed 1R stop,
+  // matching how every trade in the journal is risk-normalized.
   const simData = rrLevels.map(rr => {
     const wins = valid.filter(t => t._mfe >= rr)
     const wr = wins.length / valid.length
@@ -305,22 +308,31 @@ function RROptimizer({ mfeResults, trades }) {
   const current = simData.reduce((a, b) =>
     Math.abs(b.rrVal - currentAvgRR) < Math.abs(a.rrVal - currentAvgRR) ? b : a
   )
+  const actualWR = valid.length ? (winningTrades.length / valid.length * 100).toFixed(1) : 0
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
-        {!hasRealMFE && (
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
+          Simulerar vad som hänt om du tagit ett annat TP-mål på alla {valid.length} trades, baserat på hur
+          långt priset faktiskt rörde sig i din favör (MFE) samma session. Visar om dagens {currentAvgRR > 0 ? currentAvgRR + 'R-mål' : 'mål'} är
+          för aggressivt, för konservativt, eller redan nära optimalt.
+        </p>
+        {hasAnyProxy && (
           <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
-            ⚠ MFE-data saknas eller är 0 för vissa trades. Analys baseras på loggat utfall (R) som konservativ undre gräns – hämta MFE-data ovan för exaktare resultat.
+            ⚠ {missingMfeCount > 0 ? `${missingMfeCount} trades saknar MFE-data och exkluderas. ` : ''}
+            Vissa vinster saknar exakt MFE och räknas konservativt som "nådde precis sitt resultat" – hämta data i sektionen ovan för exakthet.
           </div>
         )}
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, padding: '10px 14px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', lineHeight: 1.6 }}>
-          Baserat på {valid.length} trades. Optimalt RR är{' '}
-          <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong>{' '}
-          (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, simulerad WR {best['Win Rate']}%).
-          {currentAvgRR > 0 && best.rrVal !== current.rrVal && (
-            <> Nuvarande snitt-RR: ~{currentAvgRR}R – {best.rrVal > currentAvgRR ? `överväg att öka till ${best.rr}` : `${best.rr} ger bäst expectancy`}.</>
+          Optimalt TP är <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong>{' '}
+          (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade vid simulerad WR {best['Win Rate']}%).
+          Ditt nuvarande snittmål: ~{currentAvgRR}R (faktisk WR {actualWR}%).
+          {best.rrVal !== current.rrVal && (
+            <> {best.rrVal > currentAvgRR
+              ? ` Historiskt fanns ofta mer rörelse kvar – pröva att flytta TP till ${best.rr}.`
+              : ` Du tar ofta ut mer risk än nödvändigt – ${best.rr} hade gett bättre expectancy med högre träffsäkerhet.`}</>
           )}
         </div>
 
@@ -344,7 +356,7 @@ function RROptimizer({ mfeResults, trades }) {
         <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="journal-table">
             <thead><tr>
-              <th>RR-nivå</th><th>Trades som nådde dit</th><th>Simulerad WR</th><th>Expectancy/trade</th><th></th>
+              <th>TP-nivå</th><th>Trades som nådde dit</th><th>Simulerad WR</th><th>Expectancy/trade</th><th></th>
             </tr></thead>
             <tbody>
               {simData.map(d => (
@@ -357,7 +369,7 @@ function RROptimizer({ mfeResults, trades }) {
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {d.rr === best.rr && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}
-                    {d.rrVal === currentAvgRR && d.rr !== best.rr && <span style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 600 }}>← nu</span>}
+                    {d.rrVal === currentAvgRR && d.rr !== best.rr && <span style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 600 }}>← nuvarande mål</span>}
                   </td>
                 </tr>
               ))}
