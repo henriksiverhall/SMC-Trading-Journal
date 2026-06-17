@@ -170,6 +170,7 @@ export default function Journal() {
   const [newFieldType, setNewFieldType] = useState('text')
   const [draggingField, setDraggingField] = useState(null)
   const [dropHint, setDropHint] = useState(null) // { id, mode: 'before'|'after'|'pair'|'swap' }
+  const [attemptedSave, setAttemptedSave] = useState(false)
   const formRef = useRef(null)
 
   // Load field layout from userSettings (synced across devices)
@@ -340,7 +341,7 @@ export default function Journal() {
   // Save
   async function handleSave(e) {
     e.preventDefault()
-    if (missingRequiredFields.length > 0) return
+    if (missingRequiredFields.length > 0) { setAttemptedSave(true); return }
     setSaving(true)
 
     const entry = weightedEntry || parseFloat(form.entry)
@@ -406,6 +407,7 @@ export default function Journal() {
     setCalcR(null); setCalcUSD(null)
     setScaleIns([]); setTargets([])
     setCustomValues({})
+    setAttemptedSave(false)
     setEditingId(null)
   }
 
@@ -449,12 +451,16 @@ export default function Journal() {
   const rColor = calcR > 0 ? 'var(--green)' : calcR < 0 ? 'var(--red)' : 'var(--text3)'
 
   // Render each form section
+  function reqMark(id) {
+    return requiredFields.includes(id) ? <span style={{ color: 'var(--red)', marginLeft: 4, fontWeight: 700 }}>*</span> : null
+  }
+
   function renderField(id) {
     switch (id) {
       case 'strategy':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Strategi <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>sparas automatiskt</span></label>
+            <label className="form-label">Strategi{reqMark('strategy')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>sparas automatiskt</span></label>
             <input type="text" className="form-control" placeholder="ICT Unicorn, Trend Pullback…"
               value={form.strategy} onChange={e => updateForm('strategy', e.target.value)} />
           </div>
@@ -462,21 +468,21 @@ export default function Journal() {
       case 'date':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Datum</label>
+            <label className="form-label">Datum{reqMark('date')}</label>
             <input type="date" className="form-control" value={form.date} onChange={e => updateForm('date', e.target.value)} />
           </div>
         )
       case 'time':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Tid (ET)</label>
+            <label className="form-label">Tid (ET){reqMark('time')}</label>
             <input type="time" className="form-control" value={form.time} onChange={e => updateForm('time', e.target.value)} />
           </div>
         )
       case 'symbol':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Instrument</label>
+            <label className="form-label">Instrument{reqMark('symbol')}</label>
             <input type="text" className="form-control" placeholder="NQ, ES, XAU…"
               value={form.symbol} onChange={e => updateForm('symbol', e.target.value)} />
             {spec && (
@@ -489,7 +495,7 @@ export default function Journal() {
       case 'direction':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Riktning</label>
+            <label className="form-label">Riktning{reqMark('direction')}</label>
             <select className="form-control" value={form.direction} onChange={e => updateForm('direction', e.target.value)}>
               <option value="">Välj…</option>
               <option value="Long">Long</option>
@@ -500,7 +506,7 @@ export default function Journal() {
       case 'entry':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Entry</label>
+            <label className="form-label">Entry{reqMark('entry')}</label>
             <input type="number" step="0.01" className="form-control" placeholder="0.00"
               value={form.entry} onChange={e => updateForm('entry', e.target.value)} />
             {scaleIns.map((s, i) => (
@@ -527,7 +533,7 @@ export default function Journal() {
       case 'contracts':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Kontrakt</label>
+            <label className="form-label">Kontrakt{reqMark('contracts')}</label>
             <input type="number" step="1" min="1" className="form-control" placeholder="1"
               value={form.contracts} onChange={e => updateForm('contracts', e.target.value)} />
           </div>
@@ -535,7 +541,7 @@ export default function Journal() {
       case 'sl':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Stop Loss</label>
+            <label className="form-label">Stop Loss{reqMark('sl')}</label>
             <input type="number" step="0.01" className="form-control" placeholder="0.00"
               value={form.sl} onChange={e => updateForm('sl', e.target.value)} />
           </div>
@@ -543,7 +549,7 @@ export default function Journal() {
       case 'tp':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Take Profit 1</label>
+            <label className="form-label">Take Profit 1{reqMark('tp')}</label>
             <input type="number" step="0.01" className="form-control" placeholder="0.00"
               value={form.tp} onChange={e => updateForm('tp', e.target.value)} />
             {targets.length > 0 && (
@@ -569,7 +575,7 @@ export default function Journal() {
       case 'actual_exit':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Faktisk exit <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
+            <label className="form-label">Faktisk exit{reqMark('actual_exit')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
             <input type="number" step="0.01" className="form-control" placeholder="Om ej exakt TP/SL"
               value={form.actual_exit} onChange={e => updateForm('actual_exit', e.target.value)} />
           </div>
@@ -577,7 +583,7 @@ export default function Journal() {
       case 'outcome':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Utfall</label>
+            <label className="form-label">Utfall{reqMark('outcome')}</label>
             <select className="form-control" value={form.outcome} onChange={e => updateForm('outcome', e.target.value)} required>
               <option value="">Välj…</option>
               <option value="W">Win</option>
@@ -608,7 +614,7 @@ export default function Journal() {
       case 'risk_pct':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Risk % av konto</label>
+            <label className="form-label">Risk % av konto{reqMark('risk_pct')}</label>
             <input type="number" step="0.1" min="0" className="form-control" placeholder="0.5"
               value={form.risk_pct} onChange={e => updateForm('risk_pct', e.target.value)} />
           </div>
@@ -616,7 +622,7 @@ export default function Journal() {
       case 'account_size':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Kontostorlek</label>
+            <label className="form-label">Kontostorlek{reqMark('account_size')}</label>
             <input type="number" step="1000" className="form-control" placeholder="50000"
               value={form.account_size} onChange={e => updateForm('account_size', e.target.value)} />
             {riskDollar && (
@@ -635,7 +641,7 @@ export default function Journal() {
       case 'grade':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Grade</label>
+            <label className="form-label">Grade{reqMark('grade')}</label>
             <div className="grade-btns" style={{ marginTop: 6 }}>
               {GRADES.map(g => (
                 <button key={g} type="button" className={`grade-btn ${form.grade === g ? 'sel' : ''}`}
@@ -647,7 +653,7 @@ export default function Journal() {
       case 'emotion':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Känsla <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
+            <label className="form-label">Känsla{reqMark('emotion')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>valfritt</span></label>
             <div className="emotion-btns" style={{ marginTop: 6 }}>
               {EMOTIONS.map(em => (
                 <button key={em.id} type="button" className={`emotion-btn ${form.emotion === em.id ? 'sel' : ''}`}
@@ -661,7 +667,7 @@ export default function Journal() {
       case 'chart':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Chart / Skärmbild</label>
+            <label className="form-label">Chart / Skärmbild{reqMark('chart')}</label>
             <input type="url" className="form-control" placeholder="URL eller länk till chart…"
               value={form.chart_link || ''} onChange={e => updateForm('chart_link', e.target.value)} style={{ marginTop: 6 }} />
           </div>
@@ -669,7 +675,7 @@ export default function Journal() {
       case 'notes':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Noteringar</label>
+            <label className="form-label">Noteringar{reqMark('notes')}</label>
             <textarea className="form-control" rows={3} placeholder="Vad gick bra? Vad kunde gjorts bättre?"
               value={form.notes} onChange={e => updateForm('notes', e.target.value)}
               style={{ resize: 'vertical', marginTop: 6 }} />
@@ -771,8 +777,6 @@ export default function Journal() {
                       {cells.map(({ id, content }) => {
                         const isDragging = draggingField === id
                         const hint = dropHint?.id === id ? dropHint.mode : null
-                        const isRequired = requiredFields.includes(id)
-                        const missing = isRequired && !isFieldFilled(id)
                         return (
                           <div key={id}
                             draggable={showFieldMgr}
@@ -787,7 +791,6 @@ export default function Journal() {
                               outline: showFieldMgr && (hint === 'pair' || hint === 'swap') ? '2px dashed var(--accent)' : '2px solid transparent',
                               outlineOffset: 4,
                               borderRadius: 'var(--r2)',
-                              boxShadow: missing ? 'inset 2px 0 0 0 var(--red)' : 'none',
                             }}
                           >
                             {showFieldMgr && hint === 'before' && (
@@ -812,12 +815,12 @@ export default function Journal() {
                 })}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={saving || missingRequiredFields.length > 0}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={saving}>
                     {saving ? 'Sparar…' : editingId ? '💾 Spara ändringar' : '🔖 Spara trade'}
                   </button>
                   {editingId && <button type="button" className="btn btn-ghost" onClick={resetForm}>Avbryt</button>}
                 </div>
-                {missingRequiredFields.length > 0 && (
+                {attemptedSave && missingRequiredFields.length > 0 && (
                   <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>
                     Fyll i: {missingRequiredFields.map(id => FIELD_LABELS[id] || id).join(', ')}
                   </div>
