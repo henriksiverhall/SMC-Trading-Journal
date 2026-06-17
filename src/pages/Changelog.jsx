@@ -2,6 +2,30 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.5-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'feature', text: 'Journal: Individuell fältdragning – varje fält flyttbart fritt, 2-kolumns rad-grid (para ihop, byt plats, eller egen full-bredd-rad)' },
+      { type: 'feature', text: 'Journal: Fältordning syncar mellan enheter via userSettings istället för bara lokalt i webbläsaren' },
+      { type: 'improvement', text: 'Journal: Log Trade-panelen breddad responsivt (420–520px) istället för fast 420px' },
+      { type: 'fix',     text: 'Worker (AI-proxy): CORS tillät bara en hårdkodad origin som inte matchade den faktiska dev-URL:en – orsakade "Kunde inte ansluta till AI-tjänsten". Nu tillåts båda kända origins' },
+    ]
+  },
+  {
+    version: 'v2.0.4-dev',
+    date: '2026-06-15',
+    entries: [
+      { type: 'feature', text: 'Widget-system – DragGrid: lägg till/ta bort och sortera widgets fritt på Dashboard och Analytics' },
+      { type: 'feature', text: 'Meddelanden – Allmänt (broadcast från admin) och Mina ärenden (support-trådar), badge för olästa' },
+      { type: 'feature', text: 'Admin – Support-flik: lista och svara på supportärenden, skapa/publicera broadcast-meddelanden' },
+      { type: 'feature', text: 'Journal: Faktisk exit, Risk%+kontostorlek, Fler targets, R auto, egna fält' },
+      { type: 'infra',   text: 'MFE/MAE bytt från TwelveData till egen Yahoo Finance-pipeline (Worker + market_bars-tabell), löser rate-limit och sessionsgräns-buggar' },
+      { type: 'infra',   text: 'Historisk backfill av EUR/USD 5-min till market_bars (2023–2026) för djupare backtesting' },
+      { type: 'fix',     text: 'RR-optimerare: korrekt proxy-logik för MFE, sessionsbunden beräkning, capture rate + bästa missade trade' },
+      { type: 'fix',     text: 'Supabase-säkerhet: admin_users-vyn (exponerade auth-data) borttagen, get_admin_users() läser auth.users direkt med egen behörighetskoll' },
+    ]
+  },
+  {
     version: 'v2.0.3-dev',
     date: '2026-06-14',
     entries: [
