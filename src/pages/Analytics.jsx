@@ -426,6 +426,7 @@ function AIAnalysis({ trades, aiEnabled }) {
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
   const [generatedAt, setGeneratedAt] = useState(null)
+  const [expandedHistory, setExpandedHistory] = useState(new Set())
   const loadedRef = useRef(false)
 
   if (!aiEnabled) return null
@@ -536,12 +537,25 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
         {history.length > 1 && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text4)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Historik</div>
-            {history.slice(1).map((h, i) => (
-              <div key={i} style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 10 }}>
-                <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 4 }}>{h.date}</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{h.text}</div>
-              </div>
-            ))}
+            {history.slice(1).map((h, i) => {
+              const isOpen = expandedHistory.has(i)
+              return (
+                <div key={i} style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}
+                  onClick={() => setExpandedHistory(prev => {
+                    const next = new Set(prev)
+                    next.has(i) ? next.delete(i) : next.add(i)
+                    return next
+                  })}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{h.date}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text4)' }}>{isOpen ? '▲' : '▼'}</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginTop: 8 }}>{h.text}</div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
