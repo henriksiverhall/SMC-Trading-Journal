@@ -173,7 +173,7 @@ export default function Checklist() {
     <div style={{ flex: 1 }}>
       <Topbar title="Checklist" />
       <div className="page-content">
-        <div className="card" style={{ maxWidth: 720, margin: '0 auto' }}>
+        <div className="card">
           <div className="card-header">
             <select className="form-control" style={{ maxWidth: 320 }} value={activeKey || ''} onChange={e => selectStrategy(e.target.value)}>
               {checklists.map(c => <option key={c.strategy_key} value={c.strategy_key}>{c.name}</option>)}
