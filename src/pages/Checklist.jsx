@@ -175,16 +175,12 @@ function Editor({ checklist, onSave, onClose, onDelete }) {
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r2)', background: 'var(--bg2)', marginTop: 16 }}>
-      {/* Editor header */}
+      {/* Editor header – bara namn + stäng, Spara finns längst ned */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>✏️ Redigerar</span>
         <input value={draft.name} onChange={e => setName(e.target.value)}
           style={{ ...inputStyle, flex: 1, fontWeight: 700, fontSize: 15 }} placeholder="Strateginamn" />
         <button onClick={onClose} style={{ ...btnSm, marginLeft: 4 }}>Stäng</button>
-        <button onClick={handleSave} disabled={saving}
-          style={{ ...btnSm, background: 'var(--accent)', border: 'none', color: 'var(--bg)', fontWeight: 700, padding: '4px 14px' }}>
-          {saving ? 'Sparar…' : '💾 Spara'}
-        </button>
       </div>
 
       <div style={{ padding: '16px' }}>
@@ -238,13 +234,19 @@ function Editor({ checklist, onSave, onClose, onDelete }) {
           </div>
         ))}
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           <button onClick={addPhase} style={{ ...btnSm, flex: 1, padding: '7px' }}>+ Lägg till fas</button>
           {onDelete && (
             <button onClick={onDelete} style={{ ...btnSm, color: 'var(--red)', borderColor: 'var(--red)', padding: '7px 14px' }}>
               🗑 Ta bort strategi
             </button>
           )}
+        </div>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ width: '100%', padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: 'var(--r)', color: 'var(--bg)', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Sparar…' : '💾 Spara ändringar'}
+          </button>
         </div>
       </div>
     </div>
@@ -344,7 +346,8 @@ export default function Checklist() {
   async function handleSave(draft) {
     const existing = checklists.find(c => c.strategy_key === draft.strategy_key)
     if (existing) {
-      await sb.from('checklists').update({ name: draft.name, phases: draft.phases, updated_at: new Date().toISOString() }).eq('id', existing.id)
+      const { error } = await sb.from('checklists').update({ name: draft.name, phases: draft.phases }).eq('id', existing.id)
+      if (error) { console.error('Checklist save failed:', error); alert('Kunde inte spara: ' + error.message); return }
     }
     await load()
     setEditingKey(null)
