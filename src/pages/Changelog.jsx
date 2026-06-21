@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.15-dev',
+    date: '2026-06-21',
+    entries: [
+      { type: 'feature', text: 'PiP-widget: flytande fönster med Checklist- och Logga trade-flikar, öppnas via ⧉-knappen i topbaren (kräver Chromium/Edge/Chrome)' },
+    ]
+  },
+  {
     version: 'v2.0.14-dev',
     date: '2026-06-21',
     entries: [

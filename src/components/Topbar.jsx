@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import PiPWidget from './PiPWidget'
 
 export default function Topbar({ title, subtitle, actions }) {
   const { user, userSettings } = useAuth()
@@ -22,6 +23,7 @@ export default function Topbar({ title, subtitle, actions }) {
         {actions && <div style={{ display: 'flex', gap: 8 }}>{actions}</div>}
       </div>
       <div className="topbar-right">
+        <PiPWidget />
         <button
           className="theme-toggle"
           onClick={() => setDark(d => !d)}
