@@ -2,6 +2,78 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.14-dev',
+    date: '2026-06-21',
+    entries: [
+      { type: 'fix',         text: 'Checklist editor: sparning fungerar nu (updated_at-kolumn saknas i schemat – borttagen från anropet)' },
+      { type: 'improvement', text: 'Checklist editor: Spara-knapp finns nu längst ned i editorn (inte bara i headern)' },
+      { type: 'improvement', text: 'Checklist: 2-kolumns layout, kollapsar automatiskt till 1 kolumn på smalt fönster' },
+    ]
+  },
+  {
+    version: 'v2.0.13-dev',
+    date: '2026-06-21',
+    entries: [
+      { type: 'feature',     text: 'Checklist: inbyggd editor – redigera namn, faser och steg, sätt blocker/stop/journalmärkning, flytta och ta bort' },
+      { type: 'feature',     text: 'Checklist: skapa ny strategi och ta bort befintlig direkt i UI:t' },
+    ]
+  },
+  {
+    version: 'v2.0.12-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'feature',     text: 'Checklist: portad från prod med standardstrategierna (Unicorn, Globex, Venom, Turtle), hopfällbara faser, progressbar, blocker-varningar' },
+      { type: 'fix',         text: 'Kanban: INSERT-policy saknades i prod RLS – kort kunde aldrig sparas av en oautentiserad klient (upsert kräver INSERT-rättighet)' },
+    ]
+  },
+  {
+    version: 'v2.0.11-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'improvement', text: 'Analytics AI-historik: kollapsad som standard, klicka för att expandera – samma mönster som prod' },
+    ]
+  },
+  {
+    version: 'v2.0.10-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'improvement', text: 'Journal: Log Trade-panelen scrollar internt när den är högre än fönstret – behöver inte längre scrolla i tradelistan för att nå fältens nederkant' },
+    ]
+  },
+  {
+    version: 'v2.0.9-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'feature',     text: 'Journal: Exit datum och Exit tid tillagda som valfria fält (för statistik på handelslängd)' },
+      { type: 'feature',     text: 'Analytics: Max Drawdown (peak-to-trough R i kronologisk ordning) tillagd i statistikraden' },
+    ]
+  },
+  {
+    version: 'v2.0.8-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'fix',         text: 'Kanban: race-fix – snabba drag i rad skickade parallella persist-anrop, nu köade i serie' },
+      { type: 'fix',         text: 'Journal: native HTML required-attribut på Utfall orsakade webbläsarens egen validering istället för vår – borttagen' },
+      { type: 'improvement', text: 'Analytics AI-analys: sparas nu i userSettings (överlever refresh/utloggning), fingerprint förhindrar onödiga API-anrop när inget ändrats' },
+    ]
+  },
+  {
+    version: 'v2.0.7-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'improvement', text: 'Journal obligatoriska fält: röd * vid etikett istället för röd ram, "Fyll i:"-hint visas bara efter ett misslyckat sparförsök' },
+    ]
+  },
+  {
+    version: 'v2.0.6-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'fix',         text: 'AI-analys: Analytics.jsx skickade fel format till Anthropic API ({prompt} istället för {model, messages}) – rättat till korrekt Messages API-format' },
+      { type: 'fix',         text: 'Kanban: Roadmap.jsx läste stale lokal state som bas vid persist, överskrev ändringar gjorda i andra flikar eller av admin – nu alltid färsk läsning från DB' },
+      { type: 'improvement', text: 'Journal obligatoriska fält: kryssrutor i Anpassa-panelen, drag och obligatorisk-togglar låsta bakom Anpassa-läget, knappen lyser när aktiv' },
+    ]
+  },
+  {
     version: 'v2.0.5-dev',
     date: '2026-06-17',
     entries: [
