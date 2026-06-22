@@ -2,6 +2,19 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.19-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'feature', text: 'Journal: filterrad (Utfall, Riktning, Strategi, Datumintervall) ovanför tradelistan' },
+      { type: 'feature', text: 'Journal + PiP: Strategi-fältet är nu en dropdown populerad från dina checklistor, med fritext-fallback' },
+      { type: 'feature', text: 'Journal: lyssnar på BroadcastChannel och uppdaterar listan live när ett trade sparas från PiP' },
+      { type: 'feature', text: 'PiP: Logga trade-fliken är nu ett fullständigt formulär (alla fält som i Journal, inkl. scale-ins, targets, exit-tid, emotion, chart, egna fält)' },
+      { type: 'fix',     text: 'PiP: trade sparat i PiP syns nu direkt i Journal utan att stänga fönstret eller ladda om sidan (BroadcastChannel)' },
+      { type: 'feature', text: 'Topbar: Avatar-ikonen har nu en dropdown med Profil och Logga ut' },
+      { type: 'improvement', text: 'Profil: helt på svenska, repeat-password-fält, uppdaterad privacy-text med acceptans av integritetsvillkor' },
+    ]
+  },
+  {
     version: 'v2.0.18-dev',
     date: '2026-06-22',
     entries: [

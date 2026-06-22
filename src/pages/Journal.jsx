@@ -157,6 +157,8 @@ function getTotalContracts(f, scales) {
 export default function Journal() {
   const { user, userSettings, saveSettings } = useAuth()
   const [trades, setTrades] = useState([])
+  const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })
+  const [checklistStrategies, setChecklistStrategies] = useState([])
   const [form, setForm] = useState(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -218,6 +220,13 @@ export default function Journal() {
       risk_pct: userSettings?.riskPct ? String(userSettings.riskPct) : f.risk_pct,
       account_size: userSettings?.accountSize ? String(userSettings.accountSize) : f.account_size,
     }))
+    // Hämta strategier från checklistor för dropdown
+    sb.from('checklists').select('name').eq('user_id', user.id).order('created_at')
+      .then(({ data }) => { if (data) setChecklistStrategies(data.map(c => c.name)) })
+    // Lyssna på trades sparade från PiP-fönstret
+    const bc = new BroadcastChannel('tradelog')
+    bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
+    return () => bc.close()
   }, [user])
 
   async function loadTrades() {
@@ -470,8 +479,23 @@ export default function Journal() {
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
             <label className="form-label">Strategi{reqMark('strategy')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>sparas automatiskt</span></label>
-            <input type="text" className="form-control" placeholder="ICT Unicorn, Trend Pullback…"
-              value={form.strategy} onChange={e => updateForm('strategy', e.target.value)} />
+            {checklistStrategies.length > 0 ? (
+              <>
+                <select className="form-control" value={checklistStrategies.includes(form.strategy) ? form.strategy : form.strategy ? '__custom__' : ''}
+                  onChange={e => updateForm('strategy', e.target.value === '__custom__' ? '' : e.target.value)}>
+                  <option value="">Välj strategi…</option>
+                  {checklistStrategies.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="__custom__">Skriv in egen…</option>
+                </select>
+                {(form.strategy && !checklistStrategies.includes(form.strategy)) && (
+                  <input type="text" className="form-control" style={{ marginTop: 6 }} placeholder="Ange strategi"
+                    value={form.strategy} onChange={e => updateForm('strategy', e.target.value)} />
+                )}
+              </>
+            ) : (
+              <input type="text" className="form-control" placeholder="ICT Unicorn, Trend Pullback…"
+                value={form.strategy} onChange={e => updateForm('strategy', e.target.value)} />
+            )}
           </div>
         )
       case 'date':
@@ -863,12 +887,75 @@ export default function Journal() {
               <div className="card-title">Trade Journal ({trades.length})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
             </div>
+
+            {/* Filterrad */}
+            {trades.length > 0 && (() => {
+              const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort()
+              return (
+                <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+                    value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
+                    <option value="">Alla utfall</option>
+                    <option value="W">Win</option>
+                    <option value="L">Loss</option>
+                    <option value="BE">Break Even</option>
+                  </select>
+                  <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+                    value={filter.direction} onChange={e => setFilter(f => ({ ...f, direction: e.target.value }))}>
+                    <option value="">Alla riktningar</option>
+                    <option value="Long">Long</option>
+                    <option value="Short">Short</option>
+                  </select>
+                  {strategies.length > 0 && (
+                    <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
+                      value={filter.strategy} onChange={e => setFilter(f => ({ ...f, strategy: e.target.value }))}>
+                      <option value="">Alla strategier</option>
+                      {strategies.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }}
+                    value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value }))} title="Från datum" />
+                  <span style={{ fontSize: 11, color: 'var(--text4)' }}>–</span>
+                  <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }}
+                    value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value }))} title="Till datum" />
+                  {(filter.outcome || filter.direction || filter.strategy || filter.dateFrom || filter.dateTo) && (
+                    <button className="btn btn-ghost btn-sm"
+                      onClick={() => setFilter({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })}>
+                      ✕ Rensa
+                    </button>
+                  )}
+                  {(() => {
+                    const n = trades.filter(t => {
+                      if (filter.outcome && t.outcome !== filter.outcome) return false
+                      if (filter.direction && t.direction !== filter.direction) return false
+                      if (filter.strategy && t.strategy !== filter.strategy) return false
+                      if (filter.dateFrom && t.date < filter.dateFrom) return false
+                      if (filter.dateTo && t.date > filter.dateTo) return false
+                      return true
+                    }).length
+                    return n !== trades.length
+                      ? <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{n} av {trades.length} trades</span>
+                      : <span style={{ fontSize: 11, color: 'var(--text4)', marginLeft: 'auto' }}>{trades.length} trades</span>
+                  })()}
+                </div>
+              )
+            })()}
+
             <div style={{ overflowX: 'auto' }}>
               {loading ? (
                 <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
               ) : trades.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
-              ) : (
+              ) : (() => {
+                const filteredTrades = trades.filter(t => {
+                  if (filter.outcome && t.outcome !== filter.outcome) return false
+                  if (filter.direction && t.direction !== filter.direction) return false
+                  if (filter.strategy && t.strategy !== filter.strategy) return false
+                  if (filter.dateFrom && t.date < filter.dateFrom) return false
+                  if (filter.dateTo && t.date > filter.dateTo) return false
+                  return true
+                })
+                return (
                 <table className="journal-table">
                   <thead>
                     <tr>
@@ -878,7 +965,7 @@ export default function Journal() {
                     </tr>
                   </thead>
                   <tbody>
-                    {trades.map(t => (
+                    {filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
                         <td className="mono">{t.date}</td>
                         <td><strong style={{ color: 'var(--text)' }}>{t.symbol || '—'}</strong></td>
@@ -894,7 +981,8 @@ export default function Journal() {
                     ))}
                   </tbody>
                 </table>
-              )}
+                )
+              })()}
             </div>
           </div>
         </div>
