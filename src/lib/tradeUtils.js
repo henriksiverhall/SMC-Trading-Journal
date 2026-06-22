@@ -35,9 +35,14 @@ export function normalizeTrade(trade) {
   let normalized = false
 
   const isBacktest = trade.custom_data?.backtest === true
+  const resultAlreadyInR = trade.custom_data?.result_unit === 'R'
 
-  if (isBacktest && result != null) {
-    // Faktisk risk = abs(entry - sl). Bättre än risk_pts (box-storlek) eftersom
+  if (resultAlreadyInR) {
+    // Result är redan satt i R-enheter – ingen konvertering behövs.
+    // Sätts när data fixats manuellt eller importerats med korrekt R-värde.
+  } else if (isBacktest && result != null) {
+    // Backtest-trade: result är i punkter, konvertera till R.
+    // Prioritera abs(entry-sl) framför risk_pts (box-storlek) eftersom
     // SL inte alltid sitter exakt vid box-kanten.
     const actualRisk = (trade.entry != null && trade.sl != null)
       ? Math.abs(parseFloat(trade.entry) - parseFloat(trade.sl))

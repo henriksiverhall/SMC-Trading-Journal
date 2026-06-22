@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.18-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'fix', text: 'tradeUtils: hoppa över R-konvertering om result_unit=R är satt – backtest-trades med fasta R-värden räknas nu korrekt (+2R/-1R/+3R)' },
+    ]
+  },
+  {
     version: 'v2.0.17-dev',
     date: '2026-06-22',
     entries: [
