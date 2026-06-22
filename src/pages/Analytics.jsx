@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatR, gradeColor, WORKER_URL, getYahooSymbol } from '../lib/constants'
+import { normalizeTrades } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
 import {
@@ -574,7 +575,7 @@ export default function Analytics() {
   useEffect(() => {
     if (!user) return
     sb.from('trades').select('*').eq('user_id', user.id).order('date', { ascending: false })
-      .then(({ data }) => { setTrades(data || []); setLoading(false) })
+      .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
   }, [user])
 
   const filtered = trades.filter(t => {

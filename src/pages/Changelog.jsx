@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.16-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'feature', text: 'tradeUtils.js: delad normaliseringsfunktion för trades – konverterar outcome (Win/Loss→W/L) och result (punkter→R via risk_pts) från alla kända import-format' },
+      { type: 'fix',     text: 'Analytics + Journal: normalizeTrades() appliceras vid fetch – backtest-trades (Blackwatch m.fl.) beräknas nu korrekt med rätt WR, R-värden och statistik' },
+    ]
+  },
+  {
     version: 'v2.0.15-dev',
     date: '2026-06-21',
     entries: [

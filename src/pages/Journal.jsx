@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EMOTIONS, GRADES, getFuturesSpec, gradeColor, formatR } from '../lib/constants'
+import { normalizeTrades } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 
 // ── Field layout: rows of 1-2 field ids. Solo = full width, pair = 50/50 split.
@@ -221,7 +222,7 @@ export default function Journal() {
 
   async function loadTrades() {
     const { data } = await sb.from('trades').select('*').eq('user_id', user.id).order('date', { ascending: false })
-    setTrades(data || [])
+    setTrades(normalizeTrades(data || []))
     setLoading(false)
   }
 
