@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatR, gradeColor, WORKER_URL, getYahooSymbol } from '../lib/constants'
-import { normalizeTrades } from '../lib/tradeUtils'
+import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec } from '../lib/constants'
+import { normalizeTrades, calcTradeSize } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
 import {
@@ -566,11 +566,25 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
 
 // ── Main Analytics ────────────────────────────────────────────────────────────
 export default function Analytics() {
-  const { user, aiEnabled } = useAuth()
+  const { user, aiEnabled, userSettings } = useAuth()
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '' })
   const [mfeResults, setMfeResults] = useState([])
+
+  // Kontoinställningar – laborterbara live
+  const [accountSize, setAccountSize] = useState(50000)
+  const [riskPct, setRiskPct] = useState(1.0)
+  const [showDollar, setShowDollar] = useState(false)
+
+  // Hydrate från userSettings om account_size/risk_pct sparats i Journal
+  useEffect(() => {
+    const t = trades.find(t => t.account_size || t.risk_pct)
+    if (!t && userSettings) {
+      if (userSettings.account_size) setAccountSize(Number(userSettings.account_size))
+      if (userSettings.risk_pct) setRiskPct(Number(userSettings.risk_pct))
+    }
+  }, [userSettings, trades])
 
   useEffect(() => {
     if (!user) return
@@ -584,6 +598,27 @@ export default function Analytics() {
     if (filter.strategy && t.strategy !== filter.strategy) return false
     return true
   })
+
+  // Dollar-berikade trades – beräknas live från kontoinställningarna
+  const filteredWithDollar = filtered.map(t => {
+    const sizing = calcTradeSize(t, accountSize, riskPct, getFuturesSpec)
+    return { ...t, _sizing: sizing }
+  })
+  const hasDollarData = filteredWithDollar.some(t => t._sizing != null)
+  const totalDollar = filteredWithDollar.reduce((a, t) => a + (t._sizing?.dollarPnl || 0), 0)
+  const maxDDDollar = (() => {
+    const chrono = [...filteredWithDollar]
+      .filter(t => t._sizing?.dollarPnl != null)
+      .sort((a, b) => `${a.date}T${a.time||'00:00'}` < `${b.date}T${b.time||'00:00'}` ? -1 : 1)
+    let equity = 0, peak = 0, worst = 0
+    for (const t of chrono) {
+      equity += t._sizing.dollarPnl
+      if (equity > peak) peak = equity
+      const dd = peak - equity
+      if (dd > worst) worst = dd
+    }
+    return worst
+  })()
 
   const withR   = filtered.filter(t => t.result != null)
   const wins    = withR.filter(t => t.outcome === 'W')
@@ -664,13 +699,36 @@ export default function Analytics() {
       title: 'Statistik',
       span: 2,
       content: (
-        <div className="stats-grid">
-          <StatCard label="Trades"        value={filtered.length}                                      sub={`${wins.length}V · ${losses.length}F`} />
-          <StatCard label="Win Rate"      value={winRate.toFixed(1) + '%'}                             cls={winRate >= 50 ? 'positive' : 'negative'} />
-          <StatCard label="Total R"       value={(totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R'}   cls={totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : ''} />
-          <StatCard label="Profit Factor" value={pf.toFixed(2)}                                        cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
-          <StatCard label="Max DD"        value={maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R'}    cls={maxDD > 0 ? 'negative' : ''} />
-          <StatCard label="Avg Vinst"     value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
+        <div>
+          <div className="stats-grid">
+            <StatCard label="Trades"        value={filtered.length}                                      sub={`${wins.length}V · ${losses.length}F`} />
+            <StatCard label="Win Rate"      value={winRate.toFixed(1) + '%'}                             cls={winRate >= 50 ? 'positive' : 'negative'} />
+            <StatCard label="Total R"       value={(totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R'}   cls={totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : ''} />
+            <StatCard label="Profit Factor" value={pf.toFixed(2)}                                        cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
+            <StatCard label="Max DD"        value={maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R'}  cls={maxDD > 0 ? 'negative' : ''} />
+            <StatCard label="Avg Vinst"     value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
+          </div>
+          {showDollar && hasDollarData && (() => {
+            const winDollar = filteredWithDollar.filter(t => t.outcome === 'W').reduce((a, t) => a + (t._sizing?.dollarPnl || 0), 0)
+            const lossDollar = filteredWithDollar.filter(t => t.outcome === 'L').reduce((a, t) => a + (t._sizing?.dollarPnl || 0), 0)
+            const avgContracts = parseFloat((filteredWithDollar.filter(t => t._sizing).reduce((a, t) => a + t._sizing.contracts, 0) / filteredWithDollar.filter(t => t._sizing).length).toFixed(1))
+            const fmt = v => (v >= 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('sv-SE', { maximumFractionDigits: 0 })
+            return (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '14px 0 8px', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                  Dollar ({accountSize.toLocaleString('sv-SE')} USD konto · {riskPct}% risk)
+                </div>
+                <div className="stats-grid">
+                  <StatCard label="Netto $"    value={fmt(totalDollar)}                 cls={totalDollar >= 0 ? 'positive' : 'negative'} />
+                  <StatCard label="Vinster $"  value={fmt(winDollar)}                   cls="positive" />
+                  <StatCard label="Förluster $" value={fmt(lossDollar)}                 cls="negative" />
+                  <StatCard label="Max DD $"   value={maxDDDollar > 0 ? '-$' + maxDDDollar.toLocaleString('sv-SE', { maximumFractionDigits: 0 }) : '$0'} cls={maxDDDollar > 0 ? 'negative' : ''} />
+                  <StatCard label="Max DD %"   value={maxDDDollar > 0 ? '-' + (maxDDDollar / accountSize * 100).toFixed(1) + '%' : '0%'} cls={maxDDDollar > 0 ? 'negative' : ''} />
+                  <StatCard label="Snitt ktr"  value={isNaN(avgContracts) ? '—' : avgContracts + ' ktr'} />
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )
     },
@@ -678,7 +736,41 @@ export default function Analytics() {
       id: 'equity',
       title: 'Equity Curve',
       span: 2,
-      content: <EquityCurve trades={filtered} />
+      content: (
+        <div>
+          <EquityCurve trades={filtered} />
+          {showDollar && hasDollarData && (() => {
+            const chrono = [...filteredWithDollar]
+              .filter(t => t._sizing?.dollarPnl != null)
+              .sort((a, b) => `${a.date}T${a.time||'00:00'}` < `${b.date}T${b.time||'00:00'}` ? -1 : 1)
+            let cumDollar = accountSize
+            const dollarData = chrono.map(t => {
+              cumDollar += t._sizing.dollarPnl
+              return { date: t.date, dollar: parseFloat(cumDollar.toFixed(0)) }
+            })
+            const isPos = dollarData.length > 0 && dollarData[dollarData.length - 1].dollar >= accountSize
+            return (
+              <div className="card" style={{ marginTop: 16 }}>
+                <div className="card-header">
+                  <div className="card-title">Equity Curve ($) – startar ${accountSize.toLocaleString('sv-SE')}</div>
+                </div>
+                <div className="card-body" style={{ paddingTop: 8 }}>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={dollarData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="date" stroke="var(--text4)" tick={{ fontSize: 10, fill: 'var(--text4)' }} tickFormatter={d => d?.slice(5)} interval="preserveStartEnd" />
+                      <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} tickFormatter={v => '$' + (v/1000).toFixed(0) + 'k'} />
+                      <Tooltip formatter={(v) => ['$' + v.toLocaleString('sv-SE'), 'Kontobalans']} labelFormatter={l => l} />
+                      <ReferenceLine y={accountSize} stroke="var(--border2)" strokeDasharray="4 4" />
+                      <Line type="monotone" dataKey="dollar" name="Balans" stroke={isPos ? 'var(--green)' : 'var(--red)'} dot={false} strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      )
     },
     {
       id: 'grade_emotion',
@@ -778,7 +870,7 @@ export default function Analytics() {
       <Topbar title="Analytics" />
       <div className="page-content">
         {/* Filters */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <select className="form-control" style={{ width: 'auto', fontSize: 12 }}
             value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
             <option value="">Alla utfall</option>
@@ -803,6 +895,39 @@ export default function Analytics() {
             <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '' })}>✕ Rensa</button>
           )}
           <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
+        </div>
+
+        {/* Kontoinstillningar – laborterbara live */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap',
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '10px 14px' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5 }}>💰 Kontosimulator</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 12, color: 'var(--text3)' }}>Konto</label>
+            <input type="number" step="1000" min="1000"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 100, fontFamily: 'var(--font)' }}
+              value={accountSize} onChange={e => setAccountSize(Number(e.target.value))} />
+            <span style={{ fontSize: 11, color: 'var(--text4)' }}>USD</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 12, color: 'var(--text3)' }}>Risk/trade</label>
+            <input type="number" step="0.1" min="0.1" max="5"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 60, fontFamily: 'var(--font)' }}
+              value={riskPct} onChange={e => setRiskPct(Number(e.target.value))} />
+            <span style={{ fontSize: 11, color: 'var(--text4)' }}>%</span>
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text4)' }}>= ${(accountSize * riskPct / 100).toFixed(0)}/trade</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Visa i $</span>
+            <button onClick={() => setShowDollar(d => !d)}
+              style={{ width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+                background: showDollar ? 'var(--accent)' : 'var(--border2)', transition: 'background 0.2s' }}>
+              <span style={{ position: 'absolute', top: 2, left: showDollar ? 18 : 2, width: 16, height: 16,
+                borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+            </button>
+          </div>
+          {!hasDollarData && showDollar && (
+            <span style={{ fontSize: 11, color: 'var(--red)' }}>Trades saknar entry/sl/symbol – kan ej beräkna kontrakt</span>
+          )}
         </div>
 
         <DragGrid pageKey="analytics" widgets={widgets} />

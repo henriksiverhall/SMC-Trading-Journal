@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.17-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'fix',     text: 'tradeUtils: R-beräkning använder nu abs(entry-sl) som faktisk risk istället för risk_pts (box-storlek) – ger korrekt R oavsett var SL sitter' },
+      { type: 'feature', text: 'Analytics: Kontosimulator – ange kontostorlek och risk% live och se dollar P&L, Max DD i $ och %, kontrakt per trade, dollar equity-kurva' },
+    ]
+  },
+  {
     version: 'v2.0.16-dev',
     date: '2026-06-22',
     entries: [
