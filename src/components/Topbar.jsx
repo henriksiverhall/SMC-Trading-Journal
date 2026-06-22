@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import PiPWidget from './PiPWidget'
 
-export default function Topbar({ title, subtitle, actions }) {
+export default function Topbar({ title, subtitle, actions, onNavigate }) {
   const { user, userSettings, signOut } = useAuth()
   const initial = (userSettings?.displayName || user?.email || 'U')[0].toUpperCase()
   const [dark, setDark] = useState(() => {
@@ -64,17 +64,18 @@ export default function Topbar({ title, subtitle, actions }) {
             }}>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 2 }}>Inloggad som</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, wordBreak: 'break-all' }}>{user?.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }} title={user?.email}>{user?.email}</div>
               </div>
-              <a href="/profile" onClick={() => setAvatarOpen(false)}
+              <button onClick={() => { setAvatarOpen(false); (onNavigate || window.__tlNavigate)?.('profile') }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-                  color: 'var(--text2)', textDecoration: 'none', fontSize: 13,
+                  width: '100%', background: 'none', border: 'none',
+                  color: 'var(--text2)', cursor: 'pointer', fontSize: 13, textAlign: 'left',
                   transition: 'background 0.1s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 👤 Profil
-              </a>
-              <button onClick={() => { setAvatarOpen(false); signOut() }}
+              </button>
+              <button onClick={() => { setAvatarOpen(false); (onNavigate || window.__tlNavigate)?.('dashboard'); signOut() }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
                   width: '100%', background: 'none', border: 'none', borderTop: '1px solid var(--border)',
                   color: 'var(--red)', cursor: 'pointer', fontSize: 13, textAlign: 'left',

@@ -158,7 +158,17 @@ export default function Journal() {
   const { user, userSettings, saveSettings } = useAuth()
   const [trades, setTrades] = useState([])
   const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })
+  const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
+
+  function toggleSort(col) {
+    setSort(s => ({ col, dir: s.col === col && s.dir === 'asc' ? 'desc' : 'asc' }))
+  }
+
+  function SortArrow({ col }) {
+    if (sort.col !== col) return null
+    return <span style={{ fontSize: 10, marginLeft: 3 }}>{sort.dir === 'asc' ? '▲' : '▼'}</span>
+  }
   const [form, setForm] = useState(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -954,14 +964,29 @@ export default function Journal() {
                   if (filter.dateFrom && t.date < filter.dateFrom) return false
                   if (filter.dateTo && t.date > filter.dateTo) return false
                   return true
+                }).sort((a, b) => {
+                  const dir = sort.dir === 'asc' ? 1 : -1
+                  const av = a[sort.col] ?? ''
+                  const bv = b[sort.col] ?? ''
+                  if (sort.col === 'result' || sort.col === 'entry' || sort.col === 'sl' || sort.col === 'tp') {
+                    return (parseFloat(av) - parseFloat(bv)) * dir
+                  }
+                  return av < bv ? -dir : av > bv ? dir : 0
                 })
                 return (
                 <table className="journal-table">
                   <thead>
                     <tr>
-                      <th>Datum</th><th>Symbol</th><th>Dir</th><th>Entry</th>
-                      <th>SL</th><th>TP</th><th>Utfall</th><th>R</th>
-                      <th>Grade</th><th>Strategi</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('symbol')}>Symbol{SortArrow({col:'symbol'})}</th>
+                      <th>Dir</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('entry')}>Entry{SortArrow({col:'entry'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('sl')}>SL{SortArrow({col:'sl'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('tp')}>TP{SortArrow({col:'tp'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('outcome')}>Utfall{SortArrow({col:'outcome'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('result')}>R{SortArrow({col:'result'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('grade')}>Grade{SortArrow({col:'grade'})}</th>
+                      <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('strategy')}>Strategi{SortArrow({col:'strategy'})}</th>
                     </tr>
                   </thead>
                   <tbody>

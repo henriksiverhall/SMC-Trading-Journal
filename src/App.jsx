@@ -22,6 +22,9 @@ export default function App() {
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
+  // Global navigation helper so Topbar can navigate without prop-drilling
+  useEffect(() => { window.__tlNavigate = setPage; return () => { delete window.__tlNavigate } }, [setPage])
+
   useEffect(() => {
     sessionStorage.setItem('tl_page', page)
   }, [page])

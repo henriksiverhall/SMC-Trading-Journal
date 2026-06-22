@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.20-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'fix',         text: 'Topbar: Profil-länk i avatar-dropdown navigerade till 404 (href=/profile i SPA). Ersatt med window.__tlNavigate som sätts av App.jsx' },
+      { type: 'improvement', text: 'Topbar: e-post trunkeras med ellipsis istället för att radbryta fult i avatar-dropdown' },
+      { type: 'feature',     text: 'Journal: kolumnsortering – klicka på Datum/Symbol/Entry/SL/TP/Utfall/R/Grade/Strategi för att sortera' },
+    ]
+  },
+  {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
