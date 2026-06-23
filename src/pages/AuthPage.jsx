@@ -70,19 +70,20 @@ export default function AuthPage() {
       )}
 
       {/* Hero panel – halvtransparent mot bakgrundsbilden */}
-      <div className="auth-hero" style={{
-        position: 'relative', zIndex: 1,
-        background: heroUrl
-          ? `linear-gradient(135deg, rgba(10,12,18,${branding?.opacity?.hero ?? 0.82}) 0%, rgba(10,12,18,${Math.max(0, (branding?.opacity?.hero ?? 0.82) - 0.27)}) 100%)`
-          : undefined,
-        backdropFilter: heroUrl ? 'blur(1px)' : undefined,
-        borderRight: 'none',
-      }}>
-        <div className="auth-hero-logo">
+      <div className="auth-hero" style={{ position: 'relative', zIndex: 1, borderRight: 'none' }}>
+        {/* Justerbart overlay – opacity styrs av Admin Branding-inställningen */}
+        {heroUrl && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+            background: 'rgb(10,12,18)',
+            opacity: branding?.opacity?.hero ?? 0.82,
+          }} />
+        )}
+        <div className="auth-hero-logo" style={{ position: 'relative', zIndex: 1 }}>
           <div className="auth-hero-logo-icon">TL</div>
           <div><div className="auth-hero-logo-name">TradeLog</div></div>
         </div>
-        <div className="auth-hero-content">
+        <div className="auth-hero-content" style={{ position: 'relative', zIndex: 1 }}>
           <h1 className="auth-hero-headline">
             Track your trades.<br />
             <span>Master your edge.</span>
@@ -106,11 +107,20 @@ export default function AuthPage() {
             </div>
           </div>
         </div>
-        <div className="auth-hero-footer">TradeLog {APP_VERSION} · journal.smctrading.se</div>
+        <div className="auth-hero-footer" style={{ position: 'relative', zIndex: 1 }}>TradeLog {APP_VERSION} · journal.smctrading.se</div>
       </div>
 
       {/* Form panel – opak, ingen transparens */}
       <div className="auth-panel" style={{ position: 'relative', zIndex: 1 }}>
+        {/* Justerbart overlay för form-panel */}
+        {heroUrl && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+            background: 'rgb(10,12,18)',
+            opacity: branding?.opacity?.form ?? 1.0,
+          }} />
+        )}
+        <div style={{ position: 'relative', zIndex: 1 }}>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
@@ -176,6 +186,7 @@ export default function AuthPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   )
