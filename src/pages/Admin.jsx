@@ -596,6 +596,32 @@ function BrandingTab({ adminId }) {
           <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 12 }}>
             Bilden visas halvtransparent bakom sidans innehåll. Välj mörk/ljus bild efter aktivt tema.
           </div>
+
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 }}>Genomskinlighet</div>
+            {[
+              { key: 'hero', label: 'Hero-panel (vänster på inloggning)', def: 0.82 },
+              { key: 'form', label: 'Formulär-panel (inloggning)', def: 1.0 },
+              { key: 'page', label: 'Bakgrund på övriga sidor', def: 0.15 },
+            ].map(({ key, label, def }) => {
+              const val = branding.opacity?.[key] ?? def
+              const transPct = Math.round((1 - val) * 100)
+              return (
+                <div key={key} style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>
+                    <span>{label}</span>
+                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--accent)', fontWeight: 600 }}>{transPct}% genomskinlig</span>
+                  </div>
+                  <input type="range" min="0" max="100" value={transPct}
+                    onChange={e => setOpacity(key, 1 - parseInt(e.target.value) / 100)}
+                    style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text4)', marginTop: 3 }}>
+                    <span>Ogenomskinlig</span><span>Helt genomskinlig</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
