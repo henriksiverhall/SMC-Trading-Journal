@@ -54,7 +54,7 @@ export default function AuthPage() {
   return (
     <div className="auth-page" style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      display: 'grid', gridTemplateColumns: '380px 440px 1fr',
+      display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) minmax(340px, 440px) 1fr',
     }}>
       {/* Hero panel */}
       <div className="auth-hero">
@@ -184,12 +184,9 @@ export default function AuthPage() {
         position: 'relative',
         overflow: 'hidden',
         background: 'var(--bg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
       }}>
         {heroUrl ? (
-          <img src={heroUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+          <img src={heroUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'left center' }} />
         ) : (
           <div style={{ color: 'var(--text4)', fontSize: 13 }}>Ingen bild konfigurerad</div>
         )}
