@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './hooks/useAuth'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
@@ -21,6 +21,35 @@ export default function App() {
     return VALID_PAGES.includes(saved) ? saved : 'dashboard'
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [bgStyle, setBgStyle] = useState({})
+  const brandingRef = useRef(null)
+
+  // Load branding settings once and apply background based on current page
+  useEffect(() => {
+    const ADMIN_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+    import('./lib/supabase').then(({ sb }) => {
+      sb.from('user_settings').select('settings').eq('user_id', ADMIN_ID).single()
+        .then(({ data }) => { brandingRef.current = data?.settings?.branding || null; applyBg(page) })
+    })
+  }, [])
+
+  function applyBg(currentPage) {
+    const b = brandingRef.current
+    if (!b?.showOn?.[currentPage]) { setBgStyle({}); return }
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
+    const url = isDark ? (b.heroImages?.dark || '/images/hero-dark.png') : (b.heroImages?.light || '/images/hero-light.png')
+    const opacity = b.opacity?.page ?? 0.15
+    setBgStyle({
+      backgroundImage: `url(${url})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+      '--page-bg-opacity': opacity,
+    })
+  }
+
+  useEffect(() => { applyBg(page) }, [page])
 
   // Global navigation helper so Topbar can navigate without prop-drilling
   useEffect(() => { window.__tlNavigate = setPage; return () => { delete window.__tlNavigate } }, [setPage])
@@ -53,8 +82,20 @@ export default function App() {
   return (
     <div className="app-layout">
       <Sidebar activePage={page} onNavigate={setPage} onOpenChange={setSidebarOpen} />
-      <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        {pages[page] || pages.dashboard}
+      <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`} style={{ position: 'relative' }}>
+        {Object.keys(bgStyle).length > 0 && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+            backgroundImage: bgStyle.backgroundImage,
+            backgroundSize: bgStyle.backgroundSize,
+            backgroundPosition: bgStyle.backgroundPosition,
+            backgroundRepeat: bgStyle.backgroundRepeat,
+            opacity: bgStyle['--page-bg-opacity'] || 0.15,
+          }} />
+        )}
+        <div style={{ position: 'relative', zIndex: 1, display: 'contents' }}>
+          {pages[page] || pages.dashboard}
+        </div>
       </main>
     </div>
   )

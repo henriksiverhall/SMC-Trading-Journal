@@ -14,17 +14,19 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [heroUrl, setHeroUrl] = useState(null)
+  const [branding, setBrandingState] = useState(null)
 
   // Ladda branding-inställningar från admin-kontot
   useEffect(() => {
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
       .then(({ data }) => {
-        const branding = data?.settings?.branding
-        if (branding?.showOn?.auth !== false) {
+        const b = data?.settings?.branding
+        setBrandingState(b || {})
+        if (b?.showOn?.auth !== false) {
           const url = isDark
-            ? (branding?.heroImages?.dark || DEFAULT_DARK)
-            : (branding?.heroImages?.light || DEFAULT_LIGHT)
+            ? (b?.heroImages?.dark || DEFAULT_DARK)
+            : (b?.heroImages?.light || DEFAULT_LIGHT)
           setHeroUrl(url)
         }
       })
@@ -71,7 +73,7 @@ export default function AuthPage() {
       <div className="auth-hero" style={{
         position: 'relative', zIndex: 1,
         background: heroUrl
-          ? 'linear-gradient(135deg, rgba(10,12,18,0.82) 0%, rgba(10,12,18,0.55) 100%)'
+          ? `linear-gradient(135deg, rgba(10,12,18,${branding?.opacity?.hero ?? 0.82}) 0%, rgba(10,12,18,${Math.max(0, (branding?.opacity?.hero ?? 0.82) - 0.27)}) 100%)`
           : undefined,
         backdropFilter: heroUrl ? 'blur(1px)' : undefined,
         borderRight: 'none',

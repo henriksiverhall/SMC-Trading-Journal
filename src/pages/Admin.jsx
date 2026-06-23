@@ -506,6 +506,7 @@ function BrandingTab({ adminId }) {
   const DEFAULT_SETTINGS = {
     heroImages: { dark: '/images/hero-dark.png', light: '/images/hero-light.png' },
     showOn: { auth: true, dashboard: false, journal: false, analytics: false, checklist: false },
+    opacity: { hero: 0.82, form: 1.0, page: 0.15 },
   }
   const { userSettings, saveSettings } = useAuth()
   const [branding, setBranding] = useState(DEFAULT_SETTINGS)
@@ -516,6 +517,9 @@ function BrandingTab({ adminId }) {
     if (userSettings?.branding) setBranding({ ...DEFAULT_SETTINGS, ...userSettings.branding })
   }, [userSettings])
 
+  function setOpacity(key, val) {
+    setBranding(b => ({ ...b, opacity: { ...(b.opacity || {}), [key]: parseFloat(val) } }))
+  }
   function setImage(theme, url) {
     setBranding(b => ({ ...b, heroImages: { ...b.heroImages, [theme]: url } }))
   }

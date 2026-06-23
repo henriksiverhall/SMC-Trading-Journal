@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.22-dev',
+    date: '2026-06-23',
+    entries: [
+      { type: 'feature', text: 'Admin Branding: transparens-sliders för hero-panel, formulär-panel och sid-bakgrund (0-100%)' },
+      { type: 'fix',     text: 'Bakgrundsbild på andra sidor (Dashboard, Journal mm) fungerar nu – hanteras centralt i App.jsx istället för per sida' },
+      { type: 'improvement', text: 'AuthPage: hero-transparens styrs live av Admin-inställningen, ingen omstart behövs' },
+    ]
+  },
+  {
     version: 'v2.0.21-dev',
     date: '2026-06-23',
     entries: [
