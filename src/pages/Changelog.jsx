@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.21-dev',
+    date: '2026-06-23',
+    entries: [
+      { type: 'feature', text: 'AuthPage: bakgrundsbild (mörk/ljus) på inloggningssidan med halvtransparent overlay för läsbarhet. Helt på svenska.' },
+      { type: 'feature', text: 'Admin – Branding-flik: ändra/ladda upp bakgrundsbilder för mörkt/ljust tema och välj vilka sidor de ska visas på med kryssrutor' },
+      { type: 'feature', text: 'useBranding-hook för framtida sidor som ska stödja bakgrundsbild' },
+    ]
+  },
+  {
     version: 'v2.0.20-dev',
     date: '2026-06-22',
     entries: [

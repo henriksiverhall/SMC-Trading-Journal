@@ -1,14 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { sb } from '../lib/supabase'
 import { APP_VERSION } from '../lib/constants'
 
+const ADMIN_USER_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+const DEFAULT_DARK  = '/images/hero-dark.png'
+const DEFAULT_LIGHT = '/images/hero-light.png'
+
 export default function AuthPage() {
-  const [mode, setMode] = useState('login') // login | signup | confirm
+  const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [heroUrl, setHeroUrl] = useState(null)
+
+  // Ladda branding-inställningar från admin-kontot
+  useEffect(() => {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
+    sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
+      .then(({ data }) => {
+        const branding = data?.settings?.branding
+        if (branding?.showOn?.auth !== false) {
+          const url = isDark
+            ? (branding?.heroImages?.dark || DEFAULT_DARK)
+            : (branding?.heroImages?.light || DEFAULT_LIGHT)
+          setHeroUrl(url)
+        }
+      })
+  }, [])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -21,7 +41,7 @@ export default function AuthPage() {
   async function handleSignup(e) {
     e.preventDefault()
     setLoading(true); setError('')
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); setLoading(false); return }
+    if (password.length < 6) { setError('Lösenordet måste vara minst 6 tecken.'); setLoading(false); return }
     const { error } = await sb.auth.signUp({
       email, password,
       options: { data: { display_name: displayName || email.split('@')[0] } }
@@ -34,7 +54,21 @@ export default function AuthPage() {
   return (
     <div className="auth-page">
       {/* Hero panel */}
-      <div className="auth-hero">
+      <div className="auth-hero" style={heroUrl ? {
+        backgroundImage: `url(${heroUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      } : undefined}>
+        {/* Overlay för läsbarhet när bild är aktiv */}
+        {heroUrl && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(135deg, rgba(10,12,16,0.82) 0%, rgba(10,12,16,0.55) 60%, rgba(10,12,16,0.3) 100%)',
+            zIndex: 0,
+          }} />
+        )}
+
         <div className="auth-hero-logo">
           <div className="auth-hero-logo-icon">TL</div>
           <div>
@@ -77,24 +111,24 @@ export default function AuthPage() {
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Check your email</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Kontrollera din e-post</div>
             <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7, marginBottom: 24 }}>
-              We sent a confirmation link to<br />
+              Vi skickade en bekräftelselänk till<br />
               <strong style={{ color: 'var(--text)' }}>{email}</strong><br /><br />
-              Click the link to activate your account.
+              Klicka på länken för att aktivera ditt konto.
             </div>
-            <button className="btn btn-ghost" onClick={() => setMode('login')}>Back to login</button>
+            <button className="btn btn-ghost" onClick={() => setMode('login')}>Tillbaka till inloggning</button>
           </div>
         ) : (
           <>
             <div className="auth-panel-header">
               <div className="auth-panel-title">
-                {mode === 'login' ? 'Welcome back' : 'Create account'}
+                {mode === 'login' ? 'Välkommen tillbaka' : 'Skapa konto'}
               </div>
               <div className="auth-panel-sub">
                 {mode === 'login'
-                  ? 'Sign in to your TradeLog account'
-                  : 'Start tracking your trades today'}
+                  ? 'Logga in på ditt TradeLog-konto'
+                  : 'Börja logga dina trades idag'}
               </div>
             </div>
 
@@ -103,69 +137,49 @@ export default function AuthPage() {
             <form className="auth-form" onSubmit={mode === 'login' ? handleLogin : handleSignup}>
               {mode === 'signup' && (
                 <div className="form-group">
-                  <label className="form-label">Display name</label>
-                  <input
-                    className="form-control"
-                    type="text"
-                    placeholder="e.g. Henrik S."
-                    value={displayName}
-                    onChange={e => setDisplayName(e.target.value)}
-                    autoComplete="nickname"
-                  />
+                  <label className="form-label">Visningsnamn</label>
+                  <input className="form-control" type="text" placeholder="t.ex. Henrik S."
+                    value={displayName} onChange={e => setDisplayName(e.target.value)}
+                    autoComplete="nickname" />
                 </div>
               )}
               <div className="form-group">
-                <label className="form-label">Email</label>
-                <input
-                  className="form-control"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
+                <label className="form-label">E-post</label>
+                <input className="form-control" type="email" placeholder="du@exempel.com"
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  required autoComplete="email" />
               </div>
               <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  className="form-control"
-                  type="password"
-                  placeholder={mode === 'signup' ? 'Min. 6 characters' : '••••••••'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                />
+                <label className="form-label">Lösenord</label>
+                <input className="form-control" type="password"
+                  placeholder={mode === 'signup' ? 'Minst 6 tecken' : '••••••••'}
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               </div>
 
               {mode === 'signup' && (
                 <p style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6 }}>
-                  By creating an account you agree to our{' '}
+                  Genom att skapa ett konto accepterar du våra{' '}
                   <span style={{ color: 'var(--text3)', textDecoration: 'underline', cursor: 'pointer' }}>
-                    Privacy Policy
+                    integritetsvillkor
                   </span>.
                 </p>
               )}
 
-              <button
-                type="submit"
-                className="btn btn-primary w-full"
-                style={{ justifyContent: 'center', marginTop: 4 }}
-                disabled={loading}
-              >
-                {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+              <button type="submit" className="btn btn-primary w-full"
+                style={{ justifyContent: 'center', marginTop: 4 }} disabled={loading}>
+                {loading ? 'Vänta…' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
               </button>
             </form>
 
             <div className="auth-switch">
               {mode === 'login' ? (
-                <>Don't have an account?{' '}
-                  <button onClick={() => { setMode('signup'); setError('') }}>Sign up</button>
+                <>Inget konto?{' '}
+                  <button onClick={() => { setMode('signup'); setError('') }}>Registrera dig</button>
                 </>
               ) : (
-                <>Already have an account?{' '}
-                  <button onClick={() => { setMode('login'); setError('') }}>Sign in</button>
+                <>Har du redan ett konto?{' '}
+                  <button onClick={() => { setMode('login'); setError('') }}>Logga in</button>
                 </>
               )}
             </div>

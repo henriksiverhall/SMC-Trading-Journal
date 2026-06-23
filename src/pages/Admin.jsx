@@ -451,6 +451,7 @@ export default function Admin() {
     { id: 'users',     label: '👥 Användare' },
     { id: 'support',   label: '🎫 Support' },
     { id: 'broadcast', label: '📢 Meddelanden' },
+    { id: 'branding',   label: '🖼 Branding' },
   ]
 
   if (!isAdmin) return (
@@ -487,6 +488,111 @@ export default function Admin() {
         {tab === 'users'     && <UsersTab currentUserId={user?.id} />}
         {tab === 'support'   && <SupportTab adminId={user?.id} />}
         {tab === 'broadcast' && <BroadcastTab adminId={user?.id} />}
+        {tab === 'branding'   && <BrandingTab adminId={user?.id} />}
+      </div>
+    </div>
+  )
+}
+// ── BrandingTab ────────────────────────────────────────────────────────────────
+function BrandingTab({ adminId }) {
+  const SUPABASE_URL = 'https://qmmpxupsxdouvoqgvgri.supabase.co'
+  const ALL_PAGES = [
+    { id: 'auth',      label: 'Inloggningssida' },
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'journal',   label: 'Journal' },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'checklist', label: 'Checklist' },
+  ]
+  const DEFAULT_SETTINGS = {
+    heroImages: { dark: '/images/hero-dark.png', light: '/images/hero-light.png' },
+    showOn: { auth: true, dashboard: false, journal: false, analytics: false, checklist: false },
+  }
+  const { userSettings, saveSettings } = useAuth()
+  const [branding, setBranding] = useState(DEFAULT_SETTINGS)
+  const [uploading, setUploading] = useState(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (userSettings?.branding) setBranding({ ...DEFAULT_SETTINGS, ...userSettings.branding })
+  }, [userSettings])
+
+  function setImage(theme, url) {
+    setBranding(b => ({ ...b, heroImages: { ...b.heroImages, [theme]: url } }))
+  }
+  function togglePage(pageId) {
+    setBranding(b => ({ ...b, showOn: { ...b.showOn, [pageId]: !b.showOn[pageId] } }))
+  }
+
+  async function handleUpload(theme, file) {
+    if (!file) return
+    setUploading(theme)
+    const name = `hero-${theme}.${file.name.split('.').pop()}`
+    const { sb } = await import('../lib/supabase')
+    const { data, error } = await sb.storage.from('branding').upload(name, file, { upsert: true })
+    if (error) { alert('Upload misslyckades: ' + error.message); setUploading(null); return }
+    const url = `${SUPABASE_URL}/storage/v1/object/public/branding/${name}`
+    setImage(theme, url)
+    setUploading(null)
+  }
+
+  async function handleSave() {
+    await saveSettings({ branding })
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  const inp = { background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '6px 10px', fontSize: 12, fontFamily: 'var(--font)', width: '100%' }
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-header">
+          <div className="card-title">🖼 Bakgrundsbilder</div>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>{saved ? '✓ Sparat' : 'Spara'}</button>
+        </div>
+        <div className="card-body">
+          {['dark', 'light'].map(theme => (
+            <div key={theme} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {theme === 'dark' ? '🌙 Mörkt tema' : '☀️ Ljust tema'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 12, alignItems: 'center' }}>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 4, display: 'block' }}>Bild-URL</label>
+                  <input style={inp} value={branding.heroImages[theme]} onChange={e => setImage(theme, e.target.value)} placeholder="/images/hero-dark.png eller https://..." />
+                  <label style={{ fontSize: 11, color: 'var(--text4)', marginTop: 8, marginBottom: 4, display: 'block' }}>Eller ladda upp</label>
+                  <input type="file" accept="image/*" onChange={e => handleUpload(theme, e.target.files[0])}
+                    style={{ fontSize: 11, color: 'var(--text3)' }} />
+                  {uploading === theme && <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>Laddar upp…</div>}
+                </div>
+                {branding.heroImages[theme] && (
+                  <div style={{ position: 'relative', height: 120, borderRadius: 'var(--r)', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                    <img src={branding.heroImages[theme]} alt={theme}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.style.display = 'none' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title">📍 Visa på sidor</div></div>
+        <div className="card-body">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+            {ALL_PAGES.map(p => (
+              <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${branding.showOn[p.id] ? 'var(--accent)' : 'var(--border)'}` }}>
+                <input type="checkbox" checked={!!branding.showOn[p.id]} onChange={() => togglePage(p.id)}
+                  style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
+                {p.label}
+              </label>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 12 }}>
+            Bilden visas halvtransparent bakom sidans innehåll. Välj mörk/ljus bild efter aktivt tema.
+          </div>
+        </div>
       </div>
     </div>
   )
