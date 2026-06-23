@@ -52,20 +52,34 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="auth-page" style={{
+    <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      display: 'grid', gridTemplateColumns: 'clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px) 1fr',
+      display: 'grid',
+      gridTemplateColumns: 'clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px)',
     }}>
-      {/* Hero panel */}
-      <div className="auth-hero">
+      {/* Full-screen background image */}
+      {heroUrl && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage: `url(${heroUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }} />
+      )}
 
+      {/* Hero panel – halvtransparent mot bakgrundsbilden */}
+      <div className="auth-hero" style={{
+        position: 'relative', zIndex: 1,
+        background: heroUrl
+          ? 'linear-gradient(135deg, rgba(10,12,18,0.82) 0%, rgba(10,12,18,0.55) 100%)'
+          : undefined,
+        backdropFilter: heroUrl ? 'blur(1px)' : undefined,
+        borderRight: 'none',
+      }}>
         <div className="auth-hero-logo">
           <div className="auth-hero-logo-icon">TL</div>
-          <div>
-            <div className="auth-hero-logo-name">TradeLog</div>
-          </div>
+          <div><div className="auth-hero-logo-name">TradeLog</div></div>
         </div>
-
         <div className="auth-hero-content">
           <h1 className="auth-hero-headline">
             Track your trades.<br />
@@ -76,29 +90,25 @@ export default function AuthPage() {
             R-based analytics, pre-trade checklists, and AI-powered insights — all in one place.
           </p>
           <div className="auth-hero-stats">
-            <div className="auth-hero-stat">
+            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
               <div className="auth-hero-stat-value">R</div>
               <div className="auth-hero-stat-label">Risk-based tracking</div>
             </div>
-            <div className="auth-hero-stat">
+            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
               <div className="auth-hero-stat-value">AI</div>
               <div className="auth-hero-stat-label">Pattern analysis</div>
             </div>
-            <div className="auth-hero-stat">
+            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
               <div className="auth-hero-stat-value">∞</div>
               <div className="auth-hero-stat-label">Trades logged</div>
             </div>
           </div>
         </div>
-
-        <div className="auth-hero-footer">
-          TradeLog {APP_VERSION} · journal.smctrading.se
-        </div>
+        <div className="auth-hero-footer">TradeLog {APP_VERSION} · journal.smctrading.se</div>
       </div>
 
-      {/* Auth panel */}
-      <div className="auth-panel">
-        <div>
+      {/* Form panel – opak, ingen transparens */}
+      <div className="auth-panel" style={{ position: 'relative', zIndex: 1 }}>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
@@ -117,9 +127,7 @@ export default function AuthPage() {
                 {mode === 'login' ? 'Välkommen tillbaka' : 'Skapa konto'}
               </div>
               <div className="auth-panel-sub">
-                {mode === 'login'
-                  ? 'Logga in på ditt TradeLog-konto'
-                  : 'Börja logga dina trades idag'}
+                {mode === 'login' ? 'Logga in på ditt TradeLog-konto' : 'Börja logga dina trades idag'}
               </div>
             </div>
 
@@ -130,15 +138,13 @@ export default function AuthPage() {
                 <div className="form-group">
                   <label className="form-label">Visningsnamn</label>
                   <input className="form-control" type="text" placeholder="t.ex. Henrik S."
-                    value={displayName} onChange={e => setDisplayName(e.target.value)}
-                    autoComplete="nickname" />
+                    value={displayName} onChange={e => setDisplayName(e.target.value)} autoComplete="nickname" />
                 </div>
               )}
               <div className="form-group">
                 <label className="form-label">E-post</label>
                 <input className="form-control" type="email" placeholder="du@exempel.com"
-                  value={email} onChange={e => setEmail(e.target.value)}
-                  required autoComplete="email" />
+                  value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div className="form-group">
                 <label className="form-label">Lösenord</label>
@@ -147,16 +153,12 @@ export default function AuthPage() {
                   value={password} onChange={e => setPassword(e.target.value)}
                   required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               </div>
-
               {mode === 'signup' && (
                 <p style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6 }}>
                   Genom att skapa ett konto accepterar du våra{' '}
-                  <span style={{ color: 'var(--text3)', textDecoration: 'underline', cursor: 'pointer' }}>
-                    integritetsvillkor
-                  </span>.
+                  <span style={{ color: 'var(--text3)', textDecoration: 'underline', cursor: 'pointer' }}>integritetsvillkor</span>.
                 </p>
               )}
-
               <button type="submit" className="btn btn-primary w-full"
                 style={{ justifyContent: 'center', marginTop: 4 }} disabled={loading}>
                 {loading ? 'Vänta…' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
@@ -165,30 +167,12 @@ export default function AuthPage() {
 
             <div className="auth-switch">
               {mode === 'login' ? (
-                <>Inget konto?{' '}
-                  <button onClick={() => { setMode('signup'); setError('') }}>Registrera dig</button>
-                </>
+                <>Inget konto?{' '}<button onClick={() => { setMode('signup'); setError('') }}>Registrera dig</button></>
               ) : (
-                <>Har du redan ett konto?{' '}
-                  <button onClick={() => { setMode('login'); setError('') }}>Logga in</button>
-                </>
+                <>Har du redan ett konto?{' '}<button onClick={() => { setMode('login'); setError('') }}>Logga in</button></>
               )}
             </div>
           </>
-        )}
-      </div>
-      </div>
-
-      {/* Image panel – fills the right side */}
-      <div style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'var(--bg)',
-      }}>
-        {heroUrl ? (
-          <img src={heroUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'right center' }} />
-        ) : (
-          <div style={{ color: 'var(--text4)', fontSize: 13 }}>Ingen bild konfigurerad</div>
         )}
       </div>
     </div>
