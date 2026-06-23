@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { sb } from '../lib/supabase'
 import { APP_VERSION } from '../lib/constants'
 
@@ -14,29 +14,16 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [heroUrl, setHeroUrl] = useState(null)
-  const [branding, setBrandingState] = useState(null)
-
-  // Ladda branding-inställningar från admin-kontot
-  // Injicera CSS-override för bakgrundstransparens (inline style vinner inte mot .auth-hero CSS)
-  const styleRef = useRef(null)
-  useEffect(() => {
-    styleRef.current = document.createElement('style')
-    styleRef.current.id = 'auth-bg-override'
-    styleRef.current.textContent = `
-      .auth-hero { background: transparent !important; }
-      .auth-panel { background: transparent !important; }
-      .auth-hero::before, .auth-hero::after { display: none !important; }
-    `
-    document.head.appendChild(styleRef.current)
-    return () => { document.getElementById('auth-bg-override')?.remove() }
-  }, [])
+  const [heroOpacity, setHeroOpacity] = useState(0.82)
+  const [formOpacity, setFormOpacity] = useState(1.0)
 
   useEffect(() => {
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
       .then(({ data }) => {
         const b = data?.settings?.branding
-        setBrandingState(b || {})
+        if (b?.opacity?.hero != null) setHeroOpacity(b.opacity.hero)
+        if (b?.opacity?.form != null) setFormOpacity(b.opacity.form)
         if (b?.showOn?.auth !== false) {
           const url = isDark
             ? (b?.heroImages?.dark || DEFAULT_DARK)
@@ -67,13 +54,18 @@ export default function AuthPage() {
     setLoading(false)
   }
 
+  // rgba background colours directly – no CSS class interference
+  const heroBg  = `rgba(10,12,18,${heroOpacity})`
+  const formBg  = `rgba(10,12,18,${formOpacity})`
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
       display: 'grid',
       gridTemplateColumns: 'clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px)',
+      fontFamily: 'var(--font)',
     }}>
-      {/* Full-screen background image */}
+      {/* Full-screen background image – behind everything */}
       {heroUrl && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
@@ -83,58 +75,63 @@ export default function AuthPage() {
         }} />
       )}
 
-      {/* Hero panel – halvtransparent mot bakgrundsbilden */}
-      <div className="auth-hero" style={{ position: 'relative', zIndex: 1, borderRight: 'none', background: 'transparent' }}>
-        {/* Justerbart overlay – opacity styrs av Admin Branding-inställningen */}
-        {heroUrl && (
+      {/* Hero panel – NO className, full inline styles */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        padding: 48, overflow: 'hidden',
+        backgroundColor: heroBg,
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-            background: 'rgb(10,12,18)',
-            opacity: branding?.opacity?.hero ?? 0.82,
-          }} />
-        )}
-        <div className="auth-hero-logo" style={{ position: 'relative', zIndex: 1 }}>
-          <div className="auth-hero-logo-icon">TL</div>
-          <div><div className="auth-hero-logo-name">TradeLog</div></div>
+            width: 38, height: 38, background: 'var(--accent-dim)',
+            border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--r2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--accent)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px',
+          }}>TL</div>
+          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>TradeLog</div>
         </div>
-        <div className="auth-hero-content" style={{ position: 'relative', zIndex: 1 }}>
-          <h1 className="auth-hero-headline">
+
+        {/* Content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h1 style={{
+            fontSize: 44, fontWeight: 800, letterSpacing: '-2px',
+            lineHeight: 1.05, color: 'var(--text)', margin: '0 0 18px',
+          }}>
             Track your trades.<br />
-            <span>Master your edge.</span>
+            <span style={{ color: 'var(--accent)' }}>Master your edge.</span>
           </h1>
-          <p className="auth-hero-sub">
+          <p style={{ fontSize: 15, color: 'var(--text3)', lineHeight: 1.65, maxWidth: 400, margin: 0 }}>
             Professional trading journal built for futures and FX traders.
             R-based analytics, pre-trade checklists, and AI-powered insights — all in one place.
           </p>
-          <div className="auth-hero-stats">
-            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
-              <div className="auth-hero-stat-value">R</div>
-              <div className="auth-hero-stat-label">Risk-based tracking</div>
-            </div>
-            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
-              <div className="auth-hero-stat-value">AI</div>
-              <div className="auth-hero-stat-label">Pattern analysis</div>
-            </div>
-            <div className="auth-hero-stat" style={{ background: heroUrl ? 'rgba(255,255,255,0.05)' : undefined }}>
-              <div className="auth-hero-stat-value">∞</div>
-              <div className="auth-hero-stat-label">Trades logged</div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 40 }}>
+            {[['R','Risk-based tracking'],['AI','Pattern analysis'],['∞','Trades logged']].map(([val, lbl]) => (
+              <div key={val} style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                borderRadius: 'var(--r2)', padding: '14px 16px',
+              }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.5px' }}>{val}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, fontWeight: 500 }}>{lbl}</div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="auth-hero-footer" style={{ position: 'relative', zIndex: 1 }}>TradeLog {APP_VERSION} · journal.smctrading.se</div>
+
+        {/* Footer */}
+        <div style={{ fontSize: 12, color: 'var(--text4)' }}>
+          TradeLog {APP_VERSION} · journal.smctrading.se
+        </div>
       </div>
 
-      {/* Form panel – opak, ingen transparens */}
-      <div className="auth-panel" style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
-        {/* Justerbart overlay för form-panel */}
-        {heroUrl && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-            background: 'rgb(10,12,18)',
-            opacity: branding?.opacity?.form ?? 1.0,
-          }} />
-        )}
-        <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Form panel – NO className, full inline styles */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '48px 40px', overflowY: 'auto',
+        backgroundColor: formBg,
+      }}>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
@@ -148,11 +145,11 @@ export default function AuthPage() {
           </div>
         ) : (
           <>
-            <div className="auth-panel-header">
-              <div className="auth-panel-title">
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text)' }}>
                 {mode === 'login' ? 'Välkommen tillbaka' : 'Skapa konto'}
               </div>
-              <div className="auth-panel-sub">
+              <div style={{ fontSize: 14, color: 'var(--text3)', marginTop: 6 }}>
                 {mode === 'login' ? 'Logga in på ditt TradeLog-konto' : 'Börja logga dina trades idag'}
               </div>
             </div>
@@ -200,7 +197,6 @@ export default function AuthPage() {
             </div>
           </>
         )}
-        </div>
       </div>
     </div>
   )
