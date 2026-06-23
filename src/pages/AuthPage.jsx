@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { APP_VERSION } from '../lib/constants'
 
@@ -17,6 +17,20 @@ export default function AuthPage() {
   const [branding, setBrandingState] = useState(null)
 
   // Ladda branding-inställningar från admin-kontot
+  // Injicera CSS-override för bakgrundstransparens (inline style vinner inte mot .auth-hero CSS)
+  const styleRef = useRef(null)
+  useEffect(() => {
+    styleRef.current = document.createElement('style')
+    styleRef.current.id = 'auth-bg-override'
+    styleRef.current.textContent = `
+      .auth-hero { background: transparent !important; }
+      .auth-panel { background: transparent !important; }
+      .auth-hero::before, .auth-hero::after { display: none !important; }
+    `
+    document.head.appendChild(styleRef.current)
+    return () => { document.getElementById('auth-bg-override')?.remove() }
+  }, [])
+
   useEffect(() => {
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
