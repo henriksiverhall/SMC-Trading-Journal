@@ -54,9 +54,11 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  // rgba background colours directly – no CSS class interference
-  const heroBg  = `rgba(10,12,18,${heroOpacity})`
-  const formBg  = `rgba(10,12,18,${formOpacity})`
+  // Välj överläggets färg baserat på tema – mörk på dark, ljus på light
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') !== 'light'
+  const overlayColor = isDarkTheme ? '10,12,18' : '255,255,255'
+  const heroBg = `rgba(${overlayColor},${heroOpacity})`
+  const formBg = `rgba(${overlayColor},${formOpacity})`
 
   return (
     <div style={{
