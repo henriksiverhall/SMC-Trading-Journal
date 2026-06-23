@@ -52,22 +52,12 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page" style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      display: 'grid', gridTemplateColumns: '380px 440px 1fr',
+    }}>
       {/* Hero panel */}
-      <div className="auth-hero" style={heroUrl ? {
-        backgroundImage: `url(${heroUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      } : undefined}>
-        {/* Overlay för läsbarhet när bild är aktiv */}
-        {heroUrl && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(135deg, rgba(10,12,16,0.82) 0%, rgba(10,12,16,0.55) 60%, rgba(10,12,16,0.3) 100%)',
-            zIndex: 0,
-          }} />
-        )}
+      <div className="auth-hero">
 
         <div className="auth-hero-logo">
           <div className="auth-hero-logo-icon">TL</div>
@@ -108,6 +98,7 @@ export default function AuthPage() {
 
       {/* Auth panel */}
       <div className="auth-panel">
+        <div>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
@@ -184,6 +175,23 @@ export default function AuthPage() {
               )}
             </div>
           </>
+        )}
+      </div>
+      </div>
+
+      {/* Image panel – fills the right side */}
+      <div style={{
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'var(--bg)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {heroUrl ? (
+          <img src={heroUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+        ) : (
+          <div style={{ color: 'var(--text4)', fontSize: 13 }}>Ingen bild konfigurerad</div>
         )}
       </div>
     </div>
