@@ -17,8 +17,15 @@ export default function AuthPage() {
   const [heroOpacity, setHeroOpacity] = useState(0.82)
   const [formOpacity, setFormOpacity] = useState(1.0)
 
+  // Tvinga dark-tema på inloggningssidan – återställ vid utloggning/navigering
   useEffect(() => {
-    const isDark = document.documentElement.getAttribute('data-theme') !== 'light'
+    const prev = document.documentElement.getAttribute('data-theme') || 'dark'
+    document.documentElement.setAttribute('data-theme', 'dark')
+    return () => document.documentElement.setAttribute('data-theme', prev)
+  }, [])
+
+  useEffect(() => {
+    const isDark = true // login-sidan är alltid dark
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
       .then(({ data }) => {
         const b = data?.settings?.branding
@@ -54,11 +61,9 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  // Välj överläggets färg baserat på tema – mörk på dark, ljus på light
-  const isDarkTheme = document.documentElement.getAttribute('data-theme') !== 'light'
-  const overlayColor = isDarkTheme ? '10,12,18' : '255,255,255'
-  const heroBg = `rgba(${overlayColor},${heroOpacity})`
-  const formBg = `rgba(${overlayColor},${formOpacity})`
+  // Login-sidan är alltid dark – fast mörk overlay-färg
+  const heroBg = `rgba(10,12,18,${heroOpacity})`
+  const formBg = `rgba(10,12,18,${formOpacity})`
 
   return (
     <div style={{
