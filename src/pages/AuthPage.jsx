@@ -70,7 +70,7 @@ export default function AuthPage() {
       )}
 
       {/* Hero panel – halvtransparent mot bakgrundsbilden */}
-      <div className="auth-hero" style={{ position: 'relative', zIndex: 1, borderRight: 'none' }}>
+      <div className="auth-hero" style={{ position: 'relative', zIndex: 1, borderRight: 'none', background: 'transparent' }}>
         {/* Justerbart overlay – opacity styrs av Admin Branding-inställningen */}
         {heroUrl && (
           <div style={{
@@ -111,7 +111,7 @@ export default function AuthPage() {
       </div>
 
       {/* Form panel – opak, ingen transparens */}
-      <div className="auth-panel" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="auth-panel" style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
         {/* Justerbart overlay för form-panel */}
         {heroUrl && (
           <div style={{
