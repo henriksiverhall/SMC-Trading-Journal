@@ -2,6 +2,18 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.23-dev',
+    date: '2026-06-23',
+    entries: [
+      { type: 'feature', text: 'Dashboard: välkomstbanner med namn, datum, total R, WR och session-countdown (London/NY)' },
+      { type: 'feature', text: 'Dashboard: Idag-widget (trades idag, P&L idag), snabbåtgärder, 2-kolumns layout' },
+      { type: 'feature', text: 'Dashboard: Expectancy, Recovery Factor och Längsta svit tillagda i statistikgrid' },
+      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor och Längsta svit tillagda i statistikgrid' },
+      { type: 'feature', text: 'Analytics: Win Rate per veckodag – ny widget med insikt om bästa/sämsta handelsdagar' },
+      { type: 'improvement', text: 'Analytics RR-optimerare: finare steg (0.1R istället för 0.5R) för psykologisk precisionsoptimering' },
+    ]
+  },
+  {
     version: 'v2.0.22-dev',
     date: '2026-06-23',
     entries: [

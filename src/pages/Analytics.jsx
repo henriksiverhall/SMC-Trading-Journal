@@ -319,7 +319,8 @@ function RROptimizer({ mfeResults, trades }) {
   )
 
   const hasAnyProxy = dataset.some(t => t._src === 'proxy_win')
-  const rrLevels = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0]
+  // 0.1R-steg från 0.5 till 6.0 – finare granularitet för psykologisk optimering
+  const rrLevels = Array.from({ length: 56 }, (_, i) => parseFloat((0.5 + i * 0.1).toFixed(1)))
 
   const winningTrades = valid.filter(t => t.outcome === 'W')
   const currentAvgRR = winningTrades.length
@@ -707,6 +708,19 @@ export default function Analytics() {
             <StatCard label="Profit Factor" value={pf.toFixed(2)}                                        cls={pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative'} />
             <StatCard label="Max DD"        value={maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R'}  cls={maxDD > 0 ? 'negative' : ''} />
             <StatCard label="Avg Vinst"     value={wins.length ? '+' + (winR / wins.length).toFixed(2) + 'R' : '—'} cls="positive" />
+            {(() => {
+              const avgW = wins.length ? winR / wins.length : 0
+              const avgL = losses.length ? Math.abs(lossR) / losses.length : 0
+              const exp = wins.length && losses.length ? parseFloat((winRate/100 * avgW - (1 - winRate/100) * avgL).toFixed(3)) : null
+              const rf = maxDD > 0 ? parseFloat((totalR / maxDD).toFixed(2)) : null
+              const longestWin = (() => { let cur=0,max=0; for(const t of [...withR].sort((a,b)=>a.date>b.date?1:-1)){ if(t.outcome==='W'){cur++;if(cur>max)max=cur}else cur=0} return max })()
+              const longestLoss = (() => { let cur=0,max=0; for(const t of [...withR].sort((a,b)=>a.date>b.date?1:-1)){ if(t.outcome==='L'){cur++;if(cur>max)max=cur}else cur=0} return max })()
+              return (<>
+                <StatCard label="Expectancy" value={exp != null ? (exp>0?'+':'')+exp+'R' : '—'} cls={exp>0?'positive':exp<0?'negative':''} />
+                <StatCard label="Recovery Factor" value={rf ?? '—'} cls={rf>=2?'positive':rf<1?'negative':''} />
+                <StatCard label="Längsta svit" value={longestWin>0?`${longestWin}V / ${longestLoss}F`:'—'} />
+              </>)
+            })()}
           </div>
           {showDollar && hasDollarData && (() => {
             const winDollar = filteredWithDollar.filter(t => t.outcome === 'W').reduce((a, t) => a + (t._sizing?.dollarPnl || 0), 0)
@@ -850,6 +864,81 @@ export default function Analytics() {
       title: 'MFE / MAE',
       span: 2,
       content: <MFESection trades={filtered} onFetched={setMfeResults} />
+    },
+    {
+      id: 'weekday',
+      title: 'Win Rate per veckodag',
+      span: 2,
+      content: (() => {
+        const DAYS = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag']
+        const byDay = {}
+        for (const t of filtered) {
+          if (!t.date || !t.outcome) continue
+          const d = new Date(t.date + 'T12:00:00').getDay()
+          if (!byDay[d]) byDay[d] = { wins: 0, total: 0 }
+          if (['W','L','BE'].includes(t.outcome)) {
+            byDay[d].total++
+            if (t.outcome === 'W') byDay[d].wins++
+          }
+        }
+        const dayData = [1,2,3,4,5].map(d => ({
+          day: DAYS[d].slice(0,3),
+          fullDay: DAYS[d],
+          wr: byDay[d]?.total ? parseFloat((byDay[d].wins / byDay[d].total * 100).toFixed(1)) : null,
+          trades: byDay[d]?.total || 0,
+          wins: byDay[d]?.wins || 0,
+        }))
+        const hasData = dayData.some(d => d.trades > 0)
+        const maxWR = Math.max(...dayData.map(d => d.wr || 0))
+        const minWR = Math.min(...dayData.filter(d => d.wr !== null).map(d => d.wr))
+        return (
+          <div className="card">
+            <div className="card-header"><div className="card-title">📅 Win Rate per veckodag</div></div>
+            <div className="card-body">
+              {!hasData ? (
+                <div style={{ color: 'var(--text4)', fontSize: 13 }}>Inga trades med datum att analysera ännu.</div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                    {dayData.map(d => {
+                      const isBest = d.wr === maxWR && d.wr !== null && maxWR > 0
+                      const isWorst = d.wr === minWR && d.wr !== null && dayData.filter(x => x.wr !== null).length > 1
+                      const color = d.wr >= 50 ? 'var(--green)' : d.wr !== null ? 'var(--red)' : 'var(--text4)'
+                      return (
+                        <div key={d.day} style={{
+                          textAlign: 'center', padding: '14px 8px',
+                          background: isBest ? 'rgba(16,185,129,0.1)' : isWorst ? 'rgba(239,68,68,0.08)' : 'var(--bg3)',
+                          borderRadius: 'var(--r)', border: `1px solid ${isBest ? 'rgba(16,185,129,0.25)' : isWorst ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+                        }}>
+                          <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 6, fontWeight: 600 }}>{d.fullDay}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color }}>
+                            {d.wr !== null ? d.wr + '%' : '—'}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text4)', marginTop: 4 }}>
+                            {d.wins}V / {d.trades - d.wins}F · {d.trades}st
+                          </div>
+                          {isBest && <div style={{ fontSize: 10, color: 'var(--green)', marginTop: 4 }}>✓ Bäst</div>}
+                          {isWorst && <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 4 }}>↓ Sämst</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {(() => {
+                    const best = dayData.filter(d => d.wr !== null).sort((a,b) => b.wr - a.wr)[0]
+                    const worst = dayData.filter(d => d.wr !== null).sort((a,b) => a.wr - b.wr)[0]
+                    if (!best || best === worst) return null
+                    return (
+                      <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>
+                        💡 Du handlar bäst på <strong style={{ color: 'var(--green)' }}>{best.fullDay}</strong> ({best.wr}% WR) och sämst på <strong style={{ color: 'var(--red)' }}>{worst.fullDay}</strong> ({worst.wr}% WR). {worst.wr < 40 ? `Överväg att undvika ${worst.fullDay}.` : ''}
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()
     },
     {
       id: 'rr',
