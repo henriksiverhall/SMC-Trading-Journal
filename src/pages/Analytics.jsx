@@ -1084,12 +1084,15 @@ export default function Analytics() {
     }
   }, [effectiveSettings, trades])
 
+  const effectiveUserId = impersonating?.id ?? user?.id
+
   useEffect(() => {
-    if (!effectiveUser) return
+    if (!effectiveUserId) return
     setLoading(true)
-    sb.from('trades').select('*').eq('user_id', effectiveUser.id).order('date', { ascending: false })
+    setTrades([])
+    sb.from('trades').select('*').eq('user_id', effectiveUserId).order('date', { ascending: false })
       .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
-  }, [effectiveUser?.id])
+  }, [effectiveUserId])
 
   const filtered = trades.filter(t => {
     if (filter.outcome && t.outcome !== filter.outcome) return false
