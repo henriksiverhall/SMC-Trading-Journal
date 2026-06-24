@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.24-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'fix', text: 'DragGrid: columns-prop ignorerades – widgets renderades alltid i en kolumn. Nu används CSS grid med gridTemplateColumns så Dashboard visas i 2 kolumner.' },
+      { type: 'feature', text: 'DragGrid: stöd för span-prop – widgets med span:2 spänner över hela bredden (Välkommen, Statistik, Equity Curve).' },
+    ]
+  },
+  {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [

@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.0.23-dev'
+export const APP_VERSION = 'v2.0.24-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
 // Mappar instrument loggade i journalen till Yahoo Finance-symboler.

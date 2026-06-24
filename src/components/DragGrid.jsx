@@ -148,13 +148,14 @@ export default function DragGrid({ pageKey, widgets, columns = 1 }) {
         </div>
       )}
 
-      {/* Widget list – single column with drag */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Widget grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 16 }}>
         {visible.map(id => {
           const w = widgets.find(w => w.id === id)
           if (!w) return null
           const isDragging   = draggingId   === id
           const isDropTarget = dropTargetId === id
+          const span = w.span && w.span > 1 ? Math.min(w.span, columns) : 1
 
           return (
             <div key={id}
@@ -164,6 +165,7 @@ export default function DragGrid({ pageKey, widgets, columns = 1 }) {
               onDragEnd={handleDragEnd}
               style={{
                 position: 'relative',
+                gridColumn: span > 1 ? `span ${span}` : undefined,
                 opacity: isDragging ? 0.35 : 1,
                 transform: isDragging ? 'scale(0.98)' : 'scale(1)',
                 transition: 'opacity 0.15s, transform 0.15s',
