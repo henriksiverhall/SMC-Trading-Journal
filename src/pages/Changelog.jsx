@@ -2,69 +2,76 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.35-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'fix', text: 'Analytics RR-optimerare och SL-optimering: tabellerna är nu kollapsade per default – visar 8 rader med "Visa alla"-knapp. Sidan blir inte längre extremt lång.' },
+      { type: 'fix', text: 'Dashboard välkommen-widget: "X nytt" ändrat till "X nytt meddelande" för tydlighet.' },
+      { type: 'fix', text: 'App: icke-admin omdirigeras till Dashboard om sessionStorage pekar på admin-sida vid inloggning.' },
+    ]
+  },
+  {
     version: 'v2.0.34-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin e-postbyte: anropet skyddas nu av Supabase JWT istället för KANBAN_SECRET – ingen hemlig nökkel i frontend-koden.' },
-      { type: 'improvement', text: 'Worker /admin/update-user: tillåter bara e-postbyte (inte lösenord), verifierar att anroparen är admin via JWT.' },
+      { type: 'feature', text: 'Admin e-postbyte: skyddas av Supabase JWT istället för KANBAN_SECRET.' },
+      { type: 'improvement', text: 'Worker /admin/update-user: tillåter bara e-postbyte, verifierar JWT.' },
     ]
   },
   {
     version: 'v2.0.33-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'AuthPage: "Glömt lösenord"-länk öppnar modal – användaren skriver sin e-post och får återställningsmail utan att lämna inloggningssidan.' },
+      { type: 'feature', text: 'AuthPage: "Glömt lösenord"-modal.' },
     ]
   },
   {
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin UserProfileModal: fullständiga admin-verktyg – ändra e-post, skicka lösenordsåterställning.' },
-      { type: 'fix', text: 'Profile: unread-badge visas korrekt per flik. Admin Support-vy: maxWidth 860px. Dashboard: öppna ärenden visas separat.' },
+      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. Support-vy 860px. Dashboard öppna ärenden.' },
     ]
   },
   {
     version: 'v2.0.31-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'useAuth: separata unreadBroadcast + unreadInbox räknare. signOut rensar sessionStorage.tl_page.' },
+      { type: 'feature', text: 'useAuth: separata räknare. signOut rensar tl_page.' },
     ]
   },
   {
     version: 'v2.0.30-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'improvement', text: 'Sidebar: Meddelanden-menyval borttaget. Badge på Profil-knappen vid olästa.' },
-      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt, Mina ärenden. Dashboard: välkommen-widget med olästa-knapp.' },
+      { type: 'improvement', text: 'Sidebar: badge på Profil. Profil: tre flikar. Dashboard: olästa-knapp.' },
     ]
   },
   {
     version: 'v2.0.29-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin: klick på rad öppnar profilmodal med kontodetaljer och tradingstatistik.' },
+      { type: 'feature', text: 'Admin: profilmodal vid klick på användare.' },
     ]
   },
   {
     version: 'v2.0.28-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Roadmap: kollaps-state i localStorage, arkivfunktion.' },
+      { type: 'feature', text: 'Roadmap: kollaps-state, arkivfunktion.' },
     ]
   },
   {
     version: 'v2.0.27-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Impersonation: persist via sessionStorage. Journal + Dashboard stöder "Visa som".' },
+      { type: 'feature', text: 'Impersonation persist. Journal + Dashboard stöd.' },
     ]
   },
   {
     version: 'v2.0.26-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: egna fält som analysdimension. Admin: impersonation-banner.' },
+      { type: 'feature', text: 'Analytics: egna fält. Admin: impersonation-banner.' },
     ]
   },
   {
@@ -78,50 +85,49 @@ const CHANGELOG = [
     version: 'v2.0.24-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'fix', text: 'DragGrid: columns/span-prop fungerar korrekt.' },
+      { type: 'fix', text: 'DragGrid: columns/span-prop.' },
     ]
   },
   {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown, Idag-widget.' },
-      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor, WR per veckodag.' },
+      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor.' },
     ]
   },
   {
     version: 'v2.0.21-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Admin Branding: bakgrundsbilder, transparens, per-sida-val.' },
+      { type: 'feature', text: 'Admin Branding: bakgrundsbilder, transparens.' },
     ]
   },
   {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown, kolumnsortering. PiP: BroadcastChannel.' },
+      { type: 'feature', text: 'Journal: filter, strategi-dropdown, sortering. PiP: BroadcastChannel.' },
     ]
   },
   {
     version: 'v2.0.15-dev',
     date: '2026-06-21',
     entries: [
-      { type: 'feature', text: 'PiP-widget (Chromium), Checklist portad med editor.' },
+      { type: 'feature', text: 'PiP-widget, Checklist portad.' },
     ]
   },
   {
     version: 'v2.0.4-dev',
     date: '2026-06-15',
     entries: [
-      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden, Journal MFE/MAE.' },
+      { type: 'feature', text: 'DragGrid, Meddelanden, Journal MFE/MAE.' },
     ]
   },
   {
     version: 'v2.0.0-dev',
     date: '2026-06-11',
     entries: [
-      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers. Alla grundsidor portade.' },
+      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers.' },
     ]
   },
 ]

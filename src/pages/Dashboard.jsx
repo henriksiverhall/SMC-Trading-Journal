@@ -35,21 +35,10 @@ function useNextSession() {
         if (diff < 0) diff += 24 * 60
         if (diff < minsUntil) { minsUntil = diff; nextSession = s }
       }
-      if (isWeekend) {
-        const daysUntilMon = utcD === 6 ? 2 : 1
-        return { label: 'London måndag', countdown: `${daysUntilMon}d ${8 - utcH}h` }
-      }
+      if (isWeekend) { const daysUntilMon = utcD === 6 ? 2 : 1; return { label: 'London måndag', countdown: `${daysUntilMon}d ${8 - utcH}h` } }
       const h = Math.floor(minsUntil / 60), m = minsUntil % 60
-      const isOpen = sessions.some(s => {
-        const sMins = s.utcHour * 60 + s.utcMin
-        const eMins = sMins + (s.label === 'London' ? 210 : 180)
-        return nowMins >= sMins && nowMins < eMins
-      })
-      return {
-        label: isOpen ? (nowMins < 13 * 60 + 30 ? 'London öppen' : 'New York öppen') : `${nextSession?.label} öppnar om`,
-        countdown: isOpen ? '' : `${h}h ${m}m`,
-        isOpen,
-      }
+      const isOpen = sessions.some(s => { const sMins = s.utcHour * 60 + s.utcMin; const eMins = sMins + (s.label === 'London' ? 210 : 180); return nowMins >= sMins && nowMins < eMins })
+      return { label: isOpen ? (nowMins < 13 * 60 + 30 ? 'London öppen' : 'New York öppen') : `${nextSession?.label} öppnar om`, countdown: isOpen ? '' : `${h}h ${m}m`, isOpen }
     }
     setInfo(calc())
     const t = setInterval(() => setInfo(calc()), 60000)
@@ -82,31 +71,23 @@ export default function Dashboard({ onNavigate }) {
     </div>
   )
 
-  const withR    = trades.filter(t => t.result != null)
-  const wins     = withR.filter(t => t.outcome === 'W')
-  const losses   = withR.filter(t => t.outcome === 'L')
-  const totalR   = withR.reduce((a, t) => a + (t.result || 0), 0)
-  const winRate  = withR.length ? wins.length / withR.length : 0
-  const winR     = wins.reduce((a, t) => a + (t.result || 0), 0)
-  const lossR    = Math.abs(losses.reduce((a, t) => a + (t.result || 0), 0))
-  const pf       = lossR > 0 ? winR / lossR : winR > 0 ? Infinity : 0
-  const avgWin   = wins.length ? winR / wins.length : 0
-  const avgLoss  = losses.length ? lossR / losses.length : 0
+  const withR = trades.filter(t => t.result != null)
+  const wins = withR.filter(t => t.outcome === 'W')
+  const losses = withR.filter(t => t.outcome === 'L')
+  const totalR = withR.reduce((a, t) => a + (t.result || 0), 0)
+  const winRate = withR.length ? wins.length / withR.length : 0
+  const winR = wins.reduce((a, t) => a + (t.result || 0), 0)
+  const lossR = Math.abs(losses.reduce((a, t) => a + (t.result || 0), 0))
+  const pf = lossR > 0 ? winR / lossR : winR > 0 ? Infinity : 0
+  const avgWin = wins.length ? winR / wins.length : 0
+  const avgLoss = losses.length ? lossR / losses.length : 0
   const expectancy = wins.length && losses.length ? parseFloat((winRate * avgWin - (1 - winRate) * avgLoss).toFixed(3)) : null
-
   let equity = 0, peak = 0, maxDD = 0
-  for (const t of withR) {
-    equity += t.result || 0
-    if (equity > peak) peak = equity
-    const dd = peak - equity
-    if (dd > maxDD) maxDD = dd
-  }
+  for (const t of withR) { equity += t.result || 0; if (equity > peak) peak = equity; const dd = peak - equity; if (dd > maxDD) maxDD = dd }
   const recoveryFactor = maxDD > 0 ? parseFloat((totalR / maxDD).toFixed(2)) : null
-
   const today = new Date().toISOString().split('T')[0]
   const todayTrades = trades.filter(t => t.date === today)
   const todayR = todayTrades.filter(t => t.result != null).reduce((a, t) => a + (t.result || 0), 0)
-
   const sorted = [...trades].filter(t => t.outcome).sort((a, b) => b.date > a.date ? 1 : -1)
   let streak = 0, streakType = null, longestWin = 0, longestLoss = 0, curWin = 0, curLoss = 0
   for (const t of [...withR].sort((a, b) => a.date > b.date ? 1 : -1)) {
@@ -114,13 +95,8 @@ export default function Dashboard({ onNavigate }) {
     if (curWin > longestWin) longestWin = curWin
     if (curLoss > longestLoss) longestLoss = curLoss
   }
-  for (const t of sorted) {
-    if (streakType === null) { streakType = t.outcome; streak = 1 }
-    else if (t.outcome === streakType) streak++
-    else break
-  }
+  for (const t of sorted) { if (streakType === null) { streakType = t.outcome; streak = 1 } else if (t.outcome === streakType) streak++ else break }
   const last10 = sorted.slice(0, 10).reverse()
-
   let cumR = 0
   const equityData = withR.map((t, i) => { cumR += t.result || 0; return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) } })
   const recent = [...trades].reverse().slice(0, 5)
