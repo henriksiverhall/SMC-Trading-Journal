@@ -12,7 +12,6 @@ function formatFull(iso) {
   return new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-// ── User Profile Modal ────────────────────────────────────────────────────────
 function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
@@ -44,9 +43,7 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 520, maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }}
-        onClick={e => e.stopPropagation()}>
-
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 520, maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{u.email}</div>
@@ -60,19 +57,15 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
-
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
           {row('Registrerad', formatTime(u.created_at))}
           {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
           {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
         </div>
-
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
-          {loading ? (
-            <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div>
-          ) : (
+          {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
             <>
               {row('Antal trades', stats.total, 'var(--accent)')}
               {stats.withR > 0 && <>
@@ -85,20 +78,12 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
             </>
           )}
         </div>
-
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {u.user_id !== adminId && (
-            <button className="btn btn-primary btn-sm" onClick={() => {
-              startImpersonation({ id: u.user_id, email: u.email })
-              window.__tlNavigate?.('dashboard')
-              onClose()
-            }}>👁 Visa som</button>
+            <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>
           )}
           {u.user_id !== adminId && (
-            <button onClick={() => { onDelete(u.user_id, u.email); onClose() }}
-              style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>
-              Ta bort
-            </button>
+            <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>
           )}
         </div>
       </div>
@@ -106,7 +91,6 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
   )
 }
 
-// ── Users tab ─────────────────────────────────────────────────────────────────
 function UsersTab({ currentUserId }) {
   const { startImpersonation } = useAuth()
   const [users, setUsers] = useState([])
@@ -118,7 +102,7 @@ function UsersTab({ currentUserId }) {
   async function loadUsers() {
     setLoading(true)
     const { data, error } = await sb.rpc('get_admin_users')
-    if (error) { console.error('get_admin_users failed:', error); setLoading(false); return }
+    if (error) { console.error(error); setLoading(false); return }
     if (!data) { setLoading(false); return }
     const sorted = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     const ids = sorted.map(u => u.user_id)
@@ -153,56 +137,25 @@ function UsersTab({ currentUserId }) {
           <button className="btn btn-ghost btn-sm" onClick={loadUsers}>↻ Uppdatera</button>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
-          ) : (
+          {loading ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div> : (
             <table className="journal-table">
-              <thead><tr>
-                <th>Email</th><th>Registrerad</th><th>Trades</th>
-                <th>Bekräftad</th><th>Admin</th><th>AI</th><th></th><th></th>
-              </tr></thead>
+              <thead><tr><th>Email</th><th>Registrerad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th>AI</th><th></th><th></th></tr></thead>
               <tbody>
                 {users.map(u => (
-                  <tr key={u.user_id}
-                    style={{ cursor: 'pointer' }}
+                  <tr key={u.user_id} style={{ cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}
-                  >
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
                     <td style={{ color: 'var(--text)' }} onClick={() => setSelectedUser(u)}>
                       <span style={{ fontWeight: 500 }}>{u.email}</span>
-                      {u.user_id === currentUserId && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '1px 5px', borderRadius: 3 }}>du</span>
-                      )}
+                      {u.user_id === currentUserId && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '1px 5px', borderRadius: 3 }}>du</span>}
                     </td>
                     <td className="mono" onClick={() => setSelectedUser(u)}>{formatTime(u.created_at)}</td>
                     <td className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }} onClick={() => setSelectedUser(u)}>{u.trade_count}</td>
                     <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.confirmed_at ? 'var(--green)' : 'var(--text4)' }}>{u.confirmed_at ? '✓ Ja' : 'Nej'}</span></td>
                     <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.is_admin ? 'var(--accent)' : 'var(--text4)' }}>{u.is_admin ? '✓ Admin' : '—'}</span></td>
-                    <td>
-                      <button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={e => { e.stopPropagation(); toggleAI(u.user_id, u.settings?.ai_enabled) }}
-                        disabled={u.user_id === currentUserId}>
-                        {u.settings?.ai_enabled ? 'På' : 'Av'}
-                      </button>
-                    </td>
-                    <td>
-                      {u.user_id !== currentUserId && (
-                        <button className="btn btn-sm btn-ghost"
-                          onClick={e => { e.stopPropagation(); startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }}
-                          title="Visa appen som denna användare"
-                          style={{ whiteSpace: 'nowrap' }}>
-                          👁 Visa som
-                        </button>
-                      )}
-                    </td>
-                    <td>
-                      {u.user_id !== currentUserId && (
-                        <button className="btn btn-sm" onClick={e => { e.stopPropagation(); deleteUser(u.user_id, u.email) }}
-                          style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                          Ta bort
-                        </button>
-                      )}
-                    </td>
+                    <td><button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={e => { e.stopPropagation(); toggleAI(u.user_id, u.settings?.ai_enabled) }} disabled={u.user_id === currentUserId}>{u.settings?.ai_enabled ? 'På' : 'Av'}</button></td>
+                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm btn-ghost" onClick={e => { e.stopPropagation(); startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }} style={{ whiteSpace: 'nowrap' }}>👁 Visa som</button>}</td>
+                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm" onClick={e => { e.stopPropagation(); deleteUser(u.user_id, u.email) }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -210,20 +163,11 @@ function UsersTab({ currentUserId }) {
           )}
         </div>
       </div>
-
-      {selectedUser && (
-        <UserProfileModal
-          user={selectedUser}
-          adminId={currentUserId}
-          onClose={() => setSelectedUser(null)}
-          onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }}
-        />
-      )}
+      {selectedUser && <UserProfileModal user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUser(null)} onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }} />}
     </>
   )
 }
 
-// ── Broadcast tab ─────────────────────────────────────────────────────────────
 function BroadcastTab({ adminId }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -247,8 +191,7 @@ function BroadcastTab({ adminId }) {
     if (!title.trim() || !body.trim()) return
     setSaving(true)
     await sb.from('messages').insert({ title: title.trim(), body: body.trim(), created_by: adminId, is_published: publish, published_at: publish ? new Date().toISOString() : null })
-    setTitle(''); setBody(''); setShowNew(false)
-    await load(); setSaving(false)
+    setTitle(''); setBody(''); setShowNew(false); await load(); setSaving(false)
   }
 
   async function saveEdit() {
@@ -260,7 +203,7 @@ function BroadcastTab({ adminId }) {
 
   async function publish(id) { await sb.from('messages').update({ is_published: true, published_at: new Date().toISOString() }).eq('id', id); load() }
   async function unpublish(id) { await sb.from('messages').update({ is_published: false, published_at: null }).eq('id', id); load() }
-  async function deleteMsg(id) { if (!window.confirm('Ta bort meddelandet?')) return; await sb.from('messages').delete().eq('id', id); load() }
+  async function deleteMsg(id) { if (!window.confirm('Ta bort?')) return; await sb.from('messages').delete().eq('id', id); load() }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -315,7 +258,6 @@ function BroadcastTab({ adminId }) {
   )
 }
 
-// ── Support tab ───────────────────────────────────────────────────────────────
 function SupportTab({ adminId }) {
   const [threads, setThreads] = useState([])
   const [users, setUsers] = useState({})
@@ -418,14 +360,13 @@ function SupportTab({ adminId }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Admin() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, unreadInbox } = useAuth()
   const [tab, setTab] = useState('users')
 
   const TABS = [
     { id: 'users',     label: '👥 Användare' },
-    { id: 'support',   label: '🎫 Support' },
+    { id: 'support',   label: unreadInbox > 0 ? `🎫 Support (${unreadInbox} ny)` : '🎫 Support' },
     { id: 'broadcast', label: '📢 Meddelanden' },
     { id: 'branding',  label: '🖼 Branding' },
   ]
@@ -459,15 +400,11 @@ export default function Admin() {
   )
 }
 
-// ── BrandingTab ────────────────────────────────────────────────────────────────
 function BrandingTab({ adminId }) {
   const SUPABASE_URL = 'https://qmmpxupsxdouvoqgvgri.supabase.co'
   const ALL_PAGES = [
-    { id: 'auth',      label: 'Inloggningssida' },
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'journal',   label: 'Journal' },
-    { id: 'analytics', label: 'Analytics' },
-    { id: 'checklist', label: 'Checklist' },
+    { id: 'auth', label: 'Inloggningssida' }, { id: 'dashboard', label: 'Dashboard' },
+    { id: 'journal', label: 'Journal' }, { id: 'analytics', label: 'Analytics' }, { id: 'checklist', label: 'Checklist' },
   ]
   const DEFAULT_SETTINGS = {
     heroImages: { dark: '/images/hero-dark.png', light: '/images/hero-light.png' },
@@ -479,29 +416,22 @@ function BrandingTab({ adminId }) {
   const [uploading, setUploading] = useState(null)
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    if (userSettings?.branding) setBranding({ ...DEFAULT_SETTINGS, ...userSettings.branding })
-  }, [userSettings])
+  useEffect(() => { if (userSettings?.branding) setBranding({ ...DEFAULT_SETTINGS, ...userSettings.branding }) }, [userSettings])
 
   function setOpacity(key, val) { setBranding(b => ({ ...b, opacity: { ...(b.opacity || {}), [key]: parseFloat(val) } })) }
   function setImage(theme, url) { setBranding(b => ({ ...b, heroImages: { ...b.heroImages, [theme]: url } })) }
   function togglePage(pageId) { setBranding(b => ({ ...b, showOn: { ...b.showOn, [pageId]: !b.showOn[pageId] } })) }
 
   async function handleUpload(theme, file) {
-    if (!file) return
-    setUploading(theme)
+    if (!file) return; setUploading(theme)
     const name = `hero-${theme}.${file.name.split('.').pop()}`
     const { sb } = await import('../lib/supabase')
-    const { data, error } = await sb.storage.from('branding').upload(name, file, { upsert: true })
+    const { error } = await sb.storage.from('branding').upload(name, file, { upsert: true })
     if (error) { alert('Upload misslyckades: ' + error.message); setUploading(null); return }
-    const url = `${SUPABASE_URL}/storage/v1/object/public/branding/${name}`
-    setImage(theme, url); setUploading(null)
+    setImage(theme, `${SUPABASE_URL}/storage/v1/object/public/branding/${name}`); setUploading(null)
   }
 
-  async function handleSave() {
-    await saveSettings({ branding })
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
-  }
+  async function handleSave() { await saveSettings({ branding }); setSaved(true); setTimeout(() => setSaved(false), 2000) }
 
   const inp = { background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '6px 10px', fontSize: 12, fontFamily: 'var(--font)', width: '100%' }
 
@@ -525,7 +455,7 @@ function BrandingTab({ adminId }) {
                   {uploading === theme && <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>Laddar upp…</div>}
                 </div>
                 {branding.heroImages[theme] && (
-                  <div style={{ position: 'relative', height: 120, borderRadius: 'var(--r)', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                  <div style={{ height: 120, borderRadius: 'var(--r)', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg3)' }}>
                     <img src={branding.heroImages[theme]} alt={theme} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                   </div>
                 )}
@@ -534,7 +464,6 @@ function BrandingTab({ adminId }) {
           ))}
         </div>
       </div>
-
       <div className="card">
         <div className="card-header"><div className="card-title">📍 Visa på sidor</div></div>
         <div className="card-body">
@@ -548,11 +477,7 @@ function BrandingTab({ adminId }) {
           </div>
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 }}>Genomskinlighet</div>
-            {[
-              { key: 'hero', label: 'Hero-panel (inloggning)', def: 0.82 },
-              { key: 'form', label: 'Formulär-panel (inloggning)', def: 1.0 },
-              { key: 'page', label: 'Bakgrund på övriga sidor', def: 0.15 },
-            ].map(({ key, label, def }) => {
+            {[{ key: 'hero', label: 'Hero-panel (inloggning)', def: 0.82 }, { key: 'form', label: 'Formulär-panel (inloggning)', def: 1.0 }, { key: 'page', label: 'Bakgrund på övriga sidor', def: 0.15 }].map(({ key, label, def }) => {
               const val = branding.opacity?.[key] ?? def
               const transPct = Math.round((1 - val) * 100)
               return (
