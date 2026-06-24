@@ -16,6 +16,7 @@ const COLUMNS = [
   { id: 'waiting',    label: 'Väntar',    emoji: '⏳' },
   { id: 'done',       label: 'Klar',      emoji: '✅' },
   { id: 'parked',     label: 'Parkerad',  emoji: '🅿️' },
+  { id: 'archived',   label: 'Arkiv',     emoji: '📦', isArchive: true },
 ]
 
 const TAG_COLORS = {
@@ -36,6 +37,18 @@ const SORT_OPTIONS = [
   { id: 'created_at', label: 'Skapdatum' },
   { id: 'title',      label: 'Titel A–Ö' },
 ]
+
+const COLLAPSED_KEY = 'tl_kanban_collapsed'
+const SHOW_ARCHIVE_KEY = 'tl_kanban_show_archive'
+
+function loadCollapsed() {
+  try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY)) || {} }
+  catch { return {} }
+}
+
+function saveCollapsed(state) {
+  try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(state)) } catch {}
+}
 
 function getTag(title) {
   for (const tag of Object.keys(TAG_COLORS)) {
@@ -112,7 +125,7 @@ function Card({ card, colId, onDragStart, onCardClick }) {
   )
 }
 
-function CardDetailModal({ card, colId, columns, onSave, onDelete, onClose, isAdmin }) {
+function CardDetailModal({ card, colId, columns, onSave, onDelete, onArchive, onClose, isAdmin }) {
   const tag = getTag(card.title)
   const titleClean = tag ? card.title.slice(tag.length).trim() : card.title
   const [editing, setEditing] = useState(false)
@@ -121,6 +134,7 @@ function CardDetailModal({ card, colId, columns, onSave, onDelete, onClose, isAd
   const [selTag, setSelTag] = useState(tag || '')
   const [prio, setPrio] = useState(card.priority || 'medium')
   const [targetCol, setTargetCol] = useState(colId)
+  const isArchived = colId === 'archived'
 
   function handleSave() {
     const fullTitle = selTag ? `${selTag} ${title.trim()}` : title.trim()
@@ -131,8 +145,6 @@ function CardDetailModal({ card, colId, columns, onSave, onDelete, onClose, isAd
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 640, maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 16 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
@@ -145,6 +157,7 @@ function CardDetailModal({ card, colId, columns, onSave, onDelete, onClose, isAd
               <span style={{ fontSize: 11, color: 'var(--text4)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20 }}>
                 {columns.find(c => c.id === colId)?.emoji} {columns.find(c => c.id === colId)?.label}
               </span>
+              {isArchived && <span style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 20 }}>📦 Arkiverad</span>}
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', lineHeight: 1.4 }}>{titleClean}</div>
           </div>
@@ -161,8 +174,14 @@ function CardDetailModal({ card, colId, columns, onSave, onDelete, onClose, isAd
               {card.updated_at && <> · Uppdaterat: {formatDate(card.updated_at)}</>}
             </div>
             {isAdmin && (
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button onClick={() => setEditing(true)} style={btnPrimary}>Redigera</button>
+                {!isArchived && (
+                  <button onClick={() => onArchive(card.id, colId)} style={btnCancel}>📦 Arkivera</button>
+                )}
+                {isArchived && (
+                  <button onClick={() => onSave(card.id, colId, 'parked', { ...card })} style={btnCancel}>↩ Återställ</button>
+                )}
                 <button onClick={() => onDelete(card.id, colId)} style={btnDanger}>Ta bort</button>
               </div>
             )}
@@ -253,45 +272,37 @@ export default function Roadmap() {
   const [addingIn, setAddingIn] = useState(null)
   const [detailCard, setDetailCard] = useState(null)
   const dragCard = useRef(null)
-  // All persist() calls are chained onto this so each one's full read-modify-write
-  // cycle completes before the next one starts reading. Without this, two rapid
-  // moves (e.g. dragging card A then immediately card B) can race: the second
-  // call's "fresh read" can land before the first call's write finishes, so the
-  // second write silently overwrites the first move - exactly the "only one of
-  // two moves stuck" symptom.
   const persistQueue = useRef(Promise.resolve())
   const [dragOverCol, setDragOverCol] = useState(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState('manual')
-  const [collapsed, setCollapsed] = useState({})
+  const [collapsed, setCollapsed] = useState(loadCollapsed)
+  const [showArchive, setShowArchive] = useState(() => {
+    try { return localStorage.getItem(SHOW_ARCHIVE_KEY) === 'true' } catch { return false }
+  })
 
   useEffect(() => {
     async function load() {
       const { data } = await sbProd.from('user_settings').select('settings').eq('user_id', PROD_ADMIN_ID).single()
       if (data?.settings?.roadmapTasks) {
         const rt = data.settings.roadmapTasks
-        if (typeof rt === 'object' && !Array.isArray(rt)) setTasks(rt)
+        if (typeof rt === 'object' && !Array.isArray(rt)) {
+          setTasks({ archived: [], ...rt })
+        }
       }
       setLoading(false)
     }
     load()
   }, [])
 
-  // persist() always re-reads the CURRENT server state right before applying
-  // the change, then writes that back. This is critical: if it instead applied
-  // `tasks` (React's in-memory copy from page-load) as the base, any change made
-  // elsewhere since page-load (another tab, an admin SQL edit, etc.) would get
-  // silently overwritten - the exact bug where moved/edited cards "reverted" on
-  // refresh. `updaterFn` describes the change as a pure function so it can be
-  // re-applied against fresh data instead of a stale local snapshot.
   function persist(updaterFn) {
     persistQueue.current = persistQueue.current.catch(() => {}).then(async () => {
       setSaving(true)
       const { data } = await sbProd.from('user_settings').select('settings').eq('user_id', PROD_ADMIN_ID).single()
       const freshSettings = data?.settings || {}
       const rt = freshSettings.roadmapTasks
-      const freshTasks = (rt && typeof rt === 'object' && !Array.isArray(rt)) ? rt : tasks
+      const freshTasks = (rt && typeof rt === 'object' && !Array.isArray(rt)) ? { archived: [], ...rt } : tasks
       const newTasks = updaterFn(freshTasks)
       setTasks(newTasks)
       const merged = { ...freshSettings, roadmapTasks: newTasks }
@@ -301,7 +312,21 @@ export default function Roadmap() {
     return persistQueue.current
   }
 
-  function toggleCollapse(colId) { setCollapsed(c => ({ ...c, [colId]: !c[colId] })) }
+  function toggleCollapse(colId) {
+    setCollapsed(c => {
+      const next = { ...c, [colId]: !c[colId] }
+      saveCollapsed(next)
+      return next
+    })
+  }
+
+  function toggleArchive() {
+    setShowArchive(v => {
+      const next = !v
+      try { localStorage.setItem(SHOW_ARCHIVE_KEY, String(next)) } catch {}
+      return next
+    })
+  }
 
   function handleDragStart(e, cardId, fromCol) { dragCard.current = { id: cardId, fromCol }; e.dataTransfer.effectAllowed = 'move' }
   function handleDragOver(e, colId) { e.preventDefault(); setDragOverCol(colId) }
@@ -332,6 +357,19 @@ export default function Roadmap() {
     setDetailCard(null)
   }
 
+  function handleArchive(cardId, fromCol) {
+    persist(freshTasks => {
+      const card = (freshTasks[fromCol] || []).find(c => c.id === cardId)
+      if (!card) return freshTasks
+      return {
+        ...freshTasks,
+        [fromCol]: (freshTasks[fromCol] || []).filter(c => c.id !== cardId),
+        archived: [...(freshTasks.archived || []), { ...card, archived_at: new Date().toISOString() }],
+      }
+    })
+    setDetailCard(null)
+  }
+
   function handleEditSave(cardId, fromCol, toCol, updated) {
     persist(freshTasks => {
       const newTasks = { ...freshTasks }
@@ -342,7 +380,9 @@ export default function Roadmap() {
     setDetailCard(null)
   }
 
-  const totalCards = Object.values(tasks).flat().length
+  const visibleColumns = showArchive ? COLUMNS : COLUMNS.filter(c => !c.isArchive)
+  const totalCards = Object.entries(tasks).filter(([k]) => k !== 'archived').flatMap(([, v]) => v).length
+  const archivedCount = (tasks.archived || []).length
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar roadmap…</div>
@@ -353,22 +393,24 @@ export default function Roadmap() {
       <Topbar title="Roadmap" subtitle={`${totalCards} kort${saving ? ' · Sparar…' : ''}`} />
 
       <div style={{ flex: 1, padding: '16px 24px', overflowX: 'auto' }}>
-
-        {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
           <label style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>Sortera:</label>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
             style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r)', color: 'var(--text2)', fontSize: 12, padding: '5px 10px', fontFamily: 'var(--font)' }}>
             {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
+          <button onClick={toggleArchive}
+            style={{ marginLeft: 'auto', background: showArchive ? 'rgba(245,158,11,0.12)' : 'var(--bg2)', border: `1px solid ${showArchive ? 'rgba(245,158,11,0.4)' : 'var(--border2)'}`, borderRadius: 'var(--r)', color: showArchive ? '#f59e0b' : 'var(--text3)', fontSize: 12, padding: '5px 12px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>
+            📦 Arkiv {archivedCount > 0 && `(${archivedCount})`}
+          </button>
         </div>
 
-        {/* Board */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          {COLUMNS.map(col => {
+          {visibleColumns.map(col => {
             const isCollapsed = collapsed[col.id]
             const cards = sortCards(tasks[col.id] || [], sortBy)
             const isDragTarget = dragOverCol === col.id
+            const isArchiveCol = col.isArchive
             return (
               <div key={col.id}
                 onDragOver={e => handleDragOver(e, col.id)}
@@ -376,20 +418,21 @@ export default function Roadmap() {
                 onDrop={e => handleDrop(e, col.id)}
                 style={{
                   width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8,
-                  background: isDragTarget ? 'rgba(0,212,170,0.04)' : 'var(--bg2)',
-                  border: `1px solid ${isDragTarget ? 'rgba(0,212,170,0.3)' : 'var(--border)'}`,
+                  background: isDragTarget ? 'rgba(0,212,170,0.04)' : isArchiveCol ? 'rgba(245,158,11,0.03)' : 'var(--bg2)',
+                  border: `1px solid ${isDragTarget ? 'rgba(0,212,170,0.3)' : isArchiveCol ? 'rgba(245,158,11,0.2)' : 'var(--border)'}`,
                   borderRadius: 'var(--r2)', padding: 12,
                   transition: 'border-color 0.15s, background 0.15s',
+                  opacity: isArchiveCol ? 0.85 : 1,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 0 : 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 14 }}>{col.emoji}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)' }}>{col.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isArchiveCol ? '#f59e0b' : 'var(--text2)' }}>{col.label}</span>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text4)', background: 'var(--bg4)', borderRadius: 20, padding: '1px 7px' }}>{cards.length}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {isAdmin && !isCollapsed && (
+                    {isAdmin && !isCollapsed && !isArchiveCol && (
                       <button onClick={() => setAddingIn(addingIn === col.id ? null : col.id)} title="Lägg till kort"
                         style={{ background: 'none', border: 'none', color: 'var(--text4)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', fontFamily: 'var(--font)' }}>+</button>
                     )}
@@ -410,7 +453,9 @@ export default function Roadmap() {
                     ))}
                     {addingIn === col.id && <AddCardForm colId={col.id} onAdd={handleAdd} onCancel={() => setAddingIn(null)} />}
                     {cards.length === 0 && addingIn !== col.id && (
-                      <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--r)', padding: '16px 12px', textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Tom</div>
+                      <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--r)', padding: '16px 12px', textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>
+                        {isArchiveCol ? 'Inga arkiverade kort' : 'Tom'}
+                      </div>
                     )}
                   </>
                 )}
@@ -422,7 +467,7 @@ export default function Roadmap() {
 
       {detailCard && (
         <CardDetailModal card={detailCard.card} colId={detailCard.colId} columns={COLUMNS}
-          onSave={handleEditSave} onDelete={handleDelete}
+          onSave={handleEditSave} onDelete={handleDelete} onArchive={handleArchive}
           onClose={() => setDetailCard(null)} isAdmin={isAdmin} />
       )}
     </div>
