@@ -46,15 +46,11 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     if (!newEmail.trim() || !newEmail.includes('@')) { setActionErr('Ogiltig e-postadress'); return }
     setActionLoading(true); clearAction()
     try {
-      // Hämta aktuell JWT från Supabase-sessionen
       const { data: { session } } = await sb.auth.getSession()
       if (!session?.access_token) throw new Error('Ingen aktiv session')
       const resp = await fetch(`${WORKER_URL}/admin/update-user`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ userId: u.user_id, updates: { email: newEmail.trim() } }),
       })
       const json = await resp.json()
@@ -86,10 +82,9 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   )
 
   const inp = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '7px 10px', fontSize: 13, fontFamily: 'var(--font)', boxSizing: 'border-box' }
-
   const SECTIONS = [
-    { id: 'info',    label: 'Info' },
-    { id: 'email',   label: '✏️ E-post' },
+    { id: 'info', label: 'Info' },
+    { id: 'email', label: '✏️ E-post' },
     { id: 'resetpw', label: '📧 Återställning' },
   ]
 
@@ -109,20 +104,14 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
-
         <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => { setSection(s.id); clearAction() }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12,
-                fontWeight: section === s.id ? 700 : 500,
-                color: section === s.id ? 'var(--text)' : 'var(--text4)',
-                padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`,
-                marginBottom: -1, transition: 'color 0.15s' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12, fontWeight: section === s.id ? 700 : 500, color: section === s.id ? 'var(--text)' : 'var(--text4)', padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
               {s.label}
             </button>
           ))}
         </div>
-
         {section === 'info' && (
           <>
             <div style={{ marginBottom: 20 }}>
@@ -156,7 +145,6 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
             </div>
           </>
         )}
-
         {section === 'email' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nuvarande: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
@@ -164,23 +152,18 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
               <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Ny e-postadress</label>
               <input style={inp} type="email" placeholder="ny@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
             </div>
-            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()}>
-              {actionLoading ? 'Sparar…' : 'Byt e-post'}
-            </button>
+            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()}>{actionLoading ? 'Sparar…' : 'Byt e-post'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
         )}
-
         {section === 'resetpw' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
-              Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span>.
-              <br />Användaren sätter nytt lösenord via länken i mailet.
+              Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span>.<br />
+              Användaren sätter nytt lösenord via länken i mailet.
             </div>
-            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>
-              {actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}
-            </button>
+            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>{actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
@@ -357,6 +340,7 @@ function BroadcastTab({ adminId }) {
   )
 }
 
+// SupportTab: ingen maxWidth/margin här – page-content-klassen på Admin-sidan hanterar bredd precis som Profile
 function SupportTab({ adminId }) {
   const [threads, setThreads] = useState([])
   const [users, setUsers] = useState({})
@@ -402,7 +386,7 @@ function SupportTab({ adminId }) {
   const filtered = threads.filter(t => filter === 'all' ? true : t.status === filter)
 
   if (activeThread) return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+    <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={() => { setActiveThread(null); setMessages([]) }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0, fontFamily: 'var(--font)' }}>← Tillbaka</button>
         <div style={{ flex: 1 }}>
@@ -434,7 +418,7 @@ function SupportTab({ adminId }) {
   )
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+    <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         {['open','closed','all'].map(f => <button key={f} onClick={() => setFilter(f)} className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-ghost'}`}>{f === 'open' ? 'Öppna' : f === 'closed' ? 'Stängda' : 'Alla'}</button>)}
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text4)' }}>{filtered.length} ärenden</span>
@@ -482,7 +466,8 @@ export default function Admin() {
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
-      <div className="page-content">
+      {/* maxWidth 860 på page-content, precis som Profile.jsx */}
+      <div className="page-content" style={{ maxWidth: 860 }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? 'var(--text)' : 'var(--text3)', padding: '10px 16px', borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
