@@ -19,7 +19,6 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-// ── Session countdown ─────────────────────────────────────────────────────────
 function useNextSession() {
   const [info, setInfo] = useState({ label: '', countdown: '' })
   useEffect(() => {
@@ -27,10 +26,7 @@ function useNextSession() {
       const now = new Date()
       const utcH = now.getUTCHours(), utcM = now.getUTCMinutes(), utcD = now.getUTCDay()
       const isWeekend = utcD === 0 || utcD === 6
-      const sessions = [
-        { label: 'London', utcHour: 8, utcMin: 0 },
-        { label: 'New York', utcHour: 13, utcMin: 30 },
-      ]
+      const sessions = [{ label: 'London', utcHour: 8, utcMin: 0 }, { label: 'New York', utcHour: 13, utcMin: 30 }]
       const nowMins = utcH * 60 + utcM
       let nextSession = null, minsUntil = Infinity
       for (const s of sessions) {
@@ -63,7 +59,7 @@ function useNextSession() {
 }
 
 export default function Dashboard({ onNavigate }) {
-  const { user, userSettings, impersonating } = useAuth()
+  const { user, userSettings, impersonating, unreadCount } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
@@ -72,8 +68,7 @@ export default function Dashboard({ onNavigate }) {
 
   useEffect(() => {
     if (!effectiveUserId) return
-    setTrades([])
-    setLoading(true)
+    setTrades([]); setLoading(true)
     sb.from('trades').select('*').eq('user_id', effectiveUserId).order('date', { ascending: true })
       .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
   }, [effectiveUserId])
@@ -87,7 +82,6 @@ export default function Dashboard({ onNavigate }) {
     </div>
   )
 
-  // ── Core stats ──────────────────────────────────────────────────────────────
   const withR    = trades.filter(t => t.result != null)
   const wins     = withR.filter(t => t.outcome === 'W')
   const losses   = withR.filter(t => t.outcome === 'L')
@@ -98,11 +92,8 @@ export default function Dashboard({ onNavigate }) {
   const pf       = lossR > 0 ? winR / lossR : winR > 0 ? Infinity : 0
   const avgWin   = wins.length ? winR / wins.length : 0
   const avgLoss  = losses.length ? lossR / losses.length : 0
-  const expectancy = wins.length && losses.length
-    ? parseFloat((winRate * avgWin - (1 - winRate) * avgLoss).toFixed(3))
-    : null
+  const expectancy = wins.length && losses.length ? parseFloat((winRate * avgWin - (1 - winRate) * avgLoss).toFixed(3)) : null
 
-  // Max DD
   let equity = 0, peak = 0, maxDD = 0
   for (const t of withR) {
     equity += t.result || 0
@@ -110,21 +101,16 @@ export default function Dashboard({ onNavigate }) {
     const dd = peak - equity
     if (dd > maxDD) maxDD = dd
   }
-
-  // Recovery factor
   const recoveryFactor = maxDD > 0 ? parseFloat((totalR / maxDD).toFixed(2)) : null
 
-  // Today's trades
   const today = new Date().toISOString().split('T')[0]
   const todayTrades = trades.filter(t => t.date === today)
   const todayR = todayTrades.filter(t => t.result != null).reduce((a, t) => a + (t.result || 0), 0)
 
-  // Streak
   const sorted = [...trades].filter(t => t.outcome).sort((a, b) => b.date > a.date ? 1 : -1)
   let streak = 0, streakType = null, longestWin = 0, longestLoss = 0, curWin = 0, curLoss = 0
   for (const t of [...withR].sort((a, b) => a.date > b.date ? 1 : -1)) {
-    if (t.outcome === 'W') { curWin++; curLoss = 0 }
-    else { curLoss++; curWin = 0 }
+    if (t.outcome === 'W') { curWin++; curLoss = 0 } else { curLoss++; curWin = 0 }
     if (curWin > longestWin) longestWin = curWin
     if (curLoss > longestLoss) longestLoss = curLoss
   }
@@ -135,100 +121,72 @@ export default function Dashboard({ onNavigate }) {
   }
   const last10 = sorted.slice(0, 10).reverse()
 
-  // Equity curve
   let cumR = 0
-  const equityData = withR.map((t, i) => {
-    cumR += t.result || 0
-    return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) }
-  })
-
+  const equityData = withR.map((t, i) => { cumR += t.result || 0; return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) } })
   const recent = [...trades].reverse().slice(0, 5)
-
   const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  // ── Widgets ─────────────────────────────────────────────────────────────────
   const widgets = [
-
-    // 1. Welcome hero card
     {
-      id: 'welcome',
-      title: 'Välkommen',
-      span: 2,
+      id: 'welcome', title: 'Välkommen', span: 2,
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 20, paddingBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 4 }}>
-                  Hej, {effectiveDisplayName}! 👋
-                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 4 }}>Hej, {effectiveDisplayName}! 👋</div>
                 <div style={{ fontSize: 13, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Total R</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: totalR >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                    {totalR >= 0 ? '+' : ''}{totalR.toFixed(2)}R
-                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: totalR >= 0 ? 'var(--green)' : 'var(--red)' }}>{totalR >= 0 ? '+' : ''}{totalR.toFixed(2)}R</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Win Rate</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' }}>
-                    {(winRate * 100).toFixed(1)}%
-                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' }}>{(winRate * 100).toFixed(1)}%</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Trades</div>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{trades.length}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                    {session.isOpen ? '🟢 Session' : '⏱ Session'}
-                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{session.isOpen ? '🟢 Session' : '⏱ Session'}</div>
                   <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, color: session.isOpen ? 'var(--green)' : 'var(--accent)', marginTop: 3 }}>
                     {session.label}{session.countdown ? <span style={{ fontSize: 11, fontWeight: 400 }}><br />{session.countdown}</span> : ''}
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Quick actions */}
             <div style={{ display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>✅ Checklist</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>📓 Journal</button>
+              {unreadCount > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
+                  style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>
+                  ✉️ {unreadCount} nytt
+                </button>
+              )}
             </div>
           </div>
         </div>
       )
     },
-
-    // 2. Today
     {
-      id: 'today',
-      title: 'Idag',
+      id: 'today', title: 'Idag',
       content: (
         <div className="card" style={{ height: '100%' }}>
           <div className="card-header"><div className="card-title">📅 Idag</div></div>
           <div className="card-body">
             {todayTrades.length === 0 ? (
-              <div style={{ color: 'var(--text4)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
-                Inga trades idag än
-              </div>
+              <div style={{ color: 'var(--text4)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Inga trades idag än</div>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
-                  <div>
-                    <div className="stat-label">Trades idag</div>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{todayTrades.length}</div>
-                  </div>
-                  <div>
-                    <div className="stat-label">P&L idag</div>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: todayR >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {todayR >= 0 ? '+' : ''}{todayR.toFixed(2)}R
-                    </div>
-                  </div>
+                  <div><div className="stat-label">Trades idag</div><div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{todayTrades.length}</div></div>
+                  <div><div className="stat-label">P&L idag</div><div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: todayR >= 0 ? 'var(--green)' : 'var(--red)' }}>{todayR >= 0 ? '+' : ''}{todayR.toFixed(2)}R</div></div>
                 </div>
                 {todayTrades.slice(-3).reverse().map(t => (
                   <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 12 }}>
@@ -242,26 +200,22 @@ export default function Dashboard({ onNavigate }) {
         </div>
       )
     },
-
-    // 3. Stats grid
     {
-      id: 'stats',
-      title: 'Statistik',
-      span: 2,
+      id: 'stats', title: 'Statistik', span: 2,
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Statistik</div></div>
           <div className="card-body">
             <div className="stats-grid">
               {[
-                { label: 'Trades',          value: trades.length,                                                    sub: `${wins.length}V · ${losses.length}F` },
-                { label: 'Win Rate',        value: (winRate * 100).toFixed(1) + '%',                                 cls: winRate >= 0.5 ? 'positive' : 'negative' },
-                { label: 'Total R',         value: (totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R',              cls: totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : '' },
-                { label: 'Profit Factor',   value: isFinite(pf) ? pf.toFixed(2) : '∞',                             cls: pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative' },
-                { label: 'Expectancy',      value: expectancy != null ? (expectancy > 0 ? '+' : '') + expectancy + 'R' : '—', cls: expectancy > 0 ? 'positive' : expectancy < 0 ? 'negative' : '', sub: 'per trade' },
-                { label: 'Max DD',          value: maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R',             cls: maxDD > 0 ? 'negative' : '' },
-                { label: 'Recovery Factor', value: recoveryFactor != null ? recoveryFactor : '—',                   cls: recoveryFactor >= 2 ? 'positive' : recoveryFactor < 1 ? 'negative' : '', sub: 'netto/max DD' },
-                { label: 'Längsta svit',    value: longestWin > 0 ? `${longestWin}V / ${longestLoss}F` : '—',     sub: 'vinst / förlust' },
+                { label: 'Trades', value: trades.length, sub: `${wins.length}V · ${losses.length}F` },
+                { label: 'Win Rate', value: (winRate * 100).toFixed(1) + '%', cls: winRate >= 0.5 ? 'positive' : 'negative' },
+                { label: 'Total R', value: (totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R', cls: totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : '' },
+                { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '∞', cls: pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative' },
+                { label: 'Expectancy', value: expectancy != null ? (expectancy > 0 ? '+' : '') + expectancy + 'R' : '—', cls: expectancy > 0 ? 'positive' : expectancy < 0 ? 'negative' : '', sub: 'per trade' },
+                { label: 'Max DD', value: maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R', cls: maxDD > 0 ? 'negative' : '' },
+                { label: 'Recovery Factor', value: recoveryFactor != null ? recoveryFactor : '—', cls: recoveryFactor >= 2 ? 'positive' : recoveryFactor < 1 ? 'negative' : '', sub: 'netto/max DD' },
+                { label: 'Längsta svit', value: longestWin > 0 ? `${longestWin}V / ${longestLoss}F` : '—', sub: 'vinst / förlust' },
               ].map(s => (
                 <div key={s.label} className="stat-card">
                   <div className="stat-label">{s.label}</div>
@@ -274,20 +228,14 @@ export default function Dashboard({ onNavigate }) {
         </div>
       )
     },
-
-    // 4. Equity curve
     {
-      id: 'equity',
-      title: 'Equity Curve',
-      span: 2,
+      id: 'equity', title: 'Equity Curve', span: 2,
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Equity Curve (R)</div></div>
           <div className="card-body" style={{ paddingTop: 12 }}>
             {equityData.length < 2 ? (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>
-                Logga minst 2 trades för att se equity curve
-              </div>
+              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>Logga minst 2 trades för att se equity curve</div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={equityData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -303,11 +251,8 @@ export default function Dashboard({ onNavigate }) {
         </div>
       )
     },
-
-    // 5. Recent trades
     {
-      id: 'recent',
-      title: 'Senaste trades',
+      id: 'recent', title: 'Senaste trades',
       content: (
         <div className="card" style={{ height: '100%' }}>
           <div className="card-header">
@@ -315,9 +260,7 @@ export default function Dashboard({ onNavigate }) {
             <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>Se alla →</button>
           </div>
           {recent.length === 0 ? (
-            <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-              Inga trades loggade ännu.
-            </div>
+            <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
           ) : recent.map(t => (
             <div key={t.id} style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'background 0.1s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
@@ -338,11 +281,8 @@ export default function Dashboard({ onNavigate }) {
         </div>
       )
     },
-
-    // 6. Streak & form
     {
-      id: 'streak',
-      title: 'Streak & form',
+      id: 'streak', title: 'Streak & form',
       content: (
         <div className="card" style={{ height: '100%' }}>
           <div className="card-header"><div className="card-title">🔥 Streak & Form</div></div>
@@ -363,15 +303,9 @@ export default function Dashboard({ onNavigate }) {
             </div>
             <div className="stat-label" style={{ marginBottom: 6 }}>Senaste 10 trades</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {last10.length === 0
-                ? <span style={{ color: 'var(--text4)', fontSize: 12 }}>Inga trades än</span>
+              {last10.length === 0 ? <span style={{ color: 'var(--text4)', fontSize: 12 }}>Inga trades än</span>
                 : last10.map((t, i) => (
-                  <div key={i} style={{
-                    width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700,
-                    background: t.outcome === 'W' ? 'var(--green-dim)' : t.outcome === 'L' ? 'var(--red-dim)' : 'var(--bg4)',
-                    color: t.outcome === 'W' ? 'var(--green)' : t.outcome === 'L' ? 'var(--red)' : 'var(--text3)',
-                  }}>{t.outcome}</div>
+                  <div key={i} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: t.outcome === 'W' ? 'var(--green-dim)' : t.outcome === 'L' ? 'var(--red-dim)' : 'var(--bg4)', color: t.outcome === 'W' ? 'var(--green)' : t.outcome === 'L' ? 'var(--red)' : 'var(--text3)' }}>{t.outcome}</div>
                 ))}
             </div>
           </div>
