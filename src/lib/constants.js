@@ -1,21 +1,14 @@
-export const APP_VERSION = 'v2.0.30-dev'
+export const APP_VERSION = 'v2.0.31-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
 export const YAHOO_SYMBOL_MAP = {
-  'NQ':'NQ=F','NQ1!':'NQ=F','MNQ':'NQ=F',
-  'ES':'ES=F','ES1!':'ES=F','MES':'ES=F',
-  'YM':'YM=F','MYM':'YM=F',
-  'RTY':'RTY=F','M2K':'RTY=F',
-  'EURUSD':'EURUSD=X','EUR/USD':'EURUSD=X',
-  'GBPUSD':'GBPUSD=X','GBP/USD':'GBPUSD=X',
-  'USDJPY':'USDJPY=X','USD/JPY':'USDJPY=X',
-  'AUDUSD':'AUDUSD=X','AUD/USD':'AUDUSD=X',
-  'USDCAD':'USDCAD=X','USD/CAD':'USDCAD=X',
-  'USDCHF':'USDCHF=X','USD/CHF':'USDCHF=X',
-  'NZDUSD':'NZDUSD=X','NZD/USD':'NZDUSD=X',
-  'EURGBP':'EURGBP=X','EUR/GBP':'EURGBP=X',
-  'EURJPY':'EURJPY=X','EUR/JPY':'EURJPY=X',
-  'GBPJPY':'GBPJPY=X','GBP/JPY':'GBPJPY=X',
+  'NQ':'NQ=F','NQ1!':'NQ=F','MNQ':'NQ=F','ES':'ES=F','ES1!':'ES=F','MES':'ES=F',
+  'YM':'YM=F','MYM':'YM=F','RTY':'RTY=F','M2K':'RTY=F',
+  'EURUSD':'EURUSD=X','EUR/USD':'EURUSD=X','GBPUSD':'GBPUSD=X','GBP/USD':'GBPUSD=X',
+  'USDJPY':'USDJPY=X','USD/JPY':'USDJPY=X','AUDUSD':'AUDUSD=X','AUD/USD':'AUDUSD=X',
+  'USDCAD':'USDCAD=X','USD/CAD':'USDCAD=X','USDCHF':'USDCHF=X','USD/CHF':'USDCHF=X',
+  'NZDUSD':'NZDUSD=X','NZD/USD':'NZDUSD=X','EURGBP':'EURGBP=X','EUR/GBP':'EURGBP=X',
+  'EURJPY':'EURJPY=X','EUR/JPY':'EURJPY=X','GBPJPY':'GBPJPY=X','GBP/JPY':'GBPJPY=X',
 }
 
 export function getYahooSymbol(instrument) {
