@@ -110,7 +110,7 @@ export default function App() {
             </button>
           </div>
         )}
-        <div style={{ position: 'relative', zIndex: 1, display: 'contents', ...(impersonating ? { paddingTop: 40 } : {}) }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'contents' }}>
           {pages[page] || pages.dashboard}
         </div>
       </main>
@@ -193,6 +193,22 @@ export default function App() {
             backgroundRepeat: bgStyle.backgroundRepeat,
             opacity: bgStyle['--page-bg-opacity'] || 0.15,
           }} />
+        )}
+        {impersonating && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+            background: 'rgba(245,158,11,0.95)', backdropFilter: 'blur(4px)',
+            padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
+            fontSize: 13, fontWeight: 600, color: '#000',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            <span>👁 Visar som: <strong>{impersonating.email}</strong></span>
+            <span style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12 }}>Du är fortfarande inloggad som admin.</span>
+            <button onClick={() => { stopImpersonation(); setPage('admin') }}
+              style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.25)', borderRadius: 6, padding: '4px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#000', fontFamily: 'inherit' }}>
+              ✕ Avsluta
+            </button>
+          </div>
         )}
         <div style={{ position: 'relative', zIndex: 1, display: 'contents' }}>
           {pages[page] || pages.dashboard}
