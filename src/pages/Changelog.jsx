@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.29-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Admin: klick på rad i användartabellen öppnar profilmodal med kontodetaljer, tradingstatistik (WR, total R, PF, V/F) och snabblänkar till Visa som och Ta bort.' },
+    ]
+  },
+  {
     version: 'v2.0.28-dev',
     date: '2026-06-24',
     entries: [
@@ -24,117 +31,99 @@ const CHANGELOG = [
     version: 'v2.0.26-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: Egna fält som analysdimension – widget visar WR och netto R per unikt värde för varje eget fält i custom_data. Uppdateras automatiskt utan konfiguration.' },
-      { type: 'feature', text: 'Admin: "Visa som"-knapp i användartabellen – admin kan se Dashboard, Analytics och Journal som en vald användare utan att byta inloggning.' },
-      { type: 'feature', text: 'Impersonation-banner – orange fält längst upp visar vem som visas. Klicka Avsluta för att återgå till admin-vyn.' },
+      { type: 'feature', text: 'Analytics: Egna fält som analysdimension – widget visar WR och netto R per unikt värde för varje eget fält i custom_data.' },
+      { type: 'feature', text: 'Admin: "Visa som"-knapp i användartabellen – admin kan se Dashboard, Analytics och Journal som en vald användare.' },
+      { type: 'feature', text: 'Impersonation-banner – orange fält längst upp visar vem som visas.' },
     ]
   },
   {
     version: 'v2.0.25-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: SL-optimerare – simulerar vad som händer om SL breddas X%. Visar räddade trades, ny WR, netto R-förändring och optimalt SL-intervall. Kräver MAE-data.' },
-      { type: 'feature', text: 'Analytics: Psykologisk analys – disciplinpoäng (0–100), regelbaserade insikter om förlustsvitar, revenge-trading, session-WR och övertradingmönster.' },
-      { type: 'improvement', text: 'Analytics: WR per handelssession (London/NY/övrigt) i psykologisk widget – identifierar vilken session som ger bäst resultat.' },
+      { type: 'feature', text: 'Analytics: SL-optimerare – simulerar vad som händer om SL breddas X%.' },
+      { type: 'feature', text: 'Analytics: Psykologisk analys – disciplinpoäng, förlustsvitar, revenge-trading, session-WR.' },
+      { type: 'improvement', text: 'Analytics: WR per handelssession (London/NY/övrigt).' },
     ]
   },
   {
     version: 'v2.0.24-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'fix', text: 'DragGrid: columns-prop ignorerades – widgets renderades alltid i en kolumn. Nu används CSS grid med gridTemplateColumns så Dashboard visas i 2 kolumner.' },
-      { type: 'feature', text: 'DragGrid: stöd för span-prop – widgets med span:2 spänner över hela bredden (Välkommen, Statistik, Equity Curve).' },
+      { type: 'fix', text: 'DragGrid: columns-prop ignorerades – nu CSS grid med gridTemplateColumns.' },
+      { type: 'feature', text: 'DragGrid: stöd för span-prop – widgets med span:2 spänner hela bredden.' },
     ]
   },
   {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Dashboard: välkomstbanner med namn, datum, total R, WR och session-countdown (London/NY)' },
-      { type: 'feature', text: 'Dashboard: Idag-widget (trades idag, P&L idag), snabbåtgärder, 2-kolumns layout' },
-      { type: 'feature', text: 'Dashboard: Expectancy, Recovery Factor och Längsta svit tillagda i statistikgrid' },
-      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor och Längsta svit tillagda i statistikgrid' },
-      { type: 'feature', text: 'Analytics: Win Rate per veckodag – ny widget med insikt om bästa/sämsta handelsdagar' },
-      { type: 'improvement', text: 'Analytics RR-optimerare: finare steg (0.1R istället för 0.5R) för psykologisk precisionsoptimering' },
+      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown, Idag-widget, 2-kolumns layout.' },
+      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor, Longest streak, WR per veckodag.' },
+      { type: 'improvement', text: 'Analytics RR-optimerare: 0.1R-steg.' },
     ]
   },
   {
     version: 'v2.0.22-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Admin Branding: transparens-sliders för hero-panel, formulär-panel och sid-bakgrund (0-100%)' },
-      { type: 'fix',     text: 'Bakgrundsbild på andra sidor (Dashboard, Journal mm) fungerar nu – hanteras centralt i App.jsx istället för per sida' },
-      { type: 'improvement', text: 'AuthPage: hero-transparens styrs live av Admin-inställningen, ingen omstart behövs' },
+      { type: 'feature', text: 'Admin Branding: transparens-sliders för hero/formulär/sid-bakgrund.' },
+      { type: 'fix', text: 'Bakgrundsbild på övriga sidor hanteras nu centralt i App.jsx.' },
     ]
   },
   {
     version: 'v2.0.21-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'AuthPage: bakgrundsbild (mörk/ljus) på inloggningssidan med halvtransparent overlay för läsbarhet. Helt på svenska.' },
-      { type: 'feature', text: 'Admin – Branding-flik: ändra/ladda upp bakgrundsbilder för mörkt/ljust tema och välj vilka sidor de ska visas på med kryssrutor' },
-      { type: 'feature', text: 'useBranding-hook för framtida sidor som ska stödja bakgrundsbild' },
-    ]
-  },
-  {
-    version: 'v2.0.20-dev',
-    date: '2026-06-22',
-    entries: [
-      { type: 'fix',         text: 'Topbar: Profil-länk i avatar-dropdown navigerade till 404 (href=/profile i SPA). Ersatt med window.__tlNavigate som sätts av App.jsx' },
-      { type: 'improvement', text: 'Topbar: e-post trunkeras med ellipsis istället för att radbryta fult i avatar-dropdown' },
-      { type: 'feature',     text: 'Journal: kolumnsortering – klicka på Datum/Symbol/Entry/SL/TP/Utfall/R/Grade/Strategi för att sortera' },
+      { type: 'feature', text: 'AuthPage: bakgrundsbild med transparens, på svenska.' },
+      { type: 'feature', text: 'Admin Branding-flik: mörk/ljus bakgrundsbild, per-sida-val.' },
     ]
   },
   {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filterrad (Utfall, Riktning, Strategi, Datumintervall) ovanför tradelistan' },
-      { type: 'feature', text: 'Journal + PiP: Strategi-fältet är nu en dropdown populerad från dina checklistor, med fritext-fallback' },
-      { type: 'feature', text: 'Journal: lyssnar på BroadcastChannel och uppdaterar listan live när ett trade sparas från PiP' },
-      { type: 'feature', text: 'PiP: Logga trade-fliken är nu ett fullständigt formulär (alla fält som i Journal, inkl. scale-ins, targets, exit-tid, emotion, chart, egna fält)' },
-      { type: 'fix',     text: 'PiP: trade sparat i PiP syns nu direkt i Journal utan att stänga fönstret eller ladda om sidan (BroadcastChannel)' },
-      { type: 'feature', text: 'Topbar: Avatar-ikonen har nu en dropdown med Profil och Logga ut' },
-      { type: 'improvement', text: 'Profil: helt på svenska, repeat-password-fält, uppdaterad privacy-text med acceptans av integritetsvillkor' },
-    ]
-  },
-  {
-    version: 'v2.0.18-dev',
-    date: '2026-06-22',
-    entries: [
-      { type: 'fix', text: 'tradeUtils: hoppa över R-konvertering om result_unit=R är satt – backtest-trades med fasta R-värden räknas nu korrekt (+2R/-1R/+3R)' },
+      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown från checklistor, kolumnsortering.' },
+      { type: 'feature', text: 'PiP: fullständigt loggformulär, BroadcastChannel live-uppdatering.' },
+      { type: 'feature', text: 'Topbar: avatar-dropdown med Profil och Logga ut.' },
     ]
   },
   {
     version: 'v2.0.17-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'fix',     text: 'tradeUtils: R-beräkning använder nu abs(entry-sl) som faktisk risk istället för risk_pts (box-storlek) – ger korrekt R oavsett var SL sitter' },
-      { type: 'feature', text: 'Analytics: Kontosimulator – ange kontostorlek och risk% live och se dollar P&L, Max DD i $ och %, kontrakt per trade, dollar equity-kurva' },
-    ]
-  },
-  {
-    version: 'v2.0.16-dev',
-    date: '2026-06-22',
-    entries: [
-      { type: 'feature', text: 'tradeUtils.js: delad normaliseringsfunktion för trades – konverterar outcome (Win/Loss→W/L) och result (punkter→R via risk_pts) från alla kända import-format' },
-      { type: 'fix',     text: 'Analytics + Journal: normalizeTrades() appliceras vid fetch – backtest-trades (Blackwatch m.fl.) beräknas nu korrekt med rätt WR, R-värden och statistik' },
+      { type: 'fix', text: 'tradeUtils: R-beräkning direction-agnostisk med abs(entry-sl).' },
+      { type: 'feature', text: 'Analytics: Kontosimulator med dollar P&L och equity-kurva.' },
     ]
   },
   {
     version: 'v2.0.15-dev',
     date: '2026-06-21',
     entries: [
-      { type: 'feature', text: 'PiP-widget: flytande fönster med Checklist- och Logga trade-flikar, öppnas via ⧉-knappen i topbaren (kräver Chromium/Edge/Chrome)' },
+      { type: 'feature', text: 'PiP-widget: flytande fönster med Checklist- och Logga trade-flikar (Chromium).' },
+    ]
+  },
+  {
+    version: 'v2.0.12-dev',
+    date: '2026-06-17',
+    entries: [
+      { type: 'feature', text: 'Checklist portad med standardstrategier, inbyggd editor, 2-kolumns layout.' },
+    ]
+  },
+  {
+    version: 'v2.0.4-dev',
+    date: '2026-06-15',
+    entries: [
+      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden (broadcast + support), Journal utökad med egna fält.' },
+      { type: 'infra', text: 'MFE/MAE via Yahoo Finance Worker + market_bars, Supabase-säkerhet fixad.' },
     ]
   },
   {
     version: 'v2.0.0-dev',
     date: '2026-06-11',
     entries: [
-      { type: 'infra',   text: 'React 18 + Vite 5 migration påbörjad – ny projektstruktur, Cloudflare Workers hosting' },
-      { type: 'feature', text: 'Dashboard, Journal, Analytics, Profil, Admin – grundläggande sidor portade' },
-      { type: 'infra',   text: 'Design system – globals.css med CSS-variabler, Inter + JetBrains Mono, kollapsbar sidebar' },
+      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers hosting.' },
+      { type: 'feature', text: 'Dashboard, Journal, Analytics, Profil, Admin – grundläggande sidor.' },
+      { type: 'infra', text: 'Design system – CSS-variabler, Inter + JetBrains Mono, kollapsbar sidebar.' },
     ]
   },
 ]
@@ -154,34 +143,22 @@ export default function Changelog() {
         {CHANGELOG.map((release, ri) => (
           <div key={release.version} style={{ marginBottom: 36 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
-              <span style={{
-                fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700,
-                color: ri === 0 ? 'var(--accent)' : 'var(--text)',
-                ...(ri === 0 ? { textShadow: '0 0 20px rgba(0,212,170,0.25)' } : {})
-              }}>{release.version}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: ri === 0 ? 'var(--accent)' : 'var(--text)', ...(ri === 0 ? { textShadow: '0 0 20px rgba(0,212,170,0.25)' } : {}) }}>{release.version}</span>
               <span style={{ fontSize: 12, color: 'var(--text4)', fontFamily: 'var(--mono)' }}>{release.date}</span>
-              {ri === 0 && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 20, padding: '2px 8px' }}>SENASTE</span>
-              )}
+              {ri === 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 20, padding: '2px 8px' }}>SENASTE</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {release.entries.map((entry, ei) => {
                 const cfg = TYPE_CONFIG[entry.type] || TYPE_CONFIG.feature
                 return (
                   <div key={ei} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 4,
-                      background: cfg.bg, color: cfg.color,
-                      flexShrink: 0, marginTop: 1, letterSpacing: 0.3, minWidth: 46, textAlign: 'center'
-                    }}>{cfg.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 4, background: cfg.bg, color: cfg.color, flexShrink: 0, marginTop: 1, letterSpacing: 0.3, minWidth: 46, textAlign: 'center' }}>{cfg.label}</span>
                     <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{entry.text}</span>
                   </div>
                 )
               })}
             </div>
-            {ri < CHANGELOG.length - 1 && (
-              <div style={{ borderBottom: '1px solid var(--border)', marginTop: 28 }} />
-            )}
+            {ri < CHANGELOG.length - 1 && <div style={{ borderBottom: '1px solid var(--border)', marginTop: 28 }} />}
           </div>
         ))}
       </div>
