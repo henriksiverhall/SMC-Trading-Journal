@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec } from '../lib/constants'
@@ -93,8 +93,7 @@ function EquityCurve({ trades }) {
             <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="var(--border2)" strokeDasharray="4 4" />
-            <Line type="monotone" dataKey="R" name="Kumulativt R" stroke={isPositive ? 'var(--green)' : 'var(--red)'}
-              dot={false} strokeWidth={2} />
+            <Line type="monotone" dataKey="R" name="Kumulativt R" stroke={isPositive ? 'var(--green)' : 'var(--red)'} dot={false} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -105,26 +104,14 @@ function EquityCurve({ trades }) {
 function MFESection({ trades, onFetched }) {
   const [status, setStatus] = useState('idle')
   const [results, setResults] = useState([])
-  const [fetchedAt, setFetchedAt] = useState(null)
   const [showAll, setShowAll] = useState(false)
-
   const candidates = trades.filter(t => t.entry && t.sl && t.date && t.direction)
-
   useEffect(() => {
-    const enriched = candidates.map(t => ({
-      ...t,
-      _mfe: t.custom_data?._mfe ?? null,
-      _mae: t.custom_data?._mae ?? null,
-    }))
+    const enriched = candidates.map(t => ({ ...t, _mfe: t.custom_data?._mfe ?? null, _mae: t.custom_data?._mae ?? null }))
     setResults(enriched)
     const anyFetched = enriched.filter(t => t._mfe != null)
-    if (anyFetched.length > 0) {
-      setFetchedAt(anyFetched[0]?.custom_data?._mfe_fetched_at)
-      setStatus('partial')
-      onFetched?.(enriched)
-    }
+    if (anyFetched.length > 0) { setStatus('partial'); onFetched?.(enriched) }
   }, [trades.length])
-
   async function fetchData() {
     const missing = candidates.filter(t => t.custom_data?._mfe == null)
     if (!missing.length) return
@@ -143,46 +130,25 @@ function MFESection({ trades, onFetched }) {
         }
       }
     }
-    setResults(enriched)
-    setFetchedAt(now)
-    setStatus('done')
-    onFetched?.(enriched)
+    setResults(enriched); setStatus('done'); onFetched?.(enriched)
   }
-
   const sortedResults = [...results].sort((a, b) => new Date(b.date) - new Date(a.date))
   const visibleResults = showAll ? sortedResults : sortedResults.slice(0, 10)
-
   const avgMFE = results.length ? (results.reduce((a, t) => a + (t._mfe || 0), 0) / results.length).toFixed(2) : null
   const avgMAE = results.length ? Math.abs(results.reduce((a, t) => a + (t._mae || 0), 0) / results.length).toFixed(2) : null
-  const avgR = results.filter(t => t.result != null).length
-    ? (results.filter(t => t.result != null).reduce((a, t) => a + t.result, 0) / results.filter(t => t.result != null).length).toFixed(2)
-    : null
+  const avgR = results.filter(t => t.result != null).length ? (results.filter(t => t.result != null).reduce((a, t) => a + t.result, 0) / results.filter(t => t.result != null).length).toFixed(2) : null
   const leftOnTable = avgMFE != null && avgR != null ? (parseFloat(avgMFE) - parseFloat(avgR)).toFixed(2) : null
   const captureable = results.filter(t => t._mfe != null && t._mfe > 0 && t.result != null)
-  const avgCaptureRate = captureable.length
-    ? (captureable.reduce((a, t) => a + Math.min(t.result / t._mfe, 1.5), 0) / captureable.length * 100).toFixed(0)
-    : null
-  const bestMissed = results
-    .filter(t => t._mfe != null && t.result != null)
-    .reduce((best, t) => { const gap = t._mfe - t.result; return (!best || gap > best.gap) ? { ...t, gap } : best }, null)
+  const avgCaptureRate = captureable.length ? (captureable.reduce((a, t) => a + Math.min(t.result / t._mfe, 1.5), 0) / captureable.length * 100).toFixed(0) : null
   const missingCount = candidates.filter(t => t.custom_data?._mfe == null).length
-
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
         <div className="card-title">📐 MFE / MAE – Execution-analys</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {missingCount > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={fetchData} disabled={status === 'loading'}>
-              {status === 'loading' ? 'Hämtar…' : `▶ Hämta ${missingCount} saknade`}
-            </button>
-          )}
-        </div>
+        {missingCount > 0 && <button className="btn btn-ghost btn-sm" onClick={fetchData} disabled={status === 'loading'}>{status === 'loading' ? 'Hämtar…' : `▶ Hämta ${missingCount} saknade`}</button>}
       </div>
       <div className="card-body">
-        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
-          <strong>MFE</strong> = max gynnsam rörelse i R · <strong>MAE</strong> = max ogynnsam rörelse · <strong>På bordet</strong> = MFE − faktiskt utfall.
-        </p>
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}><strong>MFE</strong> = max gynnsam rörelse i R · <strong>MAE</strong> = max ogynnsam rörelse · <strong>På bordet</strong> = MFE − utfall.</p>
         {status === 'loading' && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Hämtar marknadsdata…</p>}
         {results.length > 0 && (
           <>
@@ -197,12 +163,7 @@ function MFESection({ trades, onFetched }) {
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="journal-table">
-                <thead><tr>
-                  <th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th>
-                  <th style={{ color: 'var(--green)' }}>MFE</th>
-                  <th style={{ color: 'var(--red)' }}>MAE</th>
-                  <th style={{ color: 'var(--amber)' }}>På bordet</th>
-                </tr></thead>
+                <thead><tr><th>Datum</th><th>Symbol</th><th>Dir</th><th>Utfall</th><th style={{ color: 'var(--green)' }}>MFE</th><th style={{ color: 'var(--red)' }}>MAE</th><th style={{ color: 'var(--amber)' }}>På bordet</th></tr></thead>
                 <tbody>
                   {visibleResults.map(t => {
                     const left = t._mfe != null && t.result != null ? (t._mfe - t.result).toFixed(2) : null
@@ -235,62 +196,42 @@ function MFESection({ trades, onFetched }) {
 
 function SLOptimizer({ mfeResults, trades }) {
   const [showTable, setShowTable] = useState(false)
-
   const maeMap = {}
-  for (const t of (mfeResults || [])) {
-    if (t._mae != null) maeMap[t.id] = t._mae
-  }
-  const base = trades.filter(t =>
-    t.result != null && t.entry != null && t.sl != null && maeMap[t.id] != null
-  ).map(t => ({
-    ...t, _mae: maeMap[t.id], _risk: Math.abs(t.entry - t.sl),
-  })).filter(t => t._risk > 0)
-
+  for (const t of (mfeResults || [])) { if (t._mae != null) maeMap[t.id] = t._mae }
+  const base = trades.filter(t => t.result != null && t.entry != null && t.sl != null && maeMap[t.id] != null)
+    .map(t => ({ ...t, _mae: maeMap[t.id], _risk: Math.abs(t.entry - t.sl) })).filter(t => t._risk > 0)
   if (!base.length) return (
     <div className="card">
       <div className="card-header"><div className="card-title">🎯 SL-optimering</div></div>
       <div className="card-body"><p style={{ fontSize: 13, color: 'var(--text3)' }}>Hämta MAE-data i MFE/MAE-sektionen för att aktivera SL-analysen.</p></div>
     </div>
   )
-
   const losers = base.filter(t => t.outcome === 'L')
   const winners = base.filter(t => t.outcome === 'W')
   const currentWR = base.length ? (winners.length / base.length * 100) : 0
   const currentNetR = base.reduce((a, t) => a + (t.result || 0), 0)
   const steps = Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 5).toFixed(0)))
-
   const simRows = steps.map(pct => {
     const factor = 1 + pct / 100
     let savedTrades = 0, newWins = 0, newR = 0
     for (const t of base) {
       const maeAbs = Math.abs(t._mae)
       if (t.outcome === 'L') {
-        if (maeAbs < factor) {
-          const mfe = mfeResults?.find(m => m.id === t.id)?._mfe ?? null
-          const winR = mfe != null ? Math.min(mfe, factor * 2) : factor
-          newR += winR; newWins++; savedTrades++
-        } else { newR += t.result || 0 }
+        if (maeAbs < factor) { const mfe = mfeResults?.find(m => m.id === t.id)?._mfe ?? null; newR += mfe != null ? Math.min(mfe, factor * 2) : factor; newWins++; savedTrades++ }
+        else { newR += t.result || 0 }
       } else { newR += (t.result || 0) * factor; newWins++ }
     }
     const newWR = base.length ? (newWins / base.length * 100) : 0
-    return {
-      pct, pctLabel: `+${pct}%`, saved: savedTrades,
-      newWR: parseFloat(newWR.toFixed(1)), wrDelta: parseFloat((newWR - currentWR).toFixed(1)),
-      newNetR: parseFloat(newR.toFixed(2)), netRDelta: parseFloat((newR - currentNetR).toFixed(2)),
-    }
+    return { pct, pctLabel: `+${pct}%`, saved: savedTrades, newWR: parseFloat(newWR.toFixed(1)), wrDelta: parseFloat((newWR - currentWR).toFixed(1)), newNetR: parseFloat(newR.toFixed(2)), netRDelta: parseFloat((newR - currentNetR).toFixed(2)) }
   })
-
   const best = simRows.reduce((a, b) => b.netRDelta > a.netRDelta ? b : a)
   const breakEven = simRows.find(r => r.netRDelta >= 0)
   const meaningful = simRows.filter(r => r.saved > 0).slice(0, 8)
-
   return (
     <div className="card">
       <div className="card-header"><div className="card-title">🎯 SL-optimering – bredda SL = fler vinster?</div></div>
       <div className="card-body">
-        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
-          Simulerar vad som händer om du breddar SL med X% av din nuvarande risk. {base.length} trades med MAE-data analyseras.
-        </p>
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>Simulerar vad som händer om du breddar SL med X% av din nuvarande risk. {base.length} trades med MAE-data analyseras.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
           <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid var(--border)' }}>
             <div className="stat-label">Nuvarande WR</div>
@@ -302,14 +243,14 @@ function SLOptimizer({ mfeResults, trades }) {
             <div className="stat-value" style={{ color: currentNetR >= 0 ? 'var(--green)' : 'var(--red)' }}>{currentNetR > 0 ? '+' : ''}{currentNetR.toFixed(2)}R</div>
           </div>
           <div style={{ background: 'rgba(0,212,170,0.06)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid rgba(0,212,170,0.2)' }}>
-            <div className="stat-label">Optimalt SL (netto R)</div>
+            <div className="stat-label">Optimalt SL</div>
             <div className="stat-value accent">{best.pctLabel}</div>
-            <div className="stat-sub">+{best.netRDelta}R netto · {best.saved} trades räddas</div>
+            <div className="stat-sub">+{best.netRDelta}R · {best.saved} trades räddas</div>
           </div>
         </div>
         {breakEven && breakEven.pct !== simRows[0].pct && (
           <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: 14 }}>
-            💡 Break-even vid <strong style={{ color: 'var(--accent)' }}>{breakEven.pctLabel}</strong> bredare SL ({breakEven.saved} trades räddas, WR {breakEven.newWR}%).
+            💡 Break-even vid <strong style={{ color: 'var(--accent)' }}>{breakEven.pctLabel}</strong> ({breakEven.saved} trades räddas, WR {breakEven.newWR}%).
           </div>
         )}
         {meaningful.length > 0 && (
@@ -320,9 +261,7 @@ function SLOptimizer({ mfeResults, trades }) {
             {showTable && (
               <div style={{ overflowX: 'auto' }}>
                 <table className="journal-table">
-                  <thead><tr>
-                    <th>SL bredare</th><th>Räddade</th><th>Ny WR</th><th>WR Δ</th><th>Netto R</th><th>R Δ</th>
-                  </tr></thead>
+                  <thead><tr><th>SL bredare</th><th>Räddade</th><th>Ny WR</th><th>WR Δ</th><th>Netto R</th><th>R Δ</th></tr></thead>
                   <tbody>
                     {meaningful.map(r => (
                       <tr key={r.pct} style={{ background: r.pct === best.pct ? 'rgba(0,212,170,0.05)' : undefined }}>
@@ -331,10 +270,7 @@ function SLOptimizer({ mfeResults, trades }) {
                         <td className="mono" style={{ color: r.newWR >= 50 ? 'var(--green)' : 'var(--red)' }}>{r.newWR}%</td>
                         <td className="mono" style={{ color: r.wrDelta > 0 ? 'var(--green)' : 'var(--text3)' }}>+{r.wrDelta}%</td>
                         <td className="mono" style={{ color: r.newNetR >= 0 ? 'var(--green)' : 'var(--red)' }}>{r.newNetR > 0 ? '+' : ''}{r.newNetR}R</td>
-                        <td className="mono" style={{ color: r.netRDelta >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                          {r.netRDelta > 0 ? '+' : ''}{r.netRDelta}R
-                          {r.pct === best.pct && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}
-                        </td>
+                        <td className="mono" style={{ color: r.netRDelta >= 0 ? 'var(--green)' : 'var(--red)' }}>{r.netRDelta > 0 ? '+' : ''}{r.netRDelta}R{r.pct === best.pct && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -404,11 +340,7 @@ function PsychWidget({ trades }) {
   const insights = []
   if (maxLoss >= 3) insights.push({ type: 'warning', text: `Längsta förlustsvit: ${maxLoss} i rad.${maxLoss >= 5 ? ' Ta en paus och återgå till checklistan.' : ''}` })
   if (wrAfterStreak !== null && parseFloat(wrAfterStreak) < 45 && streakGroups.length >= 2) insights.push({ type: 'warning', text: `WR direkt efter förlustsvitar: ${wrAfterStreak}%. Möjlig revenge-trading.` })
-  if (sessionStats.length >= 2) {
-    const best = [...sessionStats].sort((a,b) => b.wr - a.wr)[0]
-    const worst = [...sessionStats].sort((a,b) => a.wr - b.wr)[0]
-    if (best.wr - worst.wr >= 20) insights.push({ type: 'insight', text: `Du handlar bättre under ${best.label} (${best.wr}% WR) än ${worst.label} (${worst.wr}% WR).` })
-  }
+  if (sessionStats.length >= 2) { const best = [...sessionStats].sort((a,b) => b.wr - a.wr)[0]; const worst = [...sessionStats].sort((a,b) => a.wr - b.wr)[0]; if (best.wr - worst.wr >= 20) insights.push({ type: 'insight', text: `Du handlar bättre under ${best.label} (${best.wr}% WR) än ${worst.label} (${worst.wr}% WR).` }) }
   if (disciplinedEmotion && disciplinedEmotion.wr >= 60 && disciplinedEmotion.count >= 3) insights.push({ type: 'positive', text: `Disciplined-trades: ${disciplinedEmotion.wr}% WR (${disciplinedEmotion.count} trades). Ditt bästa tillstånd.` })
   badEmotions.forEach(e => { if (e.wr < 45 && e.count >= 2) insights.push({ type: 'warning', text: `${e.emotion}-trades: ${e.wr}% WR (${e.count} trades). Överväg att skippa dem.` }) })
   if (highDayWR !== null && parseFloat(highDayWR) < 45 && highDays.length >= 2) insights.push({ type: 'warning', text: `${highDays.length} dagar med 4+ trades – WR: ${highDayWR}%. Övertradingmönster möjligt.` })
@@ -427,9 +359,7 @@ function PsychWidget({ trades }) {
             <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 4 }}>av 100</div>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-              <div style={{ height: '100%', width: score + '%', background: scoreColor, borderRadius: 4, transition: 'width 0.8s ease' }} />
-            </div>
+            <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}><div style={{ height: '100%', width: score + '%', background: scoreColor, borderRadius: 4, transition: 'width 0.8s ease' }} /></div>
             <div style={{ fontSize: 12, color: 'var(--text3)' }}>{score >= 70 ? 'Bra disciplin.' : score >= 50 ? 'Godkänd nivå men förbättringspotential.' : 'Varningsnivå – genomgå mönstren nedan.'}</div>
           </div>
         </div>
@@ -447,9 +377,7 @@ function PsychWidget({ trades }) {
             {sessionStats.map(s => (
               <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 <div style={{ width: 160, fontSize: 12, color: 'var(--text3)' }}>{s.label}</div>
-                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: s.wr + '%', background: s.wr >= 50 ? 'var(--green)' : s.wr >= 40 ? 'var(--amber)' : 'var(--red)', borderRadius: 4 }} />
-                </div>
+                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}><div style={{ height: '100%', width: s.wr + '%', background: s.wr >= 50 ? 'var(--green)' : s.wr >= 40 ? 'var(--amber)' : 'var(--red)', borderRadius: 4 }} /></div>
                 <div style={{ width: 80, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'right', color: s.wr >= 50 ? 'var(--green)' : s.wr >= 40 ? 'var(--amber)' : 'var(--red)' }}>{s.wr}% <span style={{ color: 'var(--text4)' }}>({s.t})</span></div>
               </div>
             ))}
@@ -467,13 +395,25 @@ function PsychWidget({ trades }) {
 }
 
 function CustomFieldsWidget({ trades }) {
-  const INTERNAL_KEYS = new Set(['_mfe','_mae','_mfe_fetched_at','_actual_exit','_exit_date','_exit_time','_scaleIns','_targets','_totalContracts','_weightedEntry','_risk_pct','_account_size','_futures','backtest','result_unit','rr_target','strategy_type'])
+  function isInternalKey(key) {
+    const KEYS = new Set([
+      '_mfe','_mae','_mfe_fetched_at','_actual_exit','_exit_date','_exit_time',
+      '_scaleIns','_targets','_totalContracts','_weightedEntry','_risk_pct',
+      '_account_size','_futures','backtest','result_unit','rr_target','strategy_type',
+      'risk_pts','box_size','box_low','box_high','tp_rr2','tp_rr3','tp_rr',
+      'entry_price','exit_price','trade_id','session','bar_index',
+    ])
+    if (KEYS.has(key.toLowerCase())) return true
+    if (key.startsWith('_')) return true
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(key)) return true  // VERSALER_FORMAT = backtest-data
+    return false
+  }
   const fieldMap = {}
   for (const t of trades) {
     const cd = t.custom_data
     if (!cd || typeof cd !== 'object') continue
     for (const [key, val] of Object.entries(cd)) {
-      if (INTERNAL_KEYS.has(key)) continue
+      if (isInternalKey(key)) continue
       if (val == null || val === '') continue
       const strVal = String(val).trim()
       if (!fieldMap[key]) fieldMap[key] = {}
@@ -528,7 +468,6 @@ function CustomFieldsWidget({ trades }) {
 
 function RROptimizer({ mfeResults, trades }) {
   const [showTable, setShowTable] = useState(false)
-
   const buildDataset = () => {
     const mfeMap = {}
     for (const t of (mfeResults || [])) { if (t._mfe != null) mfeMap[t.id] = t._mfe }
@@ -539,61 +478,39 @@ function RROptimizer({ mfeResults, trades }) {
       return { ...t, _mfe: null, _src: 'unknown' }
     })
   }
-
   const dataset = buildDataset()
   const valid = dataset.filter(t => t._mfe != null)
   const missingMfeCount = dataset.length - valid.length
-
   if (!valid.length) return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body"><p style={{ fontSize: 13, color: 'var(--text3)' }}>Logga trades med entry, SL och utfall för att se RR-analys.</p></div>
     </div>
   )
-
   const hasAnyProxy = dataset.some(t => t._src === 'proxy_win')
   const rrLevels = Array.from({ length: 56 }, (_, i) => parseFloat((0.5 + i * 0.1).toFixed(1)))
   const winningTrades = valid.filter(t => t.outcome === 'W')
   const currentAvgRR = winningTrades.length ? parseFloat((winningTrades.reduce((a, t) => a + (t.result || 0), 0) / winningTrades.length).toFixed(2)) : 0
-
   const simData = rrLevels.map(rr => {
     const wins = valid.filter(t => t._mfe >= rr)
     const wr = wins.length / valid.length
     const expectancy = parseFloat((wr * rr - (1 - wr) * 1).toFixed(3))
     return { rr: rr + 'R', rrVal: rr, 'Win Rate': parseFloat((wr * 100).toFixed(1)), Expectancy: expectancy, wins: wins.length, total: valid.length }
   })
-
   const best = simData.reduce((a, b) => b.Expectancy > a.Expectancy ? b : a)
   const current = simData.reduce((a, b) => Math.abs(b.rrVal - currentAvgRR) < Math.abs(a.rrVal - currentAvgRR) ? b : a)
   const actualWR = valid.length ? (winningTrades.length / valid.length * 100).toFixed(1) : 0
-
-  // Visa rader runt optimalt och nuvarande – max 8 rader per default
-  const bestIdx = simData.findIndex(d => d.rr === best.rr)
-  const currentIdx = simData.findIndex(d => d.rrVal === current.rrVal)
-  const keyIndices = new Set([
-    ...Array.from({ length: Math.min(4, simData.length) }, (_, i) => i),
-    Math.max(0, bestIdx - 1), bestIdx, Math.min(simData.length - 1, bestIdx + 1),
-    currentIdx,
-  ])
-  const previewRows = simData.filter((_, i) => keyIndices.has(i))
-
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header"><div className="card-title">📊 RR-optimerare</div></div>
       <div className="card-body">
-        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
-          Simulerar optimalt TP-mål baserat på MFE för {valid.length} trades.
-        </p>
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>Simulerar optimalt TP-mål baserat på MFE för {valid.length} trades.</p>
         {hasAnyProxy && missingMfeCount > 0 && (
-          <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
-            ⚠ {missingMfeCount} trades saknar MFE-data och exkluderas.
-          </div>
+          <div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>⚠ {missingMfeCount} trades saknar MFE-data och exkluderas.</div>
         )}
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, padding: '10px 14px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 'var(--r)', lineHeight: 1.6 }}>
-          Optimalt TP: <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong> (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, simulerad WR {best['Win Rate']}%).
-          Ditt nuvarande snittmål: ~{currentAvgRR}R (faktisk WR {actualWR}%).
+          Optimalt TP: <strong style={{ color: 'var(--accent)' }}>{best.rr}</strong> (expectancy {best.Expectancy > 0 ? '+' : ''}{best.Expectancy}R/trade, sim WR {best['Win Rate']}%). Nuvarande snittmål: ~{currentAvgRR}R (faktisk WR {actualWR}%).
         </div>
-
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={simData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -606,11 +523,9 @@ function RROptimizer({ mfeResults, trades }) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-
         <button className="btn btn-ghost btn-sm" style={{ marginTop: 12, marginBottom: showTable ? 10 : 0 }} onClick={() => setShowTable(s => !s)}>
           {showTable ? '▲ Göm tabell' : `▼ Visa alla ${simData.length} RR-nivåer`}
         </button>
-
         {showTable && (
           <div style={{ overflowX: 'auto' }}>
             <table className="journal-table">
@@ -661,34 +576,34 @@ function AIAnalysis({ trades, aiEnabled }) {
   const isCurrent = !!response && userSettings?.aiAnalysis?.fingerprint === fingerprint
   async function analyze() {
     setLoading(true)
-    const prompt = `Du är en erfaren trading coach. Analysera dessa tradingstatistik och ge konkreta råd på svenska:\n\nAntal trades: ${withR.length} (${wins.length} vinster, ${withR.filter(t => t.outcome === 'L').length} förluster)\nWin Rate: ${wr}%\nTotal R: ${totalR}R\nProfit Factor: ${pf}\nStrategier: ${[...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet'}\nSenaste 5 trades: ${withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', ')}\n\nGe 3 konkreta förbättringsförslag baserat på dessa siffror. Var specifik och direkt.`
+    const prompt = `Du är en erfaren trading coach. Analysera dessa tradingstatistik och ge konkreta råd på svenska:\n\nAntal trades: ${withR.length} (${wins.length} vinster, ${withR.filter(t => t.outcome === 'L').length} förluster)\nWin Rate: ${wr}%\nTotal R: ${totalR}R\nProfit Factor: ${pf}\nStrategier: ${[...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet'}\nSenaste 5 trades: ${withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', ')}\n\nGe 3 konkreta förbättringsförslag. Var specifik och direkt.`
     try {
       const res = await fetch(`${WORKER_URL}/api/claude`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }) })
       const rawText = await res.text()
-      if (!res.ok) { setResponse(`Kunde inte ansluta till AI-tjänsten (HTTP ${res.status}): ${rawText.slice(0, 200)}`); setLoading(false); return }
+      if (!res.ok) { setResponse(`Kunde inte ansluta (HTTP ${res.status}): ${rawText.slice(0, 200)}`); setLoading(false); return }
       const data = JSON.parse(rawText)
-      if (data.error) { setResponse(`AI-tjänsten svarade med fel: ${data.error.message || JSON.stringify(data.error)}`); setLoading(false); return }
+      if (data.error) { setResponse(`Fel: ${data.error.message || JSON.stringify(data.error)}`); setLoading(false); return }
       const text = data.content?.find(c => c.type === 'text')?.text || 'Inget svar.'
       const now = new Date().toISOString()
       const newHistory = [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...history.slice(0, 4)]
       setResponse(text); setHistory(newHistory); setGeneratedAt(now)
       saveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now } })
-    } catch (err) { setResponse(`Kunde inte ansluta till AI-tjänsten: ${err.message}`) }
+    } catch (err) { setResponse(`Kunde inte ansluta: ${err.message}`) }
     setLoading(false)
   }
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
         <div className="card-title">🤖 AI-analys</div>
-        <button className="btn btn-ghost btn-sm" onClick={analyze} disabled={loading || !withR.length || isCurrent}>{loading ? 'Analyserar…' : isCurrent ? '✓ Aktuell' : response ? '✨ Uppdatera analys' : '✨ Analysera'}</button>
+        <button className="btn btn-ghost btn-sm" onClick={analyze} disabled={loading || !withR.length || isCurrent}>{loading ? 'Analyserar…' : isCurrent ? '✓ Aktuell' : response ? '✨ Uppdatera' : '✨ Analysera'}</button>
       </div>
       <div className="card-body">
-        {!response && !loading && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Klicka "Analysera" för att få AI-baserade råd.</p>}
-        {loading && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Analyserar dina trades…</p>}
+        {!response && !loading && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Klicka "Analysera" för AI-baserade råd.</p>}
+        {loading && <p style={{ fontSize: 13, color: 'var(--text3)' }}>Analyserar…</p>}
         {response && (
           <>
             <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '14px 16px' }}>{response}</div>
-            {generatedAt && <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 8 }}>Senast analyserad: {new Date(generatedAt).toLocaleString('sv-SE')}{!isCurrent && <span style={{ color: 'var(--accent)', marginLeft: 8 }}>Ny data tillgänglig</span>}</div>}
+            {generatedAt && <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 8 }}>Senast: {new Date(generatedAt).toLocaleString('sv-SE')}{!isCurrent && <span style={{ color: 'var(--accent)', marginLeft: 8 }}>Ny data tillgänglig</span>}</div>}
           </>
         )}
         {history.length > 1 && (
@@ -714,11 +629,8 @@ function AIAnalysis({ trades, aiEnabled }) {
   )
 }
 
-import { useRef } from 'react'
-
 export default function Analytics() {
   const { user, aiEnabled, userSettings, viewAsUser, viewAsSettings, impersonating } = useAuth()
-  const effectiveUser = viewAsUser || user
   const effectiveSettings = viewAsSettings || userSettings
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
@@ -737,7 +649,6 @@ export default function Analytics() {
   }, [effectiveSettings, trades])
 
   const effectiveUserId = impersonating?.id ?? user?.id
-
   useEffect(() => {
     if (!effectiveUserId) return
     setLoading(true); setTrades([])
@@ -886,7 +797,7 @@ export default function Analytics() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
                     {dayData.map(d => { const isBest = d.wr === maxWR && d.wr !== null && maxWR > 0; const isWorst = d.wr === minWR && d.wr !== null && dayData.filter(x => x.wr !== null).length > 1; const color = d.wr >= 50 ? 'var(--green)' : d.wr !== null ? 'var(--red)' : 'var(--text4)'; return (<div key={d.day} style={{ textAlign: 'center', padding: '14px 8px', background: isBest ? 'rgba(16,185,129,0.1)' : isWorst ? 'rgba(239,68,68,0.08)' : 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${isBest ? 'rgba(16,185,129,0.25)' : isWorst ? 'rgba(239,68,68,0.2)' : 'var(--border)'}` }}><div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 6, fontWeight: 600 }}>{d.fullDay}</div><div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color }}>{d.wr !== null ? d.wr + '%' : '—'}</div><div style={{ fontSize: 10, color: 'var(--text4)', marginTop: 4 }}>{d.wins}V / {d.trades - d.wins}F · {d.trades}st</div>{isBest && <div style={{ fontSize: 10, color: 'var(--green)', marginTop: 4 }}>✓ Bäst</div>}{isWorst && <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 4 }}>↓ Sämst</div>}</div>) })}
                   </div>
-                  {(() => { const best = dayData.filter(d => d.wr !== null).sort((a,b) => b.wr - a.wr)[0]; const worst = dayData.filter(d => d.wr !== null).sort((a,b) => a.wr - b.wr)[0]; if (!best || best === worst) return null; return <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>💡 Du handlar bäst på <strong style={{ color: 'var(--green)' }}>{best.fullDay}</strong> ({best.wr}% WR) och sämst på <strong style={{ color: 'var(--red)' }}>{worst.fullDay}</strong> ({worst.wr}% WR).{worst.wr < 40 ? ` Överväg att undvika ${worst.fullDay}.` : ''}</div> })()}
+                  {(() => { const best = dayData.filter(d => d.wr !== null).sort((a,b) => b.wr - a.wr)[0]; const worst = dayData.filter(d => d.wr !== null).sort((a,b) => a.wr - b.wr)[0]; if (!best || best === worst) return null; return <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>💡 Bäst på <strong style={{ color: 'var(--green)' }}>{best.fullDay}</strong> ({best.wr}% WR), sämst på <strong style={{ color: 'var(--red)' }}>{worst.fullDay}</strong> ({worst.wr}% WR).{worst.wr < 40 ? ` Överväg att undvika ${worst.fullDay}.` : ''}</div> })()}
                 </>
               )}
             </div>
@@ -904,42 +815,22 @@ export default function Analytics() {
       <Topbar title="Analytics" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
-            <option value="">Alla utfall</option><option value="W">Vinster</option><option value="L">Förluster</option><option value="BE">Break Even</option>
-          </select>
-          <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.direction} onChange={e => setFilter(f => ({ ...f, direction: e.target.value }))}>
-            <option value="">Alla riktningar</option><option value="Long">Long</option><option value="Short">Short</option>
-          </select>
-          {strategies.length > 0 && (
-            <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.strategy} onChange={e => setFilter(f => ({ ...f, strategy: e.target.value }))}>
-              <option value="">Alla strategier</option>{strategies.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          )}
+          <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}><option value="">Alla utfall</option><option value="W">Vinster</option><option value="L">Förluster</option><option value="BE">Break Even</option></select>
+          <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.direction} onChange={e => setFilter(f => ({ ...f, direction: e.target.value }))}><option value="">Alla riktningar</option><option value="Long">Long</option><option value="Short">Short</option></select>
+          {strategies.length > 0 && <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.strategy} onChange={e => setFilter(f => ({ ...f, strategy: e.target.value }))}><option value="">Alla strategier</option>{strategies.map(s => <option key={s} value={s}>{s}</option>)}</select>}
           {(filter.outcome || filter.direction || filter.strategy) && <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '' })}>✕ Rensa</button>}
           <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center' }}>{filtered.length} trades</div>
         </div>
-
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '10px 14px' }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5 }}>💰 Kontosimulator</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ fontSize: 12, color: 'var(--text3)' }}>Konto</label>
-            <input type="number" step="1000" min="1000" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 100, fontFamily: 'var(--font)' }} value={accountSize} onChange={e => setAccountSize(Number(e.target.value))} />
-            <span style={{ fontSize: 11, color: 'var(--text4)' }}>USD</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ fontSize: 12, color: 'var(--text3)' }}>Risk/trade</label>
-            <input type="number" step="0.1" min="0.1" max="5" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 60, fontFamily: 'var(--font)' }} value={riskPct} onChange={e => setRiskPct(Number(e.target.value))} />
-            <span style={{ fontSize: 11, color: 'var(--text4)' }}>%</span>
-          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><label style={{ fontSize: 12, color: 'var(--text3)' }}>Konto</label><input type="number" step="1000" min="1000" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 100, fontFamily: 'var(--font)' }} value={accountSize} onChange={e => setAccountSize(Number(e.target.value))} /><span style={{ fontSize: 11, color: 'var(--text4)' }}>USD</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><label style={{ fontSize: 12, color: 'var(--text3)' }}>Risk/trade</label><input type="number" step="0.1" min="0.1" max="5" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '4px 8px', fontSize: 12, width: 60, fontFamily: 'var(--font)' }} value={riskPct} onChange={e => setRiskPct(Number(e.target.value))} /><span style={{ fontSize: 11, color: 'var(--text4)' }}>%</span></div>
           <span style={{ fontSize: 11, color: 'var(--text4)' }}>= ${(accountSize * riskPct / 100).toFixed(0)}/trade</span>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--text3)' }}>Visa i $</span>
-            <button onClick={() => setShowDollar(d => !d)} style={{ width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative', background: showDollar ? 'var(--accent)' : 'var(--border2)', transition: 'background 0.2s' }}>
-              <span style={{ position: 'absolute', top: 2, left: showDollar ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-            </button>
+            <button onClick={() => setShowDollar(d => !d)} style={{ width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative', background: showDollar ? 'var(--accent)' : 'var(--border2)', transition: 'background 0.2s' }}><span style={{ position: 'absolute', top: 2, left: showDollar ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} /></button>
           </div>
         </div>
-
         <DragGrid pageKey="analytics" widgets={widgets} />
         {withR.length === 0 && <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontSize: 14 }}>Inga trades att analysera ännu.</div>}
       </div>
