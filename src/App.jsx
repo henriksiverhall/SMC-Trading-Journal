@@ -13,6 +13,7 @@ import Messages from './pages/Messages'
 import Sidebar from './components/Sidebar'
 
 const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages']
+const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'changelog']
 
 export default function App() {
   const { user, loading, isAdmin, impersonating, stopImpersonation } = useAuth()
@@ -23,6 +24,13 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [bgStyle, setBgStyle] = useState({})
   const brandingRef = useRef(null)
+
+  // Vid inloggning: om sidan är admin-only och användaren inte är admin → dashboard
+  useEffect(() => {
+    if (user && !isAdmin && ADMIN_ONLY_PAGES.includes(page)) {
+      setPage('dashboard')
+    }
+  }, [user, isAdmin])
 
   useEffect(() => {
     const ADMIN_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
