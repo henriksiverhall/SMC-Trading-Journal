@@ -2,55 +2,57 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.30-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'improvement', text: 'Sidebar: Meddelanden-menyval borttaget. Badge (accent) visas nu på Profil-knappen vid olästa.' },
+      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt (broadcast med expand/kollaps), Mina ärenden (chattflöde, klickbara trådar, nytt ärende).' },
+      { type: 'feature', text: 'Dashboard: välkommen-widget visar knapp med antal olästa när det finns nya meddelanden.' },
+    ]
+  },
+  {
     version: 'v2.0.29-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin: klick på rad i användartabellen öppnar profilmodal med kontodetaljer, tradingstatistik (WR, total R, PF, V/F) och snabblänkar till Visa som och Ta bort.' },
+      { type: 'feature', text: 'Admin: klick på rad öppnar profilmodal med kontodetaljer, tradingstatistik och snabblänkar.' },
     ]
   },
   {
     version: 'v2.0.28-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Roadmap: kollaps-state sparas i localStorage – kolumner håller sig minimerade/expanderade vid refresh.' },
-      { type: 'feature', text: 'Roadmap: arkivfunktion – arkivera kort via modal-knapp, visa/dölj arkivkolumn med knapp i toolbar. Arkiverade kort kan återställas.' },
-      { type: 'feature', text: 'Profil: Meddelanden som flik – broadcast-meddelanden och inkorg samlade direkt i Profil-sidan med oläst-indikator.' },
+      { type: 'feature', text: 'Roadmap: kollaps-state i localStorage, arkivfunktion med återställning.' },
+      { type: 'feature', text: 'Profil: Meddelanden som flik (ersatt i v2.0.30 med fullständig lösning).' },
     ]
   },
   {
     version: 'v2.0.27-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Impersonation: "Visa som" håller sig vid page refresh – läget sparas i sessionStorage och återställs automatiskt.' },
-      { type: 'feature', text: 'Journal: stöd för "Visa som" – visar vald användares trades och checklistor i read-only-läge.' },
-      { type: 'improvement', text: 'Analytics: debug-logging borttagen.' },
-      { type: 'infra', text: 'Supabase RLS: admin kan nu läsa checklists och user_profiles för alla användare (krävs för impersonation).' },
+      { type: 'feature', text: 'Impersonation: refresh bevarar "Visa som"-läge via sessionStorage.' },
+      { type: 'feature', text: 'Journal + Dashboard: stöd för "Visa som" – visar vald användares data.' },
     ]
   },
   {
     version: 'v2.0.26-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: Egna fält som analysdimension – widget visar WR och netto R per unikt värde för varje eget fält i custom_data.' },
-      { type: 'feature', text: 'Admin: "Visa som"-knapp i användartabellen – admin kan se Dashboard, Analytics och Journal som en vald användare.' },
-      { type: 'feature', text: 'Impersonation-banner – orange fält längst upp visar vem som visas.' },
+      { type: 'feature', text: 'Analytics: egna fält som analysdimension, WR/R per värde.' },
+      { type: 'feature', text: 'Admin: "Visa som"-knapp + impersonation-banner.' },
     ]
   },
   {
     version: 'v2.0.25-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: SL-optimerare – simulerar vad som händer om SL breddas X%.' },
-      { type: 'feature', text: 'Analytics: Psykologisk analys – disciplinpoäng, förlustsvitar, revenge-trading, session-WR.' },
-      { type: 'improvement', text: 'Analytics: WR per handelssession (London/NY/övrigt).' },
+      { type: 'feature', text: 'Analytics: SL-optimerare, psykologisk analys med disciplinpoäng.' },
     ]
   },
   {
     version: 'v2.0.24-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'fix', text: 'DragGrid: columns-prop ignorerades – nu CSS grid med gridTemplateColumns.' },
-      { type: 'feature', text: 'DragGrid: stöd för span-prop – widgets med span:2 spänner hela bredden.' },
+      { type: 'fix', text: 'DragGrid: columns-prop och span-prop fungerar nu korrekt.' },
     ]
   },
   {
@@ -58,72 +60,44 @@ const CHANGELOG = [
     date: '2026-06-23',
     entries: [
       { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown, Idag-widget, 2-kolumns layout.' },
-      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor, Longest streak, WR per veckodag.' },
-      { type: 'improvement', text: 'Analytics RR-optimerare: 0.1R-steg.' },
-    ]
-  },
-  {
-    version: 'v2.0.22-dev',
-    date: '2026-06-23',
-    entries: [
-      { type: 'feature', text: 'Admin Branding: transparens-sliders för hero/formulär/sid-bakgrund.' },
-      { type: 'fix', text: 'Bakgrundsbild på övriga sidor hanteras nu centralt i App.jsx.' },
+      { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor, WR per veckodag.' },
     ]
   },
   {
     version: 'v2.0.21-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'AuthPage: bakgrundsbild med transparens, på svenska.' },
-      { type: 'feature', text: 'Admin Branding-flik: mörk/ljus bakgrundsbild, per-sida-val.' },
+      { type: 'feature', text: 'Admin Branding: bakgrundsbilder, transparens, per-sida-val.' },
+      { type: 'feature', text: 'AuthPage: bakgrundsbild med overlay, mörkt tema.' },
     ]
   },
   {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown från checklistor, kolumnsortering.' },
+      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown, kolumnsortering.' },
       { type: 'feature', text: 'PiP: fullständigt loggformulär, BroadcastChannel live-uppdatering.' },
-      { type: 'feature', text: 'Topbar: avatar-dropdown med Profil och Logga ut.' },
-    ]
-  },
-  {
-    version: 'v2.0.17-dev',
-    date: '2026-06-22',
-    entries: [
-      { type: 'fix', text: 'tradeUtils: R-beräkning direction-agnostisk med abs(entry-sl).' },
-      { type: 'feature', text: 'Analytics: Kontosimulator med dollar P&L och equity-kurva.' },
     ]
   },
   {
     version: 'v2.0.15-dev',
     date: '2026-06-21',
     entries: [
-      { type: 'feature', text: 'PiP-widget: flytande fönster med Checklist- och Logga trade-flikar (Chromium).' },
-    ]
-  },
-  {
-    version: 'v2.0.12-dev',
-    date: '2026-06-17',
-    entries: [
-      { type: 'feature', text: 'Checklist portad med standardstrategier, inbyggd editor, 2-kolumns layout.' },
+      { type: 'feature', text: 'PiP-widget (Chromium), Checklist portad med editor.' },
     ]
   },
   {
     version: 'v2.0.4-dev',
     date: '2026-06-15',
     entries: [
-      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden (broadcast + support), Journal utökad med egna fält.' },
-      { type: 'infra', text: 'MFE/MAE via Yahoo Finance Worker + market_bars, Supabase-säkerhet fixad.' },
+      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden, Journal utökad med egna fält, MFE/MAE.' },
     ]
   },
   {
     version: 'v2.0.0-dev',
     date: '2026-06-11',
     entries: [
-      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers hosting.' },
-      { type: 'feature', text: 'Dashboard, Journal, Analytics, Profil, Admin – grundläggande sidor.' },
-      { type: 'infra', text: 'Design system – CSS-variabler, Inter + JetBrains Mono, kollapsbar sidebar.' },
+      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers. Alla grundsidor portade.' },
     ]
   },
 ]
