@@ -1087,16 +1087,11 @@ export default function Analytics() {
   const effectiveUserId = impersonating?.id ?? user?.id
 
   useEffect(() => {
-    console.log('[Analytics] effectiveUserId:', effectiveUserId, '| impersonating:', impersonating, '| user:', user?.id)
     if (!effectiveUserId) return
     setLoading(true)
     setTrades([])
     sb.from('trades').select('*').eq('user_id', effectiveUserId).order('date', { ascending: false })
-      .then(({ data, error }) => {
-        console.log('[Analytics] trades fetched:', data?.length, 'error:', error)
-        setTrades(normalizeTrades(data || []))
-        setLoading(false)
-      })
+      .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
   }, [effectiveUserId])
 
   const filtered = trades.filter(t => {

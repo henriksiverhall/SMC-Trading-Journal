@@ -2,6 +2,16 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.27-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Impersonation: "Visa som" håller sig vid page refresh – läget sparas i sessionStorage och återställs automatiskt.' },
+      { type: 'feature', text: 'Journal: stöd för "Visa som" – visar vald användares trades och checklistor i read-only-läge.' },
+      { type: 'improvement', text: 'Analytics: debug-logging borttagen.' },
+      { type: 'infra', text: 'Supabase RLS: admin kan nu läsa checklists och user_profiles för alla användare (krävs för impersonation).' },
+    ]
+  },
+  {
     version: 'v2.0.26-dev',
     date: '2026-06-24',
     entries: [

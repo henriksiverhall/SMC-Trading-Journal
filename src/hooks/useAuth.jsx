@@ -3,19 +3,19 @@ import { sb } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+const SESSION_KEY = 'tl_impersonating'
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userSettings, setUserSettings] = useState({})
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
 
-  // ── Impersonation (admin "logga in som" annan användare) ──────────────────
-  // Byter INTE auth-session – admin är fortfarande inloggad. Alla Supabase-anrop
-  // som kräver auth.uid() körs fortsatt som admin. Det vi byter är vilket user_id
-  // som används för att LÄSA trades/settings i Analytics, Journal, Dashboard.
-  // Komponenter som ska stödja impersonation läser `viewAsUser` och `viewAsSettings`
-  // istället för `user` och `userSettings` direkt.
-  const [impersonating, setImpersonating] = useState(null)  // { id, email }
+  // ── Impersonation ─────────────────────────────────────────────────────────
+  const [impersonating, setImpersonating] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || null }
+    catch { return null }
+  })
   const [impersonatedSettings, setImpersonatedSettings] = useState({})
 
   async function startImpersonation(targetUser) {
@@ -23,15 +23,24 @@ export function AuthProvider({ children }) {
       .select('settings').eq('user_id', targetUser.id).maybeSingle()
     setImpersonatedSettings(data?.settings || {})
     setImpersonating(targetUser)
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(targetUser))
   }
 
   function stopImpersonation() {
     setImpersonating(null)
     setImpersonatedSettings({})
+    sessionStorage.removeItem(SESSION_KEY)
   }
 
-  // Exponerade värden för konsumenter – pekar på impersonerad användare om aktiv
-  // admin-specifika rättigheter (isAdmin, saveSettings) är alltid den inloggade adminens
+  // Återladda impersonated settings vid refresh om sessionStorage hade data
+  useEffect(() => {
+    const saved = impersonating
+    if (saved?.id) {
+      sb.from('user_settings').select('settings').eq('user_id', saved.id).maybeSingle()
+        .then(({ data }) => setImpersonatedSettings(data?.settings || {}))
+    }
+  }, [])
+
   const viewAsUser = impersonating ? { id: impersonating.id, email: impersonating.email } : null
   const viewAsSettings = impersonating ? impersonatedSettings : null
 
@@ -53,6 +62,7 @@ export function AuthProvider({ children }) {
         setUserSettings({})
         setLoading(false)
         setUnreadCount(0)
+        stopImpersonation()
       }
     })
 
@@ -73,7 +83,6 @@ export function AuthProvider({ children }) {
       ])
       const readIds = new Set((reads || []).map(r => r.message_id))
       const unreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
-      console.log('[unread] published:', published?.length, 'reads:', reads?.length, 'readIds:', [...readIds], 'unreadBroadcast:', unreadBroadcast, 'unreadInbox:', unreadInbox?.length)
       setUnreadCount(unreadBroadcast + (unreadInbox?.length || 0))
     } catch (e) {
       console.warn('fetchUnread:', e)
@@ -115,6 +124,7 @@ export function AuthProvider({ children }) {
     setUser(null)
     setUserSettings({})
     setUnreadCount(0)
+    stopImpersonation()
   }
 
   const isAdmin = userSettings?.is_admin === true

@@ -155,7 +155,8 @@ function getTotalContracts(f, scales) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Journal() {
-  const { user, userSettings, saveSettings } = useAuth()
+  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
   const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
@@ -230,17 +231,19 @@ export default function Journal() {
       risk_pct: userSettings?.riskPct ? String(userSettings.riskPct) : f.risk_pct,
       account_size: userSettings?.accountSize ? String(userSettings.accountSize) : f.account_size,
     }))
-    // Hämta strategier från checklistor för dropdown
-    sb.from('checklists').select('name').eq('user_id', user.id).order('created_at')
+    // Hämta strategier från checklistor
+    sb.from('checklists').select('name').eq('user_id', effectiveUserId).order('created_at')
       .then(({ data }) => { if (data) setChecklistStrategies(data.map(c => c.name)) })
-    // Lyssna på trades sparade från PiP-fönstret
-    const bc = new BroadcastChannel('tradelog')
-    bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
-    return () => bc.close()
-  }, [user])
+    // Lyssna på trades sparade från PiP-fönstret (bara om ej impersonating)
+    if (!impersonating) {
+      const bc = new BroadcastChannel('tradelog')
+      bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
+      return () => bc.close()
+    }
+  }, [effectiveUserId])
 
   async function loadTrades() {
-    const { data } = await sb.from('trades').select('*').eq('user_id', user.id).order('date', { ascending: false })
+    const { data } = await sb.from('trades').select('*').eq('user_id', effectiveUserId).order('date', { ascending: false })
     setTrades(normalizeTrades(data || []))
     setLoading(false)
   }
@@ -768,7 +771,7 @@ export default function Journal() {
 
   return (
     <div style={{ flex: 1 }}>
-      <Topbar title={editingId ? 'Journal – Redigerar' : 'Journal'} />
+      <Topbar title={editingId ? 'Journal – Redigerar' : 'Journal'} subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
         <div style={{ display: 'grid', gridTemplateColumns: 'clamp(420px, 27vw, 520px) 1fr', gap: 20, alignItems: 'start' }}>
 
