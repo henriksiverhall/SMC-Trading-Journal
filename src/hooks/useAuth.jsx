@@ -10,6 +10,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [unreadBroadcast, setUnreadBroadcast] = useState(0)
   const [unreadInbox, setUnreadInbox] = useState(0)
+  // Öppna ärenden (inbox_threads med status=open tillhörande inloggad user)
+  const [openThreads, setOpenThreads] = useState(0)
 
   const [impersonating, setImpersonating] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || null }
@@ -53,7 +55,7 @@ export function AuthProvider({ children }) {
       if (session?.user) { loadSettings(session.user.id); fetchUnread(session.user.id) }
       else {
         setUserSettings({}); setLoading(false)
-        setUnreadBroadcast(0); setUnreadInbox(0)
+        setUnreadBroadcast(0); setUnreadInbox(0); setOpenThreads(0)
         stopImpersonation()
       }
     })
@@ -64,18 +66,29 @@ export function AuthProvider({ children }) {
   async function fetchUnread(userId) {
     if (!userId) return
     try {
-      const [{ data: published }, { data: reads }, { data: inboxMsgs }] = await Promise.all([
+      const [{ data: published }, { data: reads }, { data: inboxMsgs }, { data: threads }] = await Promise.all([
         sb.from('messages').select('id').eq('is_published', true),
         sb.from('message_reads').select('message_id').eq('user_id', userId),
+        // Olästa meddelanden FRÅN andra (dvs admin-svar) i trådar som TILLHÖR denna user
         sb.from('inbox_messages')
           .select('id, inbox_threads!inner(user_id)')
           .eq('inbox_threads.user_id', userId)
           .neq('sender_id', userId)
-          .is('read_at', null)
+          .is('read_at', null),
+        // Öppna ärenden för denna user
+        sb.from('inbox_threads')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'open'),
       ])
       const readIds = new Set((reads || []).map(r => r.message_id))
-      setUnreadBroadcast((published || []).filter(m => !readIds.has(m.id)).length)
-      setUnreadInbox(inboxMsgs?.length || 0)
+      // unreadBroadcast: publicerade meddelanden utan message_reads-rad
+      const newUnreadBroadcast = (published || []).filter(m => !readIds.has(m.id)).length
+      // unreadInbox: olästa svar från admin i egna trådar
+      const newUnreadInbox = inboxMsgs?.length || 0
+      setUnreadBroadcast(newUnreadBroadcast)
+      setUnreadInbox(newUnreadInbox)
+      setOpenThreads(threads?.length || 0)
     } catch (e) { console.warn('fetchUnread:', e) }
   }
 
@@ -98,11 +111,10 @@ export function AuthProvider({ children }) {
   function refreshUnread(userId) { fetchUnread(userId || user?.id) }
 
   async function signOut() {
-    // Rensa page-state så nästa inloggning inte hamnar på en admin-sida
     sessionStorage.removeItem('tl_page')
     await sb.auth.signOut()
     setUser(null); setUserSettings({})
-    setUnreadBroadcast(0); setUnreadInbox(0)
+    setUnreadBroadcast(0); setUnreadInbox(0); setOpenThreads(0)
     stopImpersonation()
   }
 
@@ -114,7 +126,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, userSettings, loading, isAdmin, aiEnabled,
       saveSettings, signOut, loadSettings,
-      unreadCount, unreadBroadcast, unreadInbox, refreshUnread,
+      unreadCount, unreadBroadcast, unreadInbox, openThreads, refreshUnread,
       impersonating, viewAsUser, viewAsSettings,
       startImpersonation, stopImpersonation,
     }}>

@@ -2,6 +2,24 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.32-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Admin UserProfileModal: fullständiga admin-verktyg – ändra e-post, skicka lösenordsåterställning, ändra lösenord direkt som admin.' },
+      { type: 'fix', text: 'Profile: unread-badge visas nu korrekt per flik (Allmänt = broadcast, Mina ärenden = inbox). fetchUnread refreshas vid flikbyte.' },
+      { type: 'fix', text: 'Admin Support-vy: begränsad till maxWidth 860px (samma som Profile-sidan).' },
+      { type: 'feature', text: 'Dashboard välkommen-widget: visar öppna ärenden (inbox_threads) vid sidan av olästa broadcast-meddelanden.' },
+    ]
+  },
+  {
+    version: 'v2.0.31-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'useAuth: separata unreadBroadcast + unreadInbox räknare. signOut rensar sessionStorage.tl_page.' },
+      { type: 'feature', text: 'Profile: badge per flik (grön på Allmänt, röd på Mina ärenden). Admin: Support-fliken visar antal nya ärenden.' },
+    ]
+  },
+  {
     version: 'v2.0.30-dev',
     date: '2026-06-24',
     entries: [

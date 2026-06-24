@@ -360,16 +360,24 @@ export default function Profile() {
   const { user, userSettings, saveSettings, signOut, unreadBroadcast, unreadInbox, refreshUnread } = useAuth()
   const [tab, setTab] = useState('konto')
 
+  // Refresha räknare när man byter till en flik
+  function handleTabChange(newTab) {
+    setTab(newTab)
+    if (newTab === 'broadcast' || newTab === 'inbox') {
+      refreshUnread(user?.id)
+    }
+  }
+
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Profil" />
       <div className="page-content" style={{ maxWidth: 860 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
-          <TabBtn active={tab === 'konto'} onClick={() => setTab('konto')}>Konto</TabBtn>
-          <TabBtn active={tab === 'broadcast'} onClick={() => setTab('broadcast')}>
+          <TabBtn active={tab === 'konto'} onClick={() => handleTabChange('konto')}>Konto</TabBtn>
+          <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>
             Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}
           </TabBtn>
-          <TabBtn active={tab === 'inbox'} onClick={() => setTab('inbox')}>
+          <TabBtn active={tab === 'inbox'} onClick={() => handleTabChange('inbox')}>
             Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}
           </TabBtn>
         </div>

@@ -12,10 +12,19 @@ function formatFull(iso) {
   return new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
+function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Admin-verktyg state
+  const [section, setSection] = useState('info') // 'info' | 'email' | 'password' | 'resetpw'
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [repeatPassword, setRepeatPassword] = useState('')
+  const [actionMsg, setActionMsg] = useState('')
+  const [actionErr, setActionErr] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -34,6 +43,57 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
     load()
   }, [u.user_id])
 
+  function clearAction() { setActionMsg(''); setActionErr('') }
+
+  async function handleChangeEmail() {
+    if (!newEmail.trim() || !newEmail.includes('@')) { setActionErr('Ogiltig e-postadress'); return }
+    setActionLoading(true); clearAction()
+    // Kalla worker RPC för admin-e-postbyte (kräver service_role)
+    try {
+      const resp = await fetch('https://tradelog-claude-api-dev.henrik-siverhall.workers.dev/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.user_id, updates: { email: newEmail.trim() } }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) throw new Error(json.error || 'Misslyckades')
+      setActionMsg('E-post uppdaterad till ' + newEmail.trim())
+      setNewEmail('')
+      onRefresh && onRefresh()
+    } catch (e) { setActionErr(e.message) }
+    setActionLoading(false)
+  }
+
+  async function handleResetPassword() {
+    setActionLoading(true); clearAction()
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(u.email, {
+        redirectTo: 'https://smc-trading-journal-dev.henrik-siverhall.workers.dev',
+      })
+      if (error) throw error
+      setActionMsg('Återställningsmail skickat till ' + u.email)
+    } catch (e) { setActionErr(e.message) }
+    setActionLoading(false)
+  }
+
+  async function handleSetPassword() {
+    if (newPassword.length < 6) { setActionErr('Minst 6 tecken krävs'); return }
+    if (newPassword !== repeatPassword) { setActionErr('Lösenorden matchar inte'); return }
+    setActionLoading(true); clearAction()
+    try {
+      const resp = await fetch('https://tradelog-claude-api-dev.henrik-siverhall.workers.dev/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.user_id, updates: { password: newPassword } }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) throw new Error(json.error || 'Misslyckades')
+      setActionMsg('Lösenord uppdaterat!')
+      setNewPassword(''); setRepeatPassword('')
+    } catch (e) { setActionErr(e.message) }
+    setActionLoading(false)
+  }
+
   const row = (label, value, color) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
       <span style={{ color: 'var(--text3)' }}>{label}</span>
@@ -41,10 +101,20 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
     </div>
   )
 
+  const inp = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '7px 10px', fontSize: 13, fontFamily: 'var(--font)', boxSizing: 'border-box' }
+
+  const SECTIONS = [
+    { id: 'info',    label: 'Info' },
+    { id: 'email',   label: '✏️ E-post' },
+    { id: 'resetpw', label: '📧 Återställning' },
+    { id: 'password',label: '🔑 Lösenord' },
+  ]
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 520, maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 560, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{u.email}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -57,35 +127,114 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete }) {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
-          {row('Registrerad', formatTime(u.created_at))}
-          {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
-          {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+
+        {/* Sub-navigation */}
+        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+          {SECTIONS.map(s => (
+            <button key={s.id} onClick={() => { setSection(s.id); clearAction() }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12,
+                fontWeight: section === s.id ? 700 : 500,
+                color: section === s.id ? 'var(--text)' : 'var(--text4)',
+                padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`,
+                marginBottom: -1, transition: 'color 0.15s' }}>
+              {s.label}
+            </button>
+          ))}
         </div>
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
-          {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
-            <>
-              {row('Antal trades', stats.total, 'var(--accent)')}
-              {stats.withR > 0 && <>
-                {row('Win Rate', stats.wr !== null ? stats.wr + '%' : '—', parseFloat(stats.wr) >= 50 ? 'var(--green)' : 'var(--red)')}
-                {row('Total R', (parseFloat(stats.totalR) > 0 ? '+' : '') + stats.totalR + 'R', parseFloat(stats.totalR) >= 0 ? 'var(--green)' : 'var(--red)')}
-                {row('Profit Factor', stats.pf)}
-                {row('V / F', `${stats.wins}V / ${stats.losses}F`)}
-              </>}
-              {stats.total === 0 && <div style={{ fontSize: 12, color: 'var(--text4)', padding: '8px 0' }}>Inga trades loggade ännu.</div>}
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {u.user_id !== adminId && (
-            <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>
-          )}
-          {u.user_id !== adminId && (
-            <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>
-          )}
-        </div>
+
+        {/* Info-sektion */}
+        {section === 'info' && (
+          <>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
+              {row('Registrerad', formatTime(u.created_at))}
+              {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
+              {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
+              {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
+                <>
+                  {row('Antal trades', stats.total, 'var(--accent)')}
+                  {stats.withR > 0 && <>
+                    {row('Win Rate', stats.wr !== null ? stats.wr + '%' : '—', parseFloat(stats.wr) >= 50 ? 'var(--green)' : 'var(--red)')}
+                    {row('Total R', (parseFloat(stats.totalR) > 0 ? '+' : '') + stats.totalR + 'R', parseFloat(stats.totalR) >= 0 ? 'var(--green)' : 'var(--red)')}
+                    {row('Profit Factor', stats.pf)}
+                    {row('V / F', `${stats.wins}V / ${stats.losses}F`)}
+                  </>}
+                  {stats.total === 0 && <div style={{ fontSize: 12, color: 'var(--text4)', padding: '8px 0' }}>Inga trades loggade ännu.</div>}
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {u.user_id !== adminId && (
+                <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>
+              )}
+              {u.user_id !== adminId && (
+                <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* E-post-sektion */}
+        {section === 'email' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nuvarande: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Ny e-postadress</label>
+              <input style={inp} type="email" placeholder="ny@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()}>
+              {actionLoading ? 'Sparar…' : 'Byt e-post'}
+            </button>
+            {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
+            {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
+            <div style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              OBS: Kräver att Worker /admin/update-user-endpunkt är konfigurerad med service_role-nyckel.
+            </div>
+          </div>
+        )}
+
+        {/* Lösenordsåterställning */}
+        {section === 'resetpw' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
+              Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span> via Supabase.
+              <br />Användaren kan sedan sätta nytt lösenord via länken i mailet.
+            </div>
+            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>
+              {actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}
+            </button>
+            {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
+            {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
+          </div>
+        )}
+
+        {/* Sätt lösenord direkt */}
+        {section === 'password' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 13, color: 'var(--text3)' }}>Sätt nytt lösenord direkt för <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Nytt lösenord</label>
+              <input style={inp} type="password" placeholder="Minst 6 tecken" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Upprepa lösenord</label>
+              <input style={{ ...inp, borderColor: repeatPassword && repeatPassword !== newPassword ? 'var(--red)' : undefined }}
+                type="password" placeholder="Upprepa" value={repeatPassword} onChange={e => setRepeatPassword(e.target.value)} />
+              {repeatPassword && repeatPassword !== newPassword && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>Lösenorden matchar inte</div>}
+            </div>
+            <button className="btn btn-primary" onClick={handleSetPassword} disabled={actionLoading || !newPassword || newPassword !== repeatPassword}>
+              {actionLoading ? 'Sparar…' : '🔑 Sätt lösenord'}
+            </button>
+            {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
+            {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
+            <div style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              OBS: Kräver att Worker /admin/update-user-endpunkt är konfigurerad med service_role-nyckel.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -163,7 +312,7 @@ function UsersTab({ currentUserId }) {
           )}
         </div>
       </div>
-      {selectedUser && <UserProfileModal user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUser(null)} onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }} />}
+      {selectedUser && <UserProfileModal user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUser(null)} onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }} onRefresh={loadUsers} />}
     </>
   )
 }
@@ -303,7 +452,7 @@ function SupportTab({ adminId }) {
   const filtered = threads.filter(t => filter === 'all' ? true : t.status === filter)
 
   if (activeThread) return (
-    <div>
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button onClick={() => { setActiveThread(null); setMessages([]) }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0, fontFamily: 'var(--font)' }}>← Tillbaka</button>
         <div style={{ flex: 1 }}>
@@ -335,7 +484,7 @@ function SupportTab({ adminId }) {
   )
 
   return (
-    <div>
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         {['open','closed','all'].map(f => <button key={f} onClick={() => setFilter(f)} className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-ghost'}`}>{f === 'open' ? 'Öppna' : f === 'closed' ? 'Stängda' : 'Alla'}</button>)}
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text4)' }}>{filtered.length} ärenden</span>

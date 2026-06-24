@@ -59,7 +59,7 @@ function useNextSession() {
 }
 
 export default function Dashboard({ onNavigate }) {
-  const { user, userSettings, impersonating, unreadCount } = useAuth()
+  const { user, userSettings, impersonating, unreadCount, unreadBroadcast, unreadInbox, openThreads } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
@@ -163,10 +163,16 @@ export default function Dashboard({ onNavigate }) {
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>✅ Checklist</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>📓 Journal</button>
-              {unreadCount > 0 && (
+              {unreadBroadcast > 0 && (
                 <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
                   style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>
-                  ✉️ {unreadCount} nytt
+                  ✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}
+                </button>
+              )}
+              {openThreads > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
+                  style={{ borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>
+                  🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}
                 </button>
               )}
             </div>
