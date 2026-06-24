@@ -16,6 +16,11 @@ function TabBtn({ active, onClick, children }) {
   )
 }
 
+function Badge({ count, color = 'var(--accent)', textColor = '#000' }) {
+  if (!count) return null
+  return <span style={{ marginLeft: 6, background: color, color: textColor, borderRadius: 20, fontSize: 10, fontWeight: 800, padding: '1px 6px', display: 'inline-block' }}>{count}</span>
+}
+
 function formatTime(iso) {
   if (!iso) return ''
   const d = new Date(iso), now = new Date()
@@ -47,8 +52,7 @@ function BroadcastSection({ user, refreshUnread }) {
   async function markRead(msgId) {
     if (readIds.has(msgId)) return
     await sb.from('message_reads').upsert({ user_id: user.id, message_id: msgId })
-    const next = new Set([...readIds, msgId])
-    setReadIds(next)
+    setReadIds(prev => new Set([...prev, msgId]))
     refreshUnread(user.id)
   }
 
@@ -130,8 +134,7 @@ function InboxSection({ user, refreshUnread }) {
     if (thread) {
       await sb.from('inbox_messages').insert({ thread_id: thread.id, sender_id: user.id, body: newBody.trim() })
       setNewSubject(''); setNewBody(''); setShowNew(false)
-      await loadThreads()
-      setActiveThread(thread)
+      await loadThreads(); setActiveThread(thread)
     }
     setSending(false)
   }
@@ -185,13 +188,11 @@ function InboxSection({ user, refreshUnread }) {
 
       {activeThread.status === 'open' ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <textarea className="form-control" rows={2}
-            placeholder="Skriv ett svar… (Ctrl+Enter)"
+          <textarea className="form-control" rows={2} placeholder="Skriv ett svar… (Ctrl+Enter)"
             value={replyBody} onChange={e => setReplyBody(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendReply() }}
             style={{ resize: 'none', flex: 1 }} />
-          <button className="btn btn-primary" onClick={sendReply}
-            disabled={sending || !replyBody.trim()} style={{ flexShrink: 0 }}>
+          <button className="btn btn-primary" onClick={sendReply} disabled={sending || !replyBody.trim()} style={{ flexShrink: 0 }}>
             {sending ? '…' : 'Skicka'}
           </button>
         </div>
@@ -206,9 +207,7 @@ function InboxSection({ user, refreshUnread }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowNew(s => !s)}>
-          {showNew ? 'Avbryt' : '+ Nytt ärende'}
-        </button>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowNew(s => !s)}>{showNew ? 'Avbryt' : '+ Nytt ärende'}</button>
       </div>
 
       {showNew && (
@@ -230,8 +229,7 @@ function InboxSection({ user, refreshUnread }) {
 
       {!threads.length ? (
         <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-          Inga ärenden ännu.<br />
-          <span style={{ fontSize: 12 }}>Klicka "+ Nytt ärende" för att kontakta support.</span>
+          Inga ärenden ännu.<br /><span style={{ fontSize: 12 }}>Klicka "+ Nytt ärende" för att kontakta support.</span>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -245,9 +243,7 @@ function InboxSection({ user, refreshUnread }) {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{t.subject}</div>
-                <div style={{ fontSize: 11, color: 'var(--text4)' }}>
-                  {t.thread_type === 'support' ? '🎫 Support' : '💬 Direkt'} · {formatTime(t.updated_at)}
-                </div>
+                <div style={{ fontSize: 11, color: 'var(--text4)' }}>{t.thread_type === 'support' ? '🎫 Support' : '💬 Direkt'} · {formatTime(t.updated_at)}</div>
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, background: t.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)', color: t.status === 'open' ? 'var(--green)' : 'var(--text4)' }}>
                 {t.status === 'open' ? 'Öppet' : 'Stängt'}
@@ -273,8 +269,7 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
   useEffect(() => {
     if (!user) return
     setDisplayName(userSettings?.displayName || '')
-    sb.from('trades').select('id', { count: 'exact' }).eq('user_id', user.id)
-      .then(({ count }) => setTradeCount(count || 0))
+    sb.from('trades').select('id', { count: 'exact' }).eq('user_id', user.id).then(({ count }) => setTradeCount(count || 0))
   }, [user, userSettings])
 
   async function handleSaveProfile(e) {
@@ -299,8 +294,8 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
     signOut()
   }
 
-  const labelStyle = { fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }
-  const valueStyle = { fontSize: 13, color: 'var(--text2)', fontFamily: 'var(--mono)' }
+  const lbl = { fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }
+  const val = { fontSize: 13, color: 'var(--text2)', fontFamily: 'var(--mono)' }
 
   return (
     <>
@@ -308,10 +303,10 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
         <div className="card-header"><div className="card-title">Konto</div></div>
         <div className="card-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div><div style={labelStyle}>E-post</div><div style={valueStyle}>{user?.email}</div></div>
-            <div><div style={labelStyle}>Loggade trades</div><div style={{ ...valueStyle, color: 'var(--accent)', fontWeight: 700 }}>{tradeCount}</div></div>
-            <div><div style={labelStyle}>Medlem sedan</div><div style={valueStyle}>{user?.created_at ? new Date(user.created_at).toLocaleDateString('sv-SE') : '—'}</div></div>
-            <div><div style={labelStyle}>Version</div><div style={{ ...valueStyle, color: 'var(--text3)' }}>{APP_VERSION}</div></div>
+            <div><div style={lbl}>E-post</div><div style={val}>{user?.email}</div></div>
+            <div><div style={lbl}>Loggade trades</div><div style={{ ...val, color: 'var(--accent)', fontWeight: 700 }}>{tradeCount}</div></div>
+            <div><div style={lbl}>Medlem sedan</div><div style={val}>{user?.created_at ? new Date(user.created_at).toLocaleDateString('sv-SE') : '—'}</div></div>
+            <div><div style={lbl}>Version</div><div style={{ ...val, color: 'var(--text3)' }}>{APP_VERSION}</div></div>
           </div>
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: 1 }}>
@@ -362,19 +357,21 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
 }
 
 export default function Profile() {
-  const { user, userSettings, saveSettings, signOut, unreadCount, refreshUnread } = useAuth()
+  const { user, userSettings, saveSettings, signOut, unreadBroadcast, unreadInbox, refreshUnread } = useAuth()
   const [tab, setTab] = useState('konto')
 
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Profil" />
-      <div className="page-content" style={{ maxWidth: 680 }}>
+      <div className="page-content" style={{ maxWidth: 860 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
           <TabBtn active={tab === 'konto'} onClick={() => setTab('konto')}>Konto</TabBtn>
           <TabBtn active={tab === 'broadcast'} onClick={() => setTab('broadcast')}>
-            Allmänt{unreadCount > 0 && tab !== 'broadcast' ? <span style={{ marginLeft: 6, background: 'var(--accent)', color: '#000', borderRadius: 20, fontSize: 10, fontWeight: 800, padding: '1px 6px' }}>{unreadCount}</span> : null}
+            Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}
           </TabBtn>
-          <TabBtn active={tab === 'inbox'} onClick={() => setTab('inbox')}>Mina ärenden</TabBtn>
+          <TabBtn active={tab === 'inbox'} onClick={() => setTab('inbox')}>
+            Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}
+          </TabBtn>
         </div>
 
         {tab === 'konto'     && <KontoTab user={user} userSettings={userSettings} saveSettings={saveSettings} signOut={signOut} />}
