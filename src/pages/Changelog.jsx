@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.34-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Admin e-postbyte: anropet skyddas nu av Supabase JWT istället för KANBAN_SECRET – ingen hemlig nökkel i frontend-koden.' },
+      { type: 'improvement', text: 'Worker /admin/update-user: tillåter bara e-postbyte (inte lösenord), verifierar att anroparen är admin via JWT.' },
+    ]
+  },
+  {
     version: 'v2.0.33-dev',
     date: '2026-06-24',
     entries: [
@@ -12,10 +20,8 @@ const CHANGELOG = [
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin UserProfileModal: fullständiga admin-verktyg – ändra e-post, skicka lösenordsåterställning, ändra lösenord direkt som admin.' },
-      { type: 'fix', text: 'Profile: unread-badge visas nu korrekt per flik. fetchUnread refreshas vid flikbyte.' },
-      { type: 'fix', text: 'Admin Support-vy: begränsad till maxWidth 860px.' },
-      { type: 'feature', text: 'Dashboard välkommen-widget: visar öppna ärenden separat från olästa broadcast.' },
+      { type: 'feature', text: 'Admin UserProfileModal: fullständiga admin-verktyg – ändra e-post, skicka lösenordsåterställning.' },
+      { type: 'fix', text: 'Profile: unread-badge visas korrekt per flik. Admin Support-vy: maxWidth 860px. Dashboard: öppna ärenden visas separat.' },
     ]
   },
   {
@@ -23,7 +29,6 @@ const CHANGELOG = [
     date: '2026-06-24',
     entries: [
       { type: 'feature', text: 'useAuth: separata unreadBroadcast + unreadInbox räknare. signOut rensar sessionStorage.tl_page.' },
-      { type: 'feature', text: 'Profile: badge per flik. Admin: Support-fliken visar antal nya ärenden.' },
     ]
   },
   {
@@ -31,8 +36,7 @@ const CHANGELOG = [
     date: '2026-06-24',
     entries: [
       { type: 'improvement', text: 'Sidebar: Meddelanden-menyval borttaget. Badge på Profil-knappen vid olästa.' },
-      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt, Mina ärenden.' },
-      { type: 'feature', text: 'Dashboard: välkommen-widget visar knapp med antal olästa.' },
+      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt, Mina ärenden. Dashboard: välkommen-widget med olästa-knapp.' },
     ]
   },
   {

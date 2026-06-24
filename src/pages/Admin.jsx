@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { WORKER_URL } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
 function formatTime(iso) {
@@ -16,12 +17,8 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  // Admin-verktyg state
-  const [section, setSection] = useState('info') // 'info' | 'email' | 'password' | 'resetpw'
+  const [section, setSection] = useState('info')
   const [newEmail, setNewEmail] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [repeatPassword, setRepeatPassword] = useState('')
   const [actionMsg, setActionMsg] = useState('')
   const [actionErr, setActionErr] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
@@ -48,11 +45,16 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   async function handleChangeEmail() {
     if (!newEmail.trim() || !newEmail.includes('@')) { setActionErr('Ogiltig e-postadress'); return }
     setActionLoading(true); clearAction()
-    // Kalla worker RPC för admin-e-postbyte (kräver service_role)
     try {
-      const resp = await fetch('https://tradelog-claude-api-dev.henrik-siverhall.workers.dev/admin/update-user', {
+      // Hämta aktuell JWT från Supabase-sessionen
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session?.access_token) throw new Error('Ingen aktiv session')
+      const resp = await fetch(`${WORKER_URL}/admin/update-user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ userId: u.user_id, updates: { email: newEmail.trim() } }),
       })
       const json = await resp.json()
@@ -76,24 +78,6 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     setActionLoading(false)
   }
 
-  async function handleSetPassword() {
-    if (newPassword.length < 6) { setActionErr('Minst 6 tecken krävs'); return }
-    if (newPassword !== repeatPassword) { setActionErr('Lösenorden matchar inte'); return }
-    setActionLoading(true); clearAction()
-    try {
-      const resp = await fetch('https://tradelog-claude-api-dev.henrik-siverhall.workers.dev/admin/update-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: u.user_id, updates: { password: newPassword } }),
-      })
-      const json = await resp.json()
-      if (!resp.ok || json.error) throw new Error(json.error || 'Misslyckades')
-      setActionMsg('Lösenord uppdaterat!')
-      setNewPassword(''); setRepeatPassword('')
-    } catch (e) { setActionErr(e.message) }
-    setActionLoading(false)
-  }
-
   const row = (label, value, color) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
       <span style={{ color: 'var(--text3)' }}>{label}</span>
@@ -107,13 +91,11 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     { id: 'info',    label: 'Info' },
     { id: 'email',   label: '✏️ E-post' },
     { id: 'resetpw', label: '📧 Återställning' },
-    { id: 'password',label: '🔑 Lösenord' },
   ]
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 560, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{u.email}</div>
@@ -128,8 +110,7 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* Sub-navigation */}
-        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => { setSection(s.id); clearAction() }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12,
@@ -142,7 +123,6 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
           ))}
         </div>
 
-        {/* Info-sektion */}
         {section === 'info' && (
           <>
             <div style={{ marginBottom: 20 }}>
@@ -177,7 +157,6 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
           </>
         )}
 
-        {/* E-post-sektion */}
         {section === 'email' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nuvarande: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
@@ -190,49 +169,20 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
             </button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
-            <div style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              OBS: Kräver att Worker /admin/update-user-endpunkt är konfigurerad med service_role-nyckel.
-            </div>
           </div>
         )}
 
-        {/* Lösenordsåterställning */}
         {section === 'resetpw' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
-              Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span> via Supabase.
-              <br />Användaren kan sedan sätta nytt lösenord via länken i mailet.
+              Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span>.
+              <br />Användaren sätter nytt lösenord via länken i mailet.
             </div>
             <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>
               {actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}
             </button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
-          </div>
-        )}
-
-        {/* Sätt lösenord direkt */}
-        {section === 'password' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontSize: 13, color: 'var(--text3)' }}>Sätt nytt lösenord direkt för <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Nytt lösenord</label>
-              <input style={inp} type="password" placeholder="Minst 6 tecken" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Upprepa lösenord</label>
-              <input style={{ ...inp, borderColor: repeatPassword && repeatPassword !== newPassword ? 'var(--red)' : undefined }}
-                type="password" placeholder="Upprepa" value={repeatPassword} onChange={e => setRepeatPassword(e.target.value)} />
-              {repeatPassword && repeatPassword !== newPassword && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>Lösenorden matchar inte</div>}
-            </div>
-            <button className="btn btn-primary" onClick={handleSetPassword} disabled={actionLoading || !newPassword || newPassword !== repeatPassword}>
-              {actionLoading ? 'Sparar…' : '🔑 Sätt lösenord'}
-            </button>
-            {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
-            {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
-            <div style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              OBS: Kräver att Worker /admin/update-user-endpunkt är konfigurerad med service_role-nyckel.
-            </div>
           </div>
         )}
       </div>
