@@ -2,13 +2,20 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.33-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'AuthPage: "Glömt lösenord"-länk öppnar modal – användaren skriver sin e-post och får återställningsmail utan att lämna inloggningssidan.' },
+    ]
+  },
+  {
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
       { type: 'feature', text: 'Admin UserProfileModal: fullständiga admin-verktyg – ändra e-post, skicka lösenordsåterställning, ändra lösenord direkt som admin.' },
-      { type: 'fix', text: 'Profile: unread-badge visas nu korrekt per flik (Allmänt = broadcast, Mina ärenden = inbox). fetchUnread refreshas vid flikbyte.' },
-      { type: 'fix', text: 'Admin Support-vy: begränsad till maxWidth 860px (samma som Profile-sidan).' },
-      { type: 'feature', text: 'Dashboard välkommen-widget: visar öppna ärenden (inbox_threads) vid sidan av olästa broadcast-meddelanden.' },
+      { type: 'fix', text: 'Profile: unread-badge visas nu korrekt per flik. fetchUnread refreshas vid flikbyte.' },
+      { type: 'fix', text: 'Admin Support-vy: begränsad till maxWidth 860px.' },
+      { type: 'feature', text: 'Dashboard välkommen-widget: visar öppna ärenden separat från olästa broadcast.' },
     ]
   },
   {
@@ -16,68 +23,65 @@ const CHANGELOG = [
     date: '2026-06-24',
     entries: [
       { type: 'feature', text: 'useAuth: separata unreadBroadcast + unreadInbox räknare. signOut rensar sessionStorage.tl_page.' },
-      { type: 'feature', text: 'Profile: badge per flik (grön på Allmänt, röd på Mina ärenden). Admin: Support-fliken visar antal nya ärenden.' },
+      { type: 'feature', text: 'Profile: badge per flik. Admin: Support-fliken visar antal nya ärenden.' },
     ]
   },
   {
     version: 'v2.0.30-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'improvement', text: 'Sidebar: Meddelanden-menyval borttaget. Badge (accent) visas nu på Profil-knappen vid olästa.' },
-      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt (broadcast med expand/kollaps), Mina ärenden (chattflöde, klickbara trådar, nytt ärende).' },
-      { type: 'feature', text: 'Dashboard: välkommen-widget visar knapp med antal olästa när det finns nya meddelanden.' },
+      { type: 'improvement', text: 'Sidebar: Meddelanden-menyval borttaget. Badge på Profil-knappen vid olästa.' },
+      { type: 'feature', text: 'Profil: tre flikar – Konto, Allmänt, Mina ärenden.' },
+      { type: 'feature', text: 'Dashboard: välkommen-widget visar knapp med antal olästa.' },
     ]
   },
   {
     version: 'v2.0.29-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin: klick på rad öppnar profilmodal med kontodetaljer, tradingstatistik och snabblänkar.' },
+      { type: 'feature', text: 'Admin: klick på rad öppnar profilmodal med kontodetaljer och tradingstatistik.' },
     ]
   },
   {
     version: 'v2.0.28-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Roadmap: kollaps-state i localStorage, arkivfunktion med återställning.' },
-      { type: 'feature', text: 'Profil: Meddelanden som flik (ersatt i v2.0.30 med fullständig lösning).' },
+      { type: 'feature', text: 'Roadmap: kollaps-state i localStorage, arkivfunktion.' },
     ]
   },
   {
     version: 'v2.0.27-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Impersonation: refresh bevarar "Visa som"-läge via sessionStorage.' },
-      { type: 'feature', text: 'Journal + Dashboard: stöd för "Visa som" – visar vald användares data.' },
+      { type: 'feature', text: 'Impersonation: persist via sessionStorage. Journal + Dashboard stöder "Visa som".' },
     ]
   },
   {
     version: 'v2.0.26-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: egna fält som analysdimension, WR/R per värde.' },
-      { type: 'feature', text: 'Admin: "Visa som"-knapp + impersonation-banner.' },
+      { type: 'feature', text: 'Analytics: egna fält som analysdimension. Admin: impersonation-banner.' },
     ]
   },
   {
     version: 'v2.0.25-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Analytics: SL-optimerare, psykologisk analys med disciplinpoäng.' },
+      { type: 'feature', text: 'Analytics: SL-optimerare, psykologisk analys.' },
     ]
   },
   {
     version: 'v2.0.24-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'fix', text: 'DragGrid: columns-prop och span-prop fungerar nu korrekt.' },
+      { type: 'fix', text: 'DragGrid: columns/span-prop fungerar korrekt.' },
     ]
   },
   {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown, Idag-widget, 2-kolumns layout.' },
+      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown, Idag-widget.' },
       { type: 'feature', text: 'Analytics: Expectancy, Recovery Factor, WR per veckodag.' },
     ]
   },
@@ -86,15 +90,13 @@ const CHANGELOG = [
     date: '2026-06-23',
     entries: [
       { type: 'feature', text: 'Admin Branding: bakgrundsbilder, transparens, per-sida-val.' },
-      { type: 'feature', text: 'AuthPage: bakgrundsbild med overlay, mörkt tema.' },
     ]
   },
   {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown, kolumnsortering.' },
-      { type: 'feature', text: 'PiP: fullständigt loggformulär, BroadcastChannel live-uppdatering.' },
+      { type: 'feature', text: 'Journal: filterrad, strategi-dropdown, kolumnsortering. PiP: BroadcastChannel.' },
     ]
   },
   {
@@ -108,7 +110,7 @@ const CHANGELOG = [
     version: 'v2.0.4-dev',
     date: '2026-06-15',
     entries: [
-      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden, Journal utökad med egna fält, MFE/MAE.' },
+      { type: 'feature', text: 'Widget-system DragGrid, Meddelanden, Journal MFE/MAE.' },
     ]
   },
   {

@@ -6,6 +6,60 @@ const ADMIN_USER_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
 const DEFAULT_DARK  = '/images/hero-dark.png'
 const DEFAULT_LIGHT = '/images/hero-light.png'
 
+function ForgotPasswordModal({ onClose }) {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!email.trim()) return
+    setLoading(true); setError('')
+    const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://smc-trading-journal-dev.henrik-siverhall.workers.dev',
+    })
+    if (error) setError(error.message)
+    else setSent(true)
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+      <div style={{ background: '#11131a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '32px 36px', width: 380, maxWidth: '92vw', fontFamily: 'var(--font)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>Glömt lösenord</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>✕</button>
+        </div>
+        {sent ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
+            <div style={{ fontSize: 14, color: '#ccc', lineHeight: 1.7 }}>Återställningsmail skickat till<br /><strong style={{ color: '#fff' }}>{email}</strong><br /><br />Klicka på länken i mailet för att sätta nytt lösenord.</div>
+            <button onClick={onClose} style={{ marginTop: 20, background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: '#ccc', borderRadius: 8, padding: '8px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font)' }}>Stäng</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: '#999', marginBottom: 20, lineHeight: 1.6 }}>Ange din e-postadress så skickar vi en länk för att återställa lösenordet.</div>
+            {error && <div style={{ fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>{error}</div>}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>E-post</label>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="du@exempel.com"
+                  style={{ width: '100%', background: '#0a0b0f', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', padding: '9px 12px', fontSize: 14, fontFamily: 'var(--font)', boxSizing: 'border-box' }} />
+              </div>
+              <button type="submit" disabled={loading}
+                style={{ background: '#00d4aa', color: '#000', border: 'none', borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                {loading ? 'Skickar…' : 'Skicka återställningsmail'}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AuthPage() {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
@@ -16,8 +70,8 @@ export default function AuthPage() {
   const [heroUrl, setHeroUrl] = useState(null)
   const [heroOpacity, setHeroOpacity] = useState(0.82)
   const [formOpacity, setFormOpacity] = useState(1.0)
+  const [showForgot, setShowForgot] = useState(false)
 
-  // Tvinga dark-tema på inloggningssidan – återställ vid utloggning/navigering
   useEffect(() => {
     const prev = document.documentElement.getAttribute('data-theme') || 'dark'
     document.documentElement.setAttribute('data-theme', 'dark')
@@ -25,16 +79,13 @@ export default function AuthPage() {
   }, [])
 
   useEffect(() => {
-    const isDark = true // login-sidan är alltid dark
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_USER_ID).single()
       .then(({ data }) => {
         const b = data?.settings?.branding
         if (b?.opacity?.hero != null) setHeroOpacity(b.opacity.hero)
         if (b?.opacity?.form != null) setFormOpacity(b.opacity.form)
         if (b?.showOn?.auth !== false) {
-          const url = isDark
-            ? (b?.heroImages?.dark || DEFAULT_DARK)
-            : (b?.heroImages?.light || DEFAULT_LIGHT)
+          const url = b?.heroImages?.dark || DEFAULT_DARK
           setHeroUrl(url)
         }
       })
@@ -61,7 +112,6 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  // Login-sidan är alltid dark – fast mörk overlay-färg
   const heroBg = `rgba(10,12,18,${heroOpacity})`
   const formBg = `rgba(10,12,18,${formOpacity})`
 
@@ -72,40 +122,26 @@ export default function AuthPage() {
       gridTemplateColumns: 'clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px)',
       fontFamily: 'var(--font)',
     }}>
-      {/* Full-screen background image – behind everything */}
       {heroUrl && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
           backgroundImage: `url(${heroUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: 'cover', backgroundPosition: 'center',
         }} />
       )}
 
-      {/* Hero panel – NO className, full inline styles */}
+      {/* Hero panel */}
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        padding: 48, overflow: 'hidden',
-        backgroundColor: heroBg,
+        padding: 48, overflow: 'hidden', backgroundColor: heroBg,
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 38, height: 38, background: 'var(--accent-dim)',
-            border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--r2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--accent)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px',
-          }}>TL</div>
+          <div style={{ width: 38, height: 38, background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--r2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>TL</div>
           <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>TradeLog</div>
         </div>
-
-        {/* Content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h1 style={{
-            fontSize: 44, fontWeight: 800, letterSpacing: '-2px',
-            lineHeight: 1.05, color: 'var(--text)', margin: '0 0 18px',
-          }}>
+          <h1 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.05, color: 'var(--text)', margin: '0 0 18px' }}>
             Track your trades.<br />
             <span style={{ color: 'var(--accent)' }}>Master your edge.</span>
           </h1>
@@ -115,29 +151,21 @@ export default function AuthPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 40 }}>
             {[['R','Risk-based tracking'],['AI','Pattern analysis'],['∞','Trades logged']].map(([val, lbl]) => (
-              <div key={val} style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r2)', padding: '14px 16px',
-              }}>
+              <div key={val} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '14px 16px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.5px' }}>{val}</div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, fontWeight: 500 }}>{lbl}</div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div style={{ fontSize: 12, color: 'var(--text4)' }}>
-          TradeLog {APP_VERSION} · journal.smctrading.se
-        </div>
+        <div style={{ fontSize: 12, color: 'var(--text4)' }}>TradeLog {APP_VERSION} · journal.smctrading.se</div>
       </div>
 
-      {/* Form panel – NO className, full inline styles */}
+      {/* Form panel */}
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '48px 40px', overflowY: 'auto',
-        backgroundColor: formBg,
+        padding: '48px 40px', overflowY: 'auto', backgroundColor: formBg,
       }}>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -183,6 +211,14 @@ export default function AuthPage() {
                   value={password} onChange={e => setPassword(e.target.value)}
                   required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               </div>
+              {mode === 'login' && (
+                <div style={{ textAlign: 'right', marginTop: -6, marginBottom: 4 }}>
+                  <button type="button" onClick={() => setShowForgot(true)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text4)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font)', padding: 0, textDecoration: 'underline' }}>
+                    Glömt lösenord?
+                  </button>
+                </div>
+              )}
               {mode === 'signup' && (
                 <p style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6 }}>
                   Genom att skapa ett konto accepterar du våra{' '}
@@ -205,6 +241,8 @@ export default function AuthPage() {
           </>
         )}
       </div>
+
+      {showForgot && <ForgotPasswordModal onClose={() => setShowForgot(false)} />}
     </div>
   )
 }
