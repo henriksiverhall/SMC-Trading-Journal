@@ -63,21 +63,24 @@ function useNextSession() {
 }
 
 export default function Dashboard({ onNavigate }) {
-  const { user, userSettings } = useAuth()
+  const { user, userSettings, impersonating } = useAuth()
+  const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const session = useNextSession()
-  const displayName = userSettings?.displayName || user?.email?.split('@')[0] || 'Trader'
+  const effectiveDisplayName = impersonating?.email?.split('@')[0] || userSettings?.displayName || user?.email?.split('@')[0] || 'Trader'
 
   useEffect(() => {
-    if (!user) return
-    sb.from('trades').select('*').eq('user_id', user.id).order('date', { ascending: true })
+    if (!effectiveUserId) return
+    setTrades([])
+    setLoading(true)
+    sb.from('trades').select('*').eq('user_id', effectiveUserId).order('date', { ascending: true })
       .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
-  }, [user])
+  }, [effectiveUserId])
 
   if (loading) return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Dashboard" />
+      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
         <div style={{ color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
       </div>
@@ -157,7 +160,7 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 4 }}>
-                  Hej, {displayName}! 👋
+                  Hej, {effectiveDisplayName}! 👋
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
@@ -201,7 +204,7 @@ export default function Dashboard({ onNavigate }) {
       )
     },
 
-    // 2. Today + Streak side by side
+    // 2. Today
     {
       id: 'today',
       title: 'Idag',
@@ -313,10 +316,7 @@ export default function Dashboard({ onNavigate }) {
           </div>
           {recent.length === 0 ? (
             <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-              Inga trades loggade ännu.<br />
-              <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => onNavigate('journal')}>
-                Logga din första trade
-              </button>
+              Inga trades loggade ännu.
             </div>
           ) : recent.map(t => (
             <div key={t.id} style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'background 0.1s' }}
@@ -382,7 +382,7 @@ export default function Dashboard({ onNavigate }) {
 
   return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Dashboard" actions={
+      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} actions={
         <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Log Trade</button>
       } />
       <div className="page-content">
