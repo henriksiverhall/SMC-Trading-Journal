@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.25-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Analytics: SL-optimerare – simulerar vad som händer om SL breddas X%. Visar räddade trades, ny WR, netto R-förändring och optimalt SL-intervall. Kräver MAE-data.' },
+      { type: 'feature', text: 'Analytics: Psykologisk analys – disciplinpoäng (0–100), regelbaserade insikter om förlustsvitar, revenge-trading, session-WR och övertradingmönster.' },
+      { type: 'improvement', text: 'Analytics: WR per handelssession (London/NY/övrigt) i psykologisk widget – identifierar vilken session som ger bäst resultat.' },
+    ]
+  },
+  {
     version: 'v2.0.24-dev',
     date: '2026-06-24',
     entries: [

@@ -284,6 +284,395 @@ function MFESection({ trades, onFetched }) {
   )
 }
 
+// ── SL Optimizer ──────────────────────────────────────────────────────────────
+// Answers: "If I had placed my SL X pts wider, how many losing trades would
+// have been saved (MAE was less than the wider SL)? What happens to WR and
+// net R when we compensate by adjusting TP to keep the same RR?"
+function SLOptimizer({ mfeResults, trades }) {
+  const maeMap = {}
+  for (const t of (mfeResults || [])) {
+    if (t._mae != null) maeMap[t.id] = t._mae   // already in R units (negative)
+  }
+
+  // Only trades with MAE data and a known risk (entry + sl)
+  const base = trades.filter(t =>
+    t.result != null && t.entry != null && t.sl != null && maeMap[t.id] != null
+  ).map(t => ({
+    ...t,
+    _mae: maeMap[t.id],   // R (negative)
+    _risk: Math.abs(t.entry - t.sl),   // pts
+  })).filter(t => t._risk > 0)
+
+  if (!base.length) return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🎯 SL-optimering</div></div>
+      <div className="card-body">
+        <p style={{ fontSize: 13, color: 'var(--text3)' }}>
+          Hämta MAE-data i MFE/MAE-sektionen för att aktivera SL-analysen.
+        </p>
+      </div>
+    </div>
+  )
+
+  const losers = base.filter(t => t.outcome === 'L')
+  const winners = base.filter(t => t.outcome === 'W')
+  const currentWR = base.length ? (winners.length / base.length * 100) : 0
+  const currentNetR = base.reduce((a, t) => a + (t.result || 0), 0)
+
+  // Simulate widening SL by X% of current risk (5% → 150% in steps of 5%)
+  // A losing trade is "saved" if abs(MAE in R) < (1 + widening) i.e. price never
+  // went more than the new wider SL against us. When SL widens, TP must scale
+  // proportionally to keep identical RR ratio – so the winner's result grows too.
+  const steps = Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 5).toFixed(0)))
+
+  const simRows = steps.map(pct => {
+    const factor = 1 + pct / 100   // e.g. 1.20 for +20%
+    let savedTrades = 0, newWins = 0, newR = 0
+    for (const t of base) {
+      const maeAbs = Math.abs(t._mae)   // how far it went against us in R
+      if (t.outcome === 'L') {
+        if (maeAbs < factor) {
+          // Would have been saved – now wins with result = (original TP in R scaled)
+          // We don't know original TP in R, so we use the RR target: if original
+          // risk = 1R, wider risk = factor*1R, same RR means TP in pts is factor*TP
+          // → result is factor * |result_if_win| ≈ factor * avgWinR (conservative).
+          // Better: use MFE if available, else proxy with 1R * factor.
+          const mfe = mfeResults?.find(m => m.id === t.id)?._mfe ?? null
+          const winR = mfe != null ? Math.min(mfe, factor * 2) : factor   // cap at 2× new risk
+          newR += winR
+          newWins++
+          savedTrades++
+        } else {
+          newR += t.result || 0   // still a loss, but SL is wider so risk is factor
+          // result in R stays –1 (we lost 1R regardless of SL width since normalised)
+        }
+      } else {
+        // Winners: TP scaled proportionally with SL → result * factor
+        newR += (t.result || 0) * factor
+        newWins++
+      }
+    }
+    const newWR = base.length ? (newWins / base.length * 100) : 0
+    const netRDelta = newR - currentNetR
+    return {
+      pct,
+      pctLabel: `+${pct}%`,
+      saved: savedTrades,
+      newWR: parseFloat(newWR.toFixed(1)),
+      wrDelta: parseFloat((newWR - currentWR).toFixed(1)),
+      newNetR: parseFloat(newR.toFixed(2)),
+      netRDelta: parseFloat(netRDelta.toFixed(2)),
+    }
+  })
+
+  // Best SL widening = largest net R gain
+  const best = simRows.reduce((a, b) => b.netRDelta > a.netRDelta ? b : a)
+  const breakEven = simRows.find(r => r.netRDelta >= 0)
+
+  // Table: show rows where something improves, cap at 15 rows
+  const meaningful = simRows.filter(r => r.saved > 0).slice(0, 15)
+
+  return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🎯 SL-optimering – bredda SL = fler vinster?</div></div>
+      <div className="card-body">
+        <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
+          Simulerar vad som händer om du breddar SL med X% av din nuvarande risk. Förlorade trades
+          vars lägsta punkt (MAE) var inom den bredare SL räknas som räddade. TP skalas proportionellt
+          så RR-förhållandet behålls. {base.length} trades med MAE-data analyseras.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
+          <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid var(--border)' }}>
+            <div className="stat-label">Nuvarande WR</div>
+            <div className="stat-value" style={{ color: currentWR >= 50 ? 'var(--green)' : 'var(--red)' }}>{currentWR.toFixed(1)}%</div>
+            <div className="stat-sub">{winners.length}V / {losers.length}F</div>
+          </div>
+          <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid var(--border)' }}>
+            <div className="stat-label">Nuvarande netto R</div>
+            <div className="stat-value" style={{ color: currentNetR >= 0 ? 'var(--green)' : 'var(--red)' }}>{currentNetR > 0 ? '+' : ''}{currentNetR.toFixed(2)}R</div>
+          </div>
+          <div style={{ background: 'rgba(0,212,170,0.06)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid rgba(0,212,170,0.2)' }}>
+            <div className="stat-label">Optimalt SL (netto R)</div>
+            <div className="stat-value accent">{best.pctLabel}</div>
+            <div className="stat-sub">+{best.netRDelta}R netto · {best.saved} trades räddas</div>
+          </div>
+        </div>
+
+        {breakEven && breakEven.pct !== simRows[0].pct && (
+          <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: 14 }}>
+            💡 Break-even uppnås vid <strong style={{ color: 'var(--accent)' }}>{breakEven.pctLabel}</strong> bredare SL
+            ({breakEven.saved} trades räddas, WR {breakEven.newWR}%).
+            {best.pctLabel !== breakEven.pctLabel && <> Optimalt är <strong style={{ color: 'var(--accent)' }}>{best.pctLabel}</strong> med +{best.netRDelta}R netto.</>}
+          </div>
+        )}
+
+        {meaningful.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--text3)' }}>Inga förlorade trades inom simuleringsintervallet gick att rädda med bredare SL.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="journal-table">
+              <thead><tr>
+                <th>SL bredare</th>
+                <th>Räddade trades</th>
+                <th>Ny WR</th>
+                <th>WR-förändring</th>
+                <th>Netto R</th>
+                <th>R-förändring</th>
+              </tr></thead>
+              <tbody>
+                {meaningful.map(r => (
+                  <tr key={r.pct} style={{ background: r.pct === best.pct ? 'rgba(0,212,170,0.05)' : undefined }}>
+                    <td className="mono" style={{ fontWeight: r.pct === best.pct ? 700 : 400 }}>{r.pctLabel}</td>
+                    <td className="mono">{r.saved}</td>
+                    <td className="mono" style={{ color: r.newWR >= 50 ? 'var(--green)' : 'var(--red)' }}>{r.newWR}%</td>
+                    <td className="mono" style={{ color: r.wrDelta > 0 ? 'var(--green)' : 'var(--text3)' }}>+{r.wrDelta}%</td>
+                    <td className="mono" style={{ color: r.newNetR >= 0 ? 'var(--green)' : 'var(--red)' }}>{r.newNetR > 0 ? '+' : ''}{r.newNetR}R</td>
+                    <td className="mono" style={{ color: r.netRDelta >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      {r.netRDelta > 0 ? '+' : ''}{r.netRDelta}R
+                      {r.pct === best.pct && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>✓ OPTIMALT</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Psykologisk widget ─────────────────────────────────────────────────────────
+// Identifies behavioral patterns from trade data: loss streaks, revenge trading,
+// session performance, overtrading, and discipline score.
+function PsychWidget({ trades }) {
+  const withR = trades.filter(t => t.result != null && t.outcome)
+  if (withR.length < 5) return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🧠 Psykologisk analys</div></div>
+      <div className="card-body">
+        <p style={{ fontSize: 13, color: 'var(--text3)' }}>Logga minst 5 trades för att se psykologisk analys.</p>
+      </div>
+    </div>
+  )
+
+  const chrono = [...withR].sort((a, b) => `${a.date}T${a.time||'00:00'}` < `${b.date}T${b.time||'00:00'}` ? -1 : 1)
+
+  // ── Förlustsvit-analys ──────────────────────────────────────────────────────
+  let curLoss = 0, maxLoss = 0
+  let streakGroups = []   // { start, end, len, tradesAfter }
+  let streakStart = null
+  for (let i = 0; i < chrono.length; i++) {
+    const t = chrono[i]
+    if (t.outcome === 'L') {
+      if (curLoss === 0) streakStart = i
+      curLoss++
+      if (curLoss > maxLoss) maxLoss = curLoss
+    } else {
+      if (curLoss >= 2) {
+        // Check next 3 trades after streak
+        const after = chrono.slice(i, i + 3)
+        streakGroups.push({ len: curLoss, tradesAfter: after })
+      }
+      curLoss = 0; streakStart = null
+    }
+  }
+  // ongoing streak
+  if (curLoss >= 2) streakGroups.push({ len: curLoss, tradesAfter: [] })
+
+  const avgTradesAfterStreak = streakGroups.length
+    ? streakGroups.reduce((a, g) => a + g.tradesAfter.length, 0) / streakGroups.length
+    : 0
+
+  // WR i trades direkt efter en förlustsvit (revenge-indikator)
+  const tradesAfterStreak = streakGroups.flatMap(g => g.tradesAfter)
+  const wrAfterStreak = tradesAfterStreak.length
+    ? (tradesAfterStreak.filter(t => t.outcome === 'W').length / tradesAfterStreak.length * 100).toFixed(1)
+    : null
+
+  // ── Session-analys ──────────────────────────────────────────────────────────
+  const sessionBuckets = { london: { w: 0, t: 0 }, ny: { w: 0, t: 0 }, other: { w: 0, t: 0 } }
+  for (const t of withR) {
+    if (!t.time) continue
+    const [h, m] = t.time.split(':').map(Number)
+    const mins = h * 60 + m
+    // London: 08:00–13:30 UTC, NY: 13:30–20:00 UTC
+    const bucket = mins >= 8*60 && mins < 13*60+30 ? 'london'
+      : mins >= 13*60+30 && mins < 20*60 ? 'ny'
+      : 'other'
+    sessionBuckets[bucket].t++
+    if (t.outcome === 'W') sessionBuckets[bucket].w++
+  }
+  const sessionStats = [
+    { label: 'London (08–13:30)', ...sessionBuckets.london },
+    { label: 'New York (13:30–20)', ...sessionBuckets.ny },
+    { label: 'Övrig tid', ...sessionBuckets.other },
+  ].filter(s => s.t > 0).map(s => ({ ...s, wr: parseFloat((s.w / s.t * 100).toFixed(1)) }))
+
+  // ── Emotion-mönster ─────────────────────────────────────────────────────────
+  const emotionMap = {}
+  for (const t of withR) {
+    if (!t.emotion) continue
+    if (!emotionMap[t.emotion]) emotionMap[t.emotion] = { w: 0, t: 0 }
+    emotionMap[t.emotion].t++
+    if (t.outcome === 'W') emotionMap[t.emotion].w++
+  }
+  const emotionStats = Object.entries(emotionMap)
+    .map(([e, d]) => ({ emotion: e, wr: parseFloat((d.w / d.t * 100).toFixed(1)), count: d.t }))
+    .sort((a, b) => b.wr - a.wr)
+
+  const badEmotions = emotionStats.filter(e => ['FOMO','Revenge','Overconfident'].includes(e.emotion))
+  const disciplinedEmotion = emotionStats.find(e => e.emotion === 'Disciplined')
+
+  // ── Övertradinganalys ───────────────────────────────────────────────────────
+  const byDate = {}
+  for (const t of withR) {
+    if (!t.date) continue
+    if (!byDate[t.date]) byDate[t.date] = []
+    byDate[t.date].push(t)
+  }
+  const tradeCounts = Object.values(byDate).map(ts => ts.length)
+  const avgPerDay = tradeCounts.length ? (tradeCounts.reduce((a,b)=>a+b,0) / tradeCounts.length).toFixed(1) : 0
+  const highDays = Object.entries(byDate).filter(([, ts]) => ts.length >= 4)
+  const highDayWR = highDays.length
+    ? (highDays.flatMap(([, ts]) => ts).filter(t => t.outcome === 'W').length /
+       highDays.flatMap(([, ts]) => ts).length * 100).toFixed(1)
+    : null
+
+  // ── Disciplinpoäng (0–100) ──────────────────────────────────────────────────
+  let score = 70   // baseline
+  if (maxLoss >= 4) score -= 15
+  else if (maxLoss >= 3) score -= 8
+  if (wrAfterStreak !== null && parseFloat(wrAfterStreak) < 40) score -= 10
+  if (disciplinedEmotion && disciplinedEmotion.wr >= 60) score += 10
+  if (badEmotions.some(e => e.wr < 40 && e.count >= 3)) score -= 10
+  if (highDayWR !== null && parseFloat(highDayWR) < 40) score -= 8
+  if (sessionStats.length >= 2) {
+    const best = Math.max(...sessionStats.map(s => s.wr))
+    const worst = Math.min(...sessionStats.map(s => s.wr))
+    if (best - worst > 30) score -= 5
+  }
+  score = Math.max(0, Math.min(100, score))
+  const scoreColor = score >= 70 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
+
+  // ── Insikter ─────────────────────────────────────────────────────────────────
+  const insights = []
+  if (maxLoss >= 3) insights.push({
+    type: 'warning',
+    text: `Längsta förlustsvit: ${maxLoss} i rad. ${maxLoss >= 5 ? 'Det är en signal att pausa och återgå till checklistan.' : 'Håll koll på revengekänslor efter 2+ förluster.'}`
+  })
+  if (wrAfterStreak !== null && parseFloat(wrAfterStreak) < 45 && streakGroups.length >= 2) insights.push({
+    type: 'warning',
+    text: `WR direkt efter förlustsvitar: ${wrAfterStreak}%. Lägre än normalt – möjlig revenge-trading. Överväg att ta en paus efter 2 förluster i rad.`
+  })
+  if (sessionStats.length >= 2) {
+    const best = [...sessionStats].sort((a,b) => b.wr - a.wr)[0]
+    const worst = [...sessionStats].sort((a,b) => a.wr - b.wr)[0]
+    if (best.wr - worst.wr >= 20) insights.push({
+      type: 'insight',
+      text: `Du handlar markant bättre under ${best.label} (${best.wr}% WR) än ${worst.label} (${worst.wr}% WR). Fokusera på din starka session.`
+    })
+    if (sessionBuckets.other.t >= 3 && sessionBuckets.other.t > 0) {
+      const otherWR = (sessionBuckets.other.w / sessionBuckets.other.t * 100).toFixed(1)
+      if (parseFloat(otherWR) < 40) insights.push({
+        type: 'warning',
+        text: `${sessionBuckets.other.t} trades utanför London/NY-session med ${otherWR}% WR. Handel utanför prime-session verkar inte lönsamt.`
+      })
+    }
+  }
+  if (disciplinedEmotion && disciplinedEmotion.wr >= 60 && disciplinedEmotion.count >= 3) insights.push({
+    type: 'positive',
+    text: `Disciplined-trades: ${disciplinedEmotion.wr}% WR (${disciplinedEmotion.count} trades). Ditt bästa tillstånd – identifiera vad som skapar det och återskapa det.`
+  })
+  badEmotions.forEach(e => {
+    if (e.wr < 45 && e.count >= 2) insights.push({
+      type: 'warning',
+      text: `${e.emotion}-trades: ${e.wr}% WR (${e.count} trades). Dessa trades kostar dig edge – överväg att skippa dem.`
+    })
+  })
+  if (highDayWR !== null && parseFloat(highDayWR) < 45 && highDays.length >= 2) insights.push({
+    type: 'warning',
+    text: `${highDays.length} dagar med 4+ trades – WR dessa dagar: ${highDayWR}%. Övertradingmönster möjligt. Snitt ${avgPerDay} trades/dag.`
+  })
+  if (insights.length === 0) insights.push({
+    type: 'positive',
+    text: 'Inga tydliga varningssignaler hittades. Fortsätt logga trades för djupare analys.'
+  })
+
+  const insightColor = { warning: 'var(--amber)', insight: 'var(--accent)', positive: 'var(--green)' }
+  const insightBg = { warning: 'rgba(245,158,11,0.08)', insight: 'rgba(0,212,170,0.06)', positive: 'rgba(34,197,94,0.08)' }
+  const insightIcon = { warning: '⚠', insight: '💡', positive: '✓' }
+
+  return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🧠 Psykologisk analys</div></div>
+      <div className="card-body">
+
+        {/* Disciplinpoäng */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 20, padding: '14px 18px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
+          <div>
+            <div className="stat-label" style={{ marginBottom: 4 }}>Disciplinpoäng</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 36, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{score}</div>
+            <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 4 }}>av 100</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+              <div style={{ height: '100%', width: score + '%', background: scoreColor, borderRadius: 4, transition: 'width 0.8s ease' }} />
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+              {score >= 70 ? 'Bra disciplin. Håll kvar vid planen.' : score >= 50 ? 'Godkänd nivå men förbättringspotential finns.' : 'Varningsnivå – genomgå mönstren nedan noggrant.'}
+            </div>
+          </div>
+        </div>
+
+        {/* Insikter */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+          {insights.map((ins, i) => (
+            <div key={i} style={{
+              padding: '10px 14px', borderRadius: 'var(--r)',
+              background: insightBg[ins.type],
+              border: `1px solid ${insightColor[ins.type]}33`,
+              display: 'flex', gap: 10, alignItems: 'flex-start'
+            }}>
+              <span style={{ color: insightColor[ins.type], fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{insightIcon[ins.type]}</span>
+              <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{ins.text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Session-breakdown */}
+        {sessionStats.length >= 2 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>WR per session</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {sessionStats.map(s => (
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 160, fontSize: 12, color: 'var(--text3)' }}>{s.label}</div>
+                  <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: s.wr + '%', background: s.wr >= 50 ? 'var(--green)' : s.wr >= 40 ? 'var(--amber)' : 'var(--red)', borderRadius: 4, transition: 'width 0.5s' }} />
+                  </div>
+                  <div style={{ width: 80, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'right', color: s.wr >= 50 ? 'var(--green)' : s.wr >= 40 ? 'var(--amber)' : 'var(--red)' }}>
+                    {s.wr}% <span style={{ color: 'var(--text4)' }}>({s.t})</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Streak-info */}
+        {streakGroups.length > 0 && (
+          <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
+            {streakGroups.length} förlustsvit{streakGroups.length > 1 ? 'ar' : ''} (≥2 i rad) · Längst: {maxLoss}
+            {wrAfterStreak !== null && <> · WR direkt efter svit: <span style={{ color: parseFloat(wrAfterStreak) < 45 ? 'var(--amber)' : 'var(--text)' }}>{wrAfterStreak}%</span></>}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
 // Answers: "Given how far price actually moved (MFE) within the same session
 // on every logged trade, what take-profit distance (in R) would have produced
@@ -864,6 +1253,18 @@ export default function Analytics() {
       title: 'MFE / MAE',
       span: 2,
       content: <MFESection trades={filtered} onFetched={setMfeResults} />
+    },
+    {
+      id: 'sl_opt',
+      title: 'SL-optimering',
+      span: 2,
+      content: <SLOptimizer mfeResults={mfeResults} trades={filtered} />
+    },
+    {
+      id: 'psych',
+      title: 'Psykologisk analys',
+      span: 2,
+      content: <PsychWidget trades={filtered} />
     },
     {
       id: 'weekday',
