@@ -1,9 +1,6 @@
-export const APP_VERSION = 'v2.0.29-dev'
+export const APP_VERSION = 'v2.0.30-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
-// Mappar instrument loggade i journalen till Yahoo Finance-symboler.
-// Måste matcha TRACKED_SYMBOLS i Worker-koden (tradelog-claude-api-dev) –
-// annars finns ingen cachad data att läsa för det instrumentet.
 export const YAHOO_SYMBOL_MAP = {
   'NQ':'NQ=F','NQ1!':'NQ=F','MNQ':'NQ=F',
   'ES':'ES=F','ES1!':'ES=F','MES':'ES=F',
