@@ -673,6 +673,111 @@ function PsychWidget({ trades }) {
   )
 }
 
+// ── Custom Fields Widget ───────────────────────────────────────────────────────
+// Läser egna fält dynamiskt ur custom_data på trades (fält som inte börjar med _).
+// Visar WR och netto R per unikt värde för varje fält.
+function CustomFieldsWidget({ trades }) {
+  // Samla alla fältnamn från custom_data som inte är interna (_-prefix) och
+  // inte är kända tekniska nycklar
+  const INTERNAL_KEYS = new Set([
+    '_mfe','_mae','_mfe_fetched_at','_actual_exit','_exit_date','_exit_time',
+    '_scaleIns','_targets','_totalContracts','_weightedEntry','_risk_pct',
+    '_account_size','_futures','backtest','result_unit','rr_target','strategy_type',
+  ])
+
+  const fieldMap = {}   // { fieldName: { value: { w, l, r } } }
+  for (const t of trades) {
+    const cd = t.custom_data
+    if (!cd || typeof cd !== 'object') continue
+    for (const [key, val] of Object.entries(cd)) {
+      if (INTERNAL_KEYS.has(key)) continue
+      if (val == null || val === '') continue
+      const strVal = String(val).trim()
+      if (!fieldMap[key]) fieldMap[key] = {}
+      if (!fieldMap[key][strVal]) fieldMap[key][strVal] = { w: 0, l: 0, be: 0, r: 0 }
+      const bucket = fieldMap[key][strVal]
+      if (t.outcome === 'W') bucket.w++
+      else if (t.outcome === 'L') bucket.l++
+      else if (t.outcome === 'BE') bucket.be++
+      if (t.result != null) bucket.r += t.result
+    }
+  }
+
+  const fields = Object.keys(fieldMap)
+
+  if (!fields.length) return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🔖 Egna fält – analysdimension</div></div>
+      <div className="card-body">
+        <p style={{ fontSize: 13, color: 'var(--text3)' }}>
+          Lägg till egna fält i Journal-formuläret (Anpassa → Lägg till eget fält) och logga trades med värden för att se breakdown här.
+        </p>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="card">
+      <div className="card-header"><div className="card-title">🔖 Egna fält – analysdimension</div></div>
+      <div className="card-body">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {fields.map(field => {
+            const values = Object.entries(fieldMap[field])
+              .map(([val, d]) => {
+                const total = d.w + d.l + d.be
+                const wr = total > 0 ? parseFloat((d.w / (d.w + d.l || 1) * 100).toFixed(1)) : null
+                return { val, ...d, total, wr, netR: parseFloat(d.r.toFixed(2)) }
+              })
+              .filter(v => v.total > 0)
+              .sort((a, b) => b.netR - a.netR)
+
+            const maxAbsR = Math.max(...values.map(v => Math.abs(v.netR)), 0.01)
+
+            return (
+              <div key={field}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  {field}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="journal-table">
+                    <thead><tr>
+                      <th>Värde</th><th>Trades</th><th>WR</th><th>Netto R</th><th style={{ width: 140 }}>R-fördelning</th>
+                    </tr></thead>
+                    <tbody>
+                      {values.map(v => (
+                        <tr key={v.val}>
+                          <td style={{ color: 'var(--text)', fontWeight: 500 }}>{v.val}</td>
+                          <td className="mono">{v.w}V / {v.l}F{v.be > 0 ? ` / ${v.be}BE` : ''}</td>
+                          <td className="mono" style={{ color: v.wr >= 50 ? 'var(--green)' : v.wr !== null ? 'var(--red)' : 'var(--text4)' }}>
+                            {v.wr !== null ? v.wr + '%' : '—'}
+                          </td>
+                          <td className="mono" style={{ color: v.netR > 0 ? 'var(--green)' : v.netR < 0 ? 'var(--red)' : 'var(--text3)' }}>
+                            {v.netR > 0 ? '+' : ''}{v.netR}R
+                          </td>
+                          <td>
+                            <div style={{ position: 'relative', height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}>
+                              {v.netR >= 0 ? (
+                                <div style={{ position: 'absolute', left: '50%', top: 0, height: '100%', width: (v.netR / maxAbsR * 50) + '%', background: 'var(--green)', borderRadius: '0 4px 4px 0' }} />
+                              ) : (
+                                <div style={{ position: 'absolute', right: '50%', top: 0, height: '100%', width: (Math.abs(v.netR) / maxAbsR * 50) + '%', background: 'var(--red)', borderRadius: '4px 0 0 4px' }} />
+                              )}
+                              <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'var(--border2)' }} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── RR Optimizer ──────────────────────────────────────────────────────────────
 // Answers: "Given how far price actually moved (MFE) within the same session
 // on every logged trade, what take-profit distance (in R) would have produced
@@ -956,7 +1061,10 @@ Ge 3 konkreta förbättringsråd baserat på dessa siffror. Var specifik och dir
 
 // ── Main Analytics ────────────────────────────────────────────────────────────
 export default function Analytics() {
-  const { user, aiEnabled, userSettings } = useAuth()
+  const { user, aiEnabled, userSettings, viewAsUser, viewAsSettings, impersonating } = useAuth()
+  // Om admin impersonerar en användare – läs deras trades istället
+  const effectiveUser = viewAsUser || user
+  const effectiveSettings = viewAsSettings || userSettings
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '' })
@@ -970,17 +1078,18 @@ export default function Analytics() {
   // Hydrate från userSettings om account_size/risk_pct sparats i Journal
   useEffect(() => {
     const t = trades.find(t => t.account_size || t.risk_pct)
-    if (!t && userSettings) {
-      if (userSettings.account_size) setAccountSize(Number(userSettings.account_size))
-      if (userSettings.risk_pct) setRiskPct(Number(userSettings.risk_pct))
+    if (!t && effectiveSettings) {
+      if (effectiveSettings.account_size) setAccountSize(Number(effectiveSettings.account_size))
+      if (effectiveSettings.risk_pct) setRiskPct(Number(effectiveSettings.risk_pct))
     }
-  }, [userSettings, trades])
+  }, [effectiveSettings, trades])
 
   useEffect(() => {
-    if (!user) return
-    sb.from('trades').select('*').eq('user_id', user.id).order('date', { ascending: false })
+    if (!effectiveUser) return
+    setLoading(true)
+    sb.from('trades').select('*').eq('user_id', effectiveUser.id).order('date', { ascending: false })
       .then(({ data }) => { setTrades(normalizeTrades(data || [])); setLoading(false) })
-  }, [user])
+  }, [effectiveUser?.id])
 
   const filtered = trades.filter(t => {
     if (filter.outcome && t.outcome !== filter.outcome) return false
@@ -1076,9 +1185,9 @@ export default function Analytics() {
 
   if (loading) return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Analytics" />
+      <Topbar title="Analytics" subtitle={impersonating ? `Visar: ${impersonating.email}` : undefined} />
       <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Loading…</div>
+        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
       </div>
     </div>
   )
@@ -1348,6 +1457,12 @@ export default function Analytics() {
       content: <RROptimizer mfeResults={mfeResults} trades={filtered} />
     },
     {
+      id: 'custom_fields',
+      title: 'Egna fält',
+      span: 2,
+      content: <CustomFieldsWidget trades={filtered} />
+    },
+    {
       id: 'ai',
       title: 'AI-analys',
       span: 2,
@@ -1357,7 +1472,7 @@ export default function Analytics() {
 
   return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Analytics" />
+      <Topbar title="Analytics" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
         {/* Filters */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>

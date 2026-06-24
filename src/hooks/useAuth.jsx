@@ -9,6 +9,32 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
 
+  // ── Impersonation (admin "logga in som" annan användare) ──────────────────
+  // Byter INTE auth-session – admin är fortfarande inloggad. Alla Supabase-anrop
+  // som kräver auth.uid() körs fortsatt som admin. Det vi byter är vilket user_id
+  // som används för att LÄSA trades/settings i Analytics, Journal, Dashboard.
+  // Komponenter som ska stödja impersonation läser `viewAsUser` och `viewAsSettings`
+  // istället för `user` och `userSettings` direkt.
+  const [impersonating, setImpersonating] = useState(null)  // { id, email }
+  const [impersonatedSettings, setImpersonatedSettings] = useState({})
+
+  async function startImpersonation(targetUser) {
+    const { data } = await sb.from('user_settings')
+      .select('settings').eq('user_id', targetUser.id).maybeSingle()
+    setImpersonatedSettings(data?.settings || {})
+    setImpersonating(targetUser)
+  }
+
+  function stopImpersonation() {
+    setImpersonating(null)
+    setImpersonatedSettings({})
+  }
+
+  // Exponerade värden för konsumenter – pekar på impersonerad användare om aktiv
+  // admin-specifika rättigheter (isAdmin, saveSettings) är alltid den inloggade adminens
+  const viewAsUser = impersonating ? { id: impersonating.id, email: impersonating.email } : null
+  const viewAsSettings = impersonating ? impersonatedSettings : null
+
   useEffect(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -98,7 +124,9 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, userSettings, loading, isAdmin, aiEnabled,
       saveSettings, signOut, loadSettings,
-      unreadCount, refreshUnread
+      unreadCount, refreshUnread,
+      impersonating, viewAsUser, viewAsSettings,
+      startImpersonation, stopImpersonation,
     }}>
       {children}
     </AuthContext.Provider>

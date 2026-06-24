@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.26-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Analytics: Egna fält som analysdimension – widget visar WR och netto R per unikt värde för varje eget fält i custom_data. Uppdateras automatiskt utan konfiguration.' },
+      { type: 'feature', text: 'Admin: "Visa som"-knapp i användartabellen – admin kan se Dashboard, Analytics och Journal som en vald användare utan att byta inloggning.' },
+      { type: 'feature', text: 'Impersonation-banner – orange fält längst upp visar vem som visas. Klicka Avsluta för att återgå till admin-vyn.' },
+    ]
+  },
+  {
     version: 'v2.0.25-dev',
     date: '2026-06-24',
     entries: [

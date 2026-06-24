@@ -14,6 +14,7 @@ function formatFull(iso) {
 
 // ── Users tab ─────────────────────────────────────────────────────────────────
 function UsersTab({ currentUserId }) {
+  const { startImpersonation } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -65,7 +66,7 @@ function UsersTab({ currentUserId }) {
           <table className="journal-table">
             <thead><tr>
               <th>Email</th><th>Registrerad</th><th>Trades</th>
-              <th>Bekräftad</th><th>Admin</th><th>AI</th><th></th>
+              <th>Bekräftad</th><th>Admin</th><th>AI</th><th></th><th></th>
             </tr></thead>
             <tbody>
               {users.map(u => (
@@ -86,6 +87,19 @@ function UsersTab({ currentUserId }) {
                       disabled={u.user_id === currentUserId}>
                       {u.settings?.ai_enabled ? 'På' : 'Av'}
                     </button>
+                  </td>
+                  <td>
+                    {u.user_id !== currentUserId && (
+                      <button className="btn btn-sm btn-ghost"
+                        onClick={() => {
+                          startImpersonation({ id: u.user_id, email: u.email })
+                          window.__tlNavigate?.('dashboard')
+                        }}
+                        title="Visa appen som denna användare"
+                        style={{ whiteSpace: 'nowrap' }}>
+                        👁 Visa som
+                      </button>
+                    )}
                   </td>
                   <td>
                     {u.user_id !== currentUserId && (
