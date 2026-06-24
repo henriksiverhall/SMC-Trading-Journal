@@ -394,7 +394,11 @@ function PsychWidget({ trades }) {
   )
 }
 
+// ── CustomFieldsWidget ─────────────────────────────────────────────────────────
+// Visar max 10 rader per fält. Fält med fler rader får en "Visa alla / Dra ihop"-knapp.
 function CustomFieldsWidget({ trades }) {
+  const [expandedFields, setExpandedFields] = useState({})
+
   function isInternalKey(key) {
     const KEYS = new Set([
       '_mfe','_mae','_mfe_fetched_at','_actual_exit','_exit_date','_exit_time',
@@ -405,9 +409,10 @@ function CustomFieldsWidget({ trades }) {
     ])
     if (KEYS.has(key.toLowerCase())) return true
     if (key.startsWith('_')) return true
-    if (/^[A-Z][A-Z0-9_]{2,}$/.test(key)) return true  // VERSALER_FORMAT = backtest-data
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(key)) return true
     return false
   }
+
   const fieldMap = {}
   for (const t of trades) {
     const cd = t.custom_data
@@ -419,10 +424,13 @@ function CustomFieldsWidget({ trades }) {
       if (!fieldMap[key]) fieldMap[key] = {}
       if (!fieldMap[key][strVal]) fieldMap[key][strVal] = { w: 0, l: 0, be: 0, r: 0 }
       const bucket = fieldMap[key][strVal]
-      if (t.outcome === 'W') bucket.w++; else if (t.outcome === 'L') bucket.l++; else if (t.outcome === 'BE') bucket.be++
+      if (t.outcome === 'W') bucket.w++
+      else if (t.outcome === 'L') bucket.l++
+      else if (t.outcome === 'BE') bucket.be++
       if (t.result != null) bucket.r += t.result
     }
   }
+
   const fields = Object.keys(fieldMap)
   if (!fields.length) return (
     <div className="card">
@@ -430,33 +438,72 @@ function CustomFieldsWidget({ trades }) {
       <div className="card-body"><p style={{ fontSize: 13, color: 'var(--text3)' }}>Lägg till egna fält i Journal-formuläret för att se breakdown här.</p></div>
     </div>
   )
+
   return (
     <div className="card">
       <div className="card-header"><div className="card-title">🔖 Egna fält – analysdimension</div></div>
       <div className="card-body">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {fields.map(field => {
-            const values = Object.entries(fieldMap[field]).map(([val, d]) => { const total = d.w + d.l + d.be; const wr = total > 0 ? parseFloat((d.w / (d.w + d.l || 1) * 100).toFixed(1)) : null; return { val, ...d, total, wr, netR: parseFloat(d.r.toFixed(2)) } }).filter(v => v.total > 0).sort((a, b) => b.netR - a.netR)
-            const maxAbsR = Math.max(...values.map(v => Math.abs(v.netR)), 0.01)
+            const allValues = Object.entries(fieldMap[field])
+              .map(([val, d]) => {
+                const total = d.w + d.l + d.be
+                const wr = total > 0 ? parseFloat((d.w / (d.w + d.l || 1) * 100).toFixed(1)) : null
+                return { val, ...d, total, wr, netR: parseFloat(d.r.toFixed(2)) }
+              })
+              .filter(v => v.total > 0)
+              .sort((a, b) => b.netR - a.netR)
+
+            const maxAbsR = Math.max(...allValues.map(v => Math.abs(v.netR)), 0.01)
+            const isExpanded = !!expandedFields[field]
+            const LIMIT = 10
+            const visibleValues = isExpanded ? allValues : allValues.slice(0, LIMIT)
+            const hasMore = allValues.length > LIMIT
+
             return (
               <div key={field}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>{field}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {field} <span style={{ fontSize: 11, color: 'var(--text4)', fontWeight: 400, textTransform: 'none' }}>({allValues.length} värden)</span>
+                  </div>
+                  {hasMore && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setExpandedFields(prev => ({ ...prev, [field]: !prev[field] }))}
+                    >
+                      {isExpanded ? '▲ Dra ihop' : `▼ Visa alla ${allValues.length}`}
+                    </button>
+                  )}
+                </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table className="journal-table">
                     <thead><tr><th>Värde</th><th>Trades</th><th>WR</th><th>Netto R</th><th style={{ width: 140 }}>R-fördelning</th></tr></thead>
                     <tbody>
-                      {values.map(v => (
+                      {visibleValues.map(v => (
                         <tr key={v.val}>
                           <td style={{ color: 'var(--text)', fontWeight: 500 }}>{v.val}</td>
                           <td className="mono">{v.w}V / {v.l}F{v.be > 0 ? ` / ${v.be}BE` : ''}</td>
                           <td className="mono" style={{ color: v.wr >= 50 ? 'var(--green)' : v.wr !== null ? 'var(--red)' : 'var(--text4)' }}>{v.wr !== null ? v.wr + '%' : '—'}</td>
                           <td className="mono" style={{ color: v.netR > 0 ? 'var(--green)' : v.netR < 0 ? 'var(--red)' : 'var(--text3)' }}>{v.netR > 0 ? '+' : ''}{v.netR}R</td>
-                          <td><div style={{ position: 'relative', height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}>{v.netR >= 0 ? <div style={{ position: 'absolute', left: '50%', top: 0, height: '100%', width: (v.netR / maxAbsR * 50) + '%', background: 'var(--green)', borderRadius: '0 4px 4px 0' }} /> : <div style={{ position: 'absolute', right: '50%', top: 0, height: '100%', width: (Math.abs(v.netR) / maxAbsR * 50) + '%', background: 'var(--red)', borderRadius: '4px 0 0 4px' }} />}<div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'var(--border2)' }} /></div></td>
+                          <td>
+                            <div style={{ position: 'relative', height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}>
+                              {v.netR >= 0
+                                ? <div style={{ position: 'absolute', left: '50%', top: 0, height: '100%', width: (v.netR / maxAbsR * 50) + '%', background: 'var(--green)', borderRadius: '0 4px 4px 0' }} />
+                                : <div style={{ position: 'absolute', right: '50%', top: 0, height: '100%', width: (Math.abs(v.netR) / maxAbsR * 50) + '%', background: 'var(--red)', borderRadius: '4px 0 0 4px' }} />
+                              }
+                              <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'var(--border2)' }} />
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {hasMore && !isExpanded && (
+                  <div style={{ fontSize: 12, color: 'var(--text4)', marginTop: 6, textAlign: 'right' }}>
+                    Visar 10 av {allValues.length} – klicka "Visa alla" för att se resten
+                  </div>
+                )}
               </div>
             )
           })}
