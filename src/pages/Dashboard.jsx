@@ -19,11 +19,9 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-// ── Sessionsdefinitioner – lokal tid i respektive stad ──────────────────────────
-// Öppet/stängt jämförs mot stadens egna lokala tid via Intl.DateTimeFormat.
-// Webbläsaren hanterar DST automatiskt – ingen UTC-matematik krävs.
-// "lokal tid" under klockan = användarens enhets tidszon (Intl.DateTimeFormat().resolvedOptions().timeZone)
-// – en trader i USA ser sina lokala tider, en i Japan sina. Helt automatiskt.
+// ── Sessionsdefinitioner ──────────────────────────────────────────────────────
+// ÖPPEN/STÄNGD = stadens lokala handelstid via session.tz
+// Visare + digital tid = din tidszon (localTz från webbläsaren)
 const SESSIONS = [
   { label: 'London',   openH: 8,  openM: 0,  closeH: 16, closeM: 30, tz: 'Europe/London',    flag: '🇬🇧' },
   { label: 'New York', openH: 9,  openM: 30, closeH: 16, closeM: 0,  tz: 'America/New_York', flag: '🇺🇸' },
@@ -41,6 +39,7 @@ function getHMS(date, tz) {
   }
 }
 
+// Öppen/stängd jämförs mot marknadens lokala tid
 function isOpen(session, date) {
   const { h, m } = getHMS(date, session.tz)
   const now   = h * 60 + m
@@ -49,18 +48,24 @@ function isOpen(session, date) {
   return now >= open && now < close
 }
 
+// ── Analog klocka ─────────────────────────────────────────────────────────────
+// Visare och digital tid = DIN lokala tid (localTz)
+// Sessionsbåge och ÖPPEN/STÄNGD = marknadens lokala tid (session.tz)
 function AnalogClock({ session, now, localTz }) {
   const SIZE = 110
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
 
-  const { h: ch, m: cm, s: cs } = getHMS(now, session.tz)
-  const { h: lh, m: lm, s: ls } = getHMS(now, localTz)
+  // Din lokala tid – visas på visare och digital display
+  const { h, m, s } = getHMS(now, localTz)
+
+  // Marknadens lokala tid – används bara för ÖPPEN/STÄNGD
   const open = isOpen(session, now)
 
+  // Sessionsbågen i 12h-format (marknadens öppettider på urtavlan)
   const openM12  = (session.openH  % 12) * 60 + session.openM
   const closeM12 = (session.closeH % 12) * 60 + session.closeM
 
-  function angle12(m) { return (m / (12 * 60)) * 360 - 90 }
+  function angle12(mins) { return (mins / (12 * 60)) * 360 - 90 }
   function pt(deg, rad) {
     const a = (deg * Math.PI) / 180
     return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) }
@@ -71,9 +76,10 @@ function AnalogClock({ session, now, localTz }) {
     return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${span > 360 ? 1 : 0} 1 ${p2.x} ${p2.y}`
   }
 
-  const sDeg = cs * 6
-  const mDeg = cm * 6 + cs * 0.1
-  const hDeg = (ch % 12) * 30 + cm * 0.5
+  // Visarvinklar baserade på din tid
+  const sDeg = s * 6
+  const mDeg = m * 6 + s * 0.1
+  const hDeg = (h % 12) * 30 + m * 0.5
 
   function tip(deg, len) {
     const a = ((deg - 90) * Math.PI) / 180
@@ -93,14 +99,14 @@ function AnalogClock({ session, now, localTz }) {
   })
 
   const pad = n => String(n).padStart(2, '0')
-  const cityTime  = `${pad(ch)}:${pad(cm)}:${pad(cs)}`
-  const localTime = `${pad(lh)}:${pad(lm)}:${pad(ls)}`
+  const displayTime = `${pad(h)}:${pad(m)}:${pad(s)}`
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
         style={{ filter: open ? `drop-shadow(0 0 8px ${color}44)` : 'none' }}>
         <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.5)" stroke="var(--border2)" strokeWidth={2} />
+        {/* Sessionsbåge – marknadens öppettider */}
         <path d={arc(openM12, closeM12, r - 3.5)} fill="none"
           stroke={color} strokeWidth={7} strokeLinecap="round" opacity={open ? 0.9 : 0.22} />
         {ticks.map((t, i) => (
@@ -108,6 +114,7 @@ function AnalogClock({ session, now, localTz }) {
             stroke={t.major ? 'var(--text3)' : 'var(--text4)'}
             strokeWidth={t.major ? 2.2 : 1.1} />
         ))}
+        {/* Visare – din lokala tid */}
         <line x1={cx} y1={cy} x2={tip(hDeg, r * 0.48).x} y2={tip(hDeg, r * 0.48).y}
           stroke="var(--text)" strokeWidth={4} strokeLinecap="round" />
         <line x1={cx} y1={cy} x2={tip(mDeg, r * 0.65).x} y2={tip(mDeg, r * 0.65).y}
@@ -116,15 +123,18 @@ function AnalogClock({ session, now, localTz }) {
           stroke={color} strokeWidth={1.8} strokeLinecap="round" />
         <circle cx={cx} cy={cy} r={4} fill={color} />
       </svg>
+
+      {/* Marknadsnamn */}
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>
         {session.flag} {session.label}
       </div>
+
+      {/* Din lokala tid HH:MM:SS */}
       <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>
-        {cityTime}
+        {displayTime}
       </div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text4)' }}>
-        lokal: {localTime}
-      </div>
+
+      {/* Status-badge */}
       <div style={{
         fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
         background: open ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
@@ -226,21 +236,14 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-
-            {/* Layout: [Hälsning] | sep | [flex statistik] | sep | [Klockor] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-
-              {/* Hälsning – fast bredd till vänster */}
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
                   Hej, {effectiveDisplayName}! 👋
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
-
               {sep}
-
-              {/* Statistik – tar resten av utrymmet, precis till vänster om klockorna */}
               <div style={{ display: 'flex', gap: 20, flex: 1, justifyContent: 'flex-end' }}>
                 {[
                   { label: 'Total R', value: (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R', color: totalR >= 0 ? 'var(--green)' : 'var(--red)' },
@@ -254,16 +257,11 @@ export default function Dashboard({ onNavigate }) {
                   </div>
                 ))}
               </div>
-
               {sep}
-
-              {/* Klockor – längst till höger, fast storlek */}
               <div style={{ flexShrink: 0 }}>
                 <SessionClocks />
               </div>
             </div>
-
-            {/* Knappar */}
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>✅ Checklist</button>
