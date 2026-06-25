@@ -360,7 +360,6 @@ export default function Profile() {
   const { user, userSettings, saveSettings, signOut, unreadBroadcast, unreadInbox, refreshUnread } = useAuth()
   const [tab, setTab] = useState('konto')
 
-  // Refresha räknare när man byter till en flik
   function handleTabChange(newTab) {
     setTab(newTab)
     if (newTab === 'broadcast' || newTab === 'inbox') {
@@ -371,7 +370,7 @@ export default function Profile() {
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Profil" />
-      <div className="page-content" style={{ maxWidth: 860 }}>
+      <div className="page-content" style={{ maxWidth: 1100 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
           <TabBtn active={tab === 'konto'} onClick={() => handleTabChange('konto')}>Konto</TabBtn>
           <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>
