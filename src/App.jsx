@@ -10,9 +10,10 @@ import Admin from './pages/Admin'
 import Roadmap from './pages/Roadmap'
 import Changelog from './pages/Changelog'
 import Messages from './pages/Messages'
+import Calendar from './pages/Calendar'
 import Sidebar from './components/Sidebar'
 
-const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages']
+const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages','calendar']
 const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'changelog']
 
 export default function App() {
@@ -25,7 +26,6 @@ export default function App() {
   const [bgStyle, setBgStyle] = useState({})
   const brandingRef = useRef(null)
 
-  // Vid inloggning: om sidan är admin-only och användaren inte är admin → dashboard
   useEffect(() => {
     if (user && !isAdmin && ADMIN_ONLY_PAGES.includes(page)) {
       setPage('dashboard')
@@ -57,9 +57,7 @@ export default function App() {
   }
 
   useEffect(() => { applyBg(page) }, [page])
-
   useEffect(() => { window.__tlNavigate = setPage; return () => { delete window.__tlNavigate } }, [setPage])
-
   useEffect(() => { sessionStorage.setItem('tl_page', page) }, [page])
 
   if (loading) return (
@@ -81,6 +79,7 @@ export default function App() {
     roadmap:   <Roadmap />,
     changelog: isAdmin ? <Changelog /> : <Dashboard onNavigate={setPage} />,
     messages:  <Messages />,
+    calendar:  <Calendar />,
   }
 
   return (

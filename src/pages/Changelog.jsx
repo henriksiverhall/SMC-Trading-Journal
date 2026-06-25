@@ -2,20 +2,47 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.39-dev',
+    date: '2026-06-25',
+    entries: [
+      { type: 'feature', text: 'Ekonomisk kalender: ny sida i sidomenyn. ForexFactory-data via Worker-proxy. Filter på impact (Hög/Medium/Låg), valuta (USD/EUR/GBP/JPY/CAD/AUD/NZD/CHF), tidsperiod (Denna vecka / Nästa vecka / Idag). Händelser grupperade per dag, sorterade på impact sedan tid. Aktuellt utfall/prognos/föregående visas.' },
+    ]
+  },
+  {
+    version: 'v2.0.38-dev',
+    date: '2026-06-25',
+    entries: [
+      { type: 'improvement', text: 'Dashboard: statistik borttagen från välkomstwidget (finns i Statistik-widget under). Klockor högerställda mot RTH-rutan.' },
+    ]
+  },
+  {
+    version: 'v2.0.37-dev',
+    date: '2026-06-25',
+    entries: [
+      { type: 'feature', text: 'Dashboard: 4 analoga sessionsklockor (Din tid + London/NY/Tokyo). Varje marknadsklocka visar stadens lokala tid, sessionsbåge för handelstider, nedräkning HH:MM:SS till open/close. RTH-instrumentruta för Guld/Olja/ES·NQ·YM. Tema-kompatibla CSS-variabler.' },
+    ]
+  },
+  {
+    version: 'v2.0.36-dev',
+    date: '2026-06-25',
+    entries: [
+      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält, max 10 rader, backtest-nycklar filtreras.' },
+      { type: 'fix', text: 'Admin + Profile: maxWidth höjt till 1100px. _patch_CustomFieldsWidget.jsx borttagen.' },
+    ]
+  },
+  {
     version: 'v2.0.35-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'fix', text: 'Analytics RR-optimerare och SL-optimering: tabellerna är nu kollapsade per default – visar 8 rader med "Visa alla"-knapp. Sidan blir inte längre extremt lång.' },
-      { type: 'fix', text: 'Dashboard välkommen-widget: "X nytt" ändrat till "X nytt meddelande" för tydlighet.' },
-      { type: 'fix', text: 'App: icke-admin omdirigeras till Dashboard om sessionStorage pekar på admin-sida vid inloggning.' },
+      { type: 'fix', text: 'Analytics RR-optimerare och SL-optimering: tabellerna är nu kollapsade per default.' },
+      { type: 'fix', text: 'Dashboard välkommen-widget: "X nytt" ändrat till "X nytt meddelande".' },
     ]
   },
   {
     version: 'v2.0.34-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin e-postbyte: skyddas av Supabase JWT istället för KANBAN_SECRET.' },
-      { type: 'improvement', text: 'Worker /admin/update-user: tillåter bara e-postbyte, verifierar JWT.' },
+      { type: 'feature', text: 'Admin e-postbyte skyddas av Supabase JWT.' },
     ]
   },
   {
@@ -29,70 +56,14 @@ const CHANGELOG = [
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. Support-vy 860px. Dashboard öppna ärenden.' },
-    ]
-  },
-  {
-    version: 'v2.0.31-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'useAuth: separata räknare. signOut rensar tl_page.' },
-    ]
-  },
-  {
-    version: 'v2.0.30-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'improvement', text: 'Sidebar: badge på Profil. Profil: tre flikar. Dashboard: olästa-knapp.' },
-    ]
-  },
-  {
-    version: 'v2.0.29-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Admin: profilmodal vid klick på användare.' },
-    ]
-  },
-  {
-    version: 'v2.0.28-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Roadmap: kollaps-state, arkivfunktion.' },
-    ]
-  },
-  {
-    version: 'v2.0.27-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Impersonation persist. Journal + Dashboard stöd.' },
-    ]
-  },
-  {
-    version: 'v2.0.26-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Analytics: egna fält. Admin: impersonation-banner.' },
-    ]
-  },
-  {
-    version: 'v2.0.25-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Analytics: SL-optimerare, psykologisk analys.' },
-    ]
-  },
-  {
-    version: 'v2.0.24-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'fix', text: 'DragGrid: columns/span-prop.' },
+      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. Separata unread-räknare.' },
     ]
   },
   {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor.' },
+      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor, SL-optimerare, psykologisk analys.' },
     ]
   },
   {
@@ -106,28 +77,28 @@ const CHANGELOG = [
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filter, strategi-dropdown, sortering. PiP: BroadcastChannel.' },
+      { type: 'feature', text: 'Journal: filter, strategi-dropdown, sortering. PiP: BroadcastChannel live-uppdatering.' },
     ]
   },
   {
     version: 'v2.0.15-dev',
     date: '2026-06-21',
     entries: [
-      { type: 'feature', text: 'PiP-widget, Checklist portad.' },
+      { type: 'feature', text: 'PiP-widget, Checklist portad, obligatoriska fält.' },
     ]
   },
   {
     version: 'v2.0.4-dev',
     date: '2026-06-15',
     entries: [
-      { type: 'feature', text: 'DragGrid, Meddelanden, Journal MFE/MAE.' },
+      { type: 'feature', text: 'DragGrid widget-system, Meddelanden, Journal MFE/MAE.' },
     ]
   },
   {
     version: 'v2.0.0-dev',
     date: '2026-06-11',
     entries: [
-      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers.' },
+      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers, Supabase.' },
     ]
   },
 ]
