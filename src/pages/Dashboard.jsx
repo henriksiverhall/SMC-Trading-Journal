@@ -320,7 +320,7 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            {/* Layout: [Namn+datum] | sep | [Klockor] | sep | [Instrument] */}
+            {/* Layout: [Namn+datum] | mellanrum | [Klockor] | sep | [RTH] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
@@ -328,8 +328,8 @@ export default function Dashboard({ onNavigate }) {
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
-              {sep}
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+              {/* Klockor – marginLeft auto trycks mot höger */}
+              <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
                 <SessionClocks />
               </div>
               {sep}
