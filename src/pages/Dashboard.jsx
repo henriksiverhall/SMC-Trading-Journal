@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatR } from '../lib/constants'
@@ -19,126 +19,141 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-// ── Sessionsdefinitioner (UTC) ────────────────────────────────────────────────
+// ── Sessionsdefinitioner (UTC) ─────────────────────────────────────────────────
+// Tider baserade på faktiska handelssessioner:
+// Asia/Tokyo:  02:00–09:00 UTC  (Tokyo open kl 09:00 JST = 00:00 UTC, men likvid handel 02-09)
+// London:      08:00–16:30 UTC
+// New York:    13:30–20:00 UTC
 const SESSIONS = [
   { label: 'London',   openH: 8,  openM: 0,  closeH: 16, closeM: 30, tz: 'Europe/London',    flag: '🇬🇧' },
   { label: 'New York', openH: 13, openM: 30, closeH: 20, closeM: 0,  tz: 'America/New_York', flag: '🇺🇸' },
-  { label: 'Asia',     openH: 0,  openM: 0,  closeH: 8,  closeM: 0,  tz: 'Asia/Tokyo',       flag: '🇯🇵' },
+  { label: 'Asia',     openH: 0,  openM: 0,  closeH: 9,  closeM: 0,  tz: 'Asia/Tokyo',       flag: '🇯🇵' },
 ]
 
 function isSessionOpen(session, nowUtcMins) {
   const open  = session.openH  * 60 + session.openM
   const close = session.closeH * 60 + session.closeM
   if (close > open) return nowUtcMins >= open && nowUtcMins < close
-  // Asia wraps midnight
+  // wraps midnight (Asia: 00:00–09:00 wraps inte, men lägg in stöd ändå)
   return nowUtcMins >= open || nowUtcMins < close
 }
 
-// ── Analog klocka ─────────────────────────────────────────────────────────────
+// ── Analog klocka ──────────────────────────────────────────────────────────────
 function AnalogClock({ session, nowUtc }) {
-  const size = 72
-  const cx = size / 2, cy = size / 2, r = size / 2 - 3
+  const SIZE = 90
+  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 4
 
-  // Räkna ut lokal tid för respektive tz
-  const localStr = nowUtc.toLocaleTimeString('sv-SE', { timeZone: session.tz, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  // Lokal tid för sessionens tidszon
+  const localStr = nowUtc.toLocaleTimeString('sv-SE', {
+    timeZone: session.tz, hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
   const [hStr, mStr, sStr] = localStr.split(':')
   const hh = parseInt(hStr), mm = parseInt(mStr), ss = parseInt(sStr)
 
   const nowUtcMins = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes()
   const open = isSessionOpen(session, nowUtcMins)
 
-  // Visar grön/röd båge för sessionen
   const openMins  = session.openH  * 60 + session.openM
   const closeMins = session.closeH * 60 + session.closeM
 
   function minsToAngle(m) { return (m / (24 * 60)) * 360 - 90 }
-  function polarToXY(angle, rad) {
-    const rad2 = (angle * Math.PI) / 180
-    return { x: cx + rad * Math.cos(rad2), y: cy + rad * Math.sin(rad2) }
+  function toXY(angle, rad) {
+    const a = (angle * Math.PI) / 180
+    return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) }
   }
-  function arcPath(startMins, endMins, rad) {
-    const a1 = minsToAngle(startMins), a2 = minsToAngle(endMins)
-    const p1 = polarToXY(a1, rad), p2 = polarToXY(a2, rad)
-    const delta = endMins - startMins
-    const large = delta > 12 * 60 ? 1 : 0
+  function arcPath(startM, endM, rad) {
+    const p1 = toXY(minsToAngle(startM), rad)
+    const p2 = toXY(minsToAngle(endM),   rad)
+    const span = endM - startM
+    const large = (span > 12 * 60 || span < 0) ? 1 : 0
     return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${large} 1 ${p2.x} ${p2.y}`
   }
 
-  // Visarnas vinklar
   const secDeg  = ss * 6
   const minDeg  = mm * 6 + ss * 0.1
   const hourDeg = (hh % 12) * 30 + mm * 0.5
 
   function handEnd(deg, len) {
-    const rad = ((deg - 90) * Math.PI) / 180
-    return { x: cx + len * Math.cos(rad), y: cy + len * Math.sin(rad) }
+    const a = ((deg - 90) * Math.PI) / 180
+    return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) }
   }
 
-  const hEnd = handEnd(hourDeg, r * 0.52)
-  const mEnd = handEnd(minDeg,  r * 0.70)
-  const sEnd = handEnd(secDeg,  r * 0.80)
+  const hEnd = handEnd(hourDeg, r * 0.50)
+  const mEnd = handEnd(minDeg,  r * 0.68)
+  const sEnd = handEnd(secDeg,  r * 0.78)
 
-  const arcColor = open ? 'rgba(16,185,129,0.55)' : 'rgba(239,68,68,0.35)'
   const arcStroke = open ? '#10b981' : '#ef4444'
 
-  // Timmarkörerna (12 st)
   const ticks = Array.from({ length: 12 }, (_, i) => {
     const a = (i * 30 - 90) * Math.PI / 180
-    const inner = r * 0.82, outer = r * 0.95
+    const inner = r * (i % 3 === 0 ? 0.78 : 0.84)
+    const outer = r * 0.94
     return {
       x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a),
       x2: cx + outer * Math.cos(a), y2: cy + outer * Math.sin(a),
+      major: i % 3 === 0,
     }
   })
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Urtavla */}
-        <circle cx={cx} cy={cy} r={r} fill="var(--bg3)" stroke="var(--border2)" strokeWidth={1.5} />
+  // Lokal tidssträng (HH:MM) att visa under klockan
+  const localTimeStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`
 
-        {/* Sessions-båge (subtil färgad arc längs kanten) */}
-        {closeMins !== openMins && (
-          <path
-            d={arcPath(openMins, closeMins, r - 2)}
-            fill="none"
-            stroke={arcStroke}
-            strokeWidth={4}
-            strokeLinecap="round"
-            opacity={0.7}
-          />
-        )}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ filter: open ? 'drop-shadow(0 0 6px rgba(16,185,129,0.2))' : 'none' }}>
+        {/* Urtavla */}
+        <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.4)" stroke="var(--border2)" strokeWidth={1.5} />
+
+        {/* Sessionsbåge längs kanten */}
+        <path
+          d={arcPath(openMins, closeMins, r - 2.5)}
+          fill="none"
+          stroke={arcStroke}
+          strokeWidth={5}
+          strokeLinecap="round"
+          opacity={open ? 0.8 : 0.3}
+        />
 
         {/* Timmarkeringar */}
         {ticks.map((t, i) => (
           <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-            stroke="var(--text4)" strokeWidth={i % 3 === 0 ? 1.5 : 0.8} />
+            stroke={t.major ? 'var(--text3)' : 'var(--text4)'}
+            strokeWidth={t.major ? 1.8 : 0.9} />
         ))}
 
         {/* Timvisare */}
         <line x1={cx} y1={cy} x2={hEnd.x} y2={hEnd.y}
-          stroke="var(--text)" strokeWidth={2.5} strokeLinecap="round" />
+          stroke="var(--text)" strokeWidth={3} strokeLinecap="round" />
 
         {/* Minutvisare */}
         <line x1={cx} y1={cy} x2={mEnd.x} y2={mEnd.y}
-          stroke="var(--text2)" strokeWidth={1.8} strokeLinecap="round" />
+          stroke="var(--text2)" strokeWidth={2} strokeLinecap="round" />
 
         {/* Sekundvisare */}
         <line x1={cx} y1={cy} x2={sEnd.x} y2={sEnd.y}
-          stroke={open ? '#10b981' : '#ef4444'} strokeWidth={1} strokeLinecap="round" />
+          stroke={open ? '#10b981' : '#ef4444'} strokeWidth={1.2} strokeLinecap="round" />
 
         {/* Mittpunkt */}
-        <circle cx={cx} cy={cy} r={2.5} fill={open ? '#10b981' : '#ef4444'} />
+        <circle cx={cx} cy={cy} r={3} fill={open ? '#10b981' : '#ef4444'} />
       </svg>
 
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', letterSpacing: 0.3 }}>
+      {/* Etikett */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3, textAlign: 'center' }}>
         {session.flag} {session.label}
       </div>
+
+      {/* Lokal tid */}
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text3)' }}>
+        {localTimeStr}
+      </div>
+
+      {/* Status-badge */}
       <div style={{
-        fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
-        background: open ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)',
+        fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
+        background: open ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
         color: open ? '#10b981' : '#ef4444',
-        letterSpacing: 0.5,
+        letterSpacing: 0.6,
+        border: `1px solid ${open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.2)'}`,
       }}>
         {open ? '● ÖPPEN' : '○ STÄNGD'}
       </div>
@@ -146,7 +161,7 @@ function AnalogClock({ session, nowUtc }) {
   )
 }
 
-// ── SessionsKlockor – hämtar tid varje sekund ──────────────────────────────────
+// ── SessionClocks – uppdateras varje sekund ────────────────────────────────────
 function SessionClocks() {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -154,49 +169,10 @@ function SessionClocks() {
     return () => clearInterval(t)
   }, [])
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', justifyContent: 'center' }}>
       {SESSIONS.map(s => <AnalogClock key={s.label} session={s} nowUtc={now} />)}
     </div>
   )
-}
-
-function useNextSession() {
-  const [info, setInfo] = useState({ label: '', countdown: '' })
-  useEffect(() => {
-    function calc() {
-      const now = new Date()
-      const utcH = now.getUTCHours(), utcM = now.getUTCMinutes(), utcD = now.getUTCDay()
-      const isWeekend = utcD === 0 || utcD === 6
-      const sessions = [{ label: 'London', utcHour: 8, utcMin: 0 }, { label: 'New York', utcHour: 13, utcMin: 30 }]
-      const nowMins = utcH * 60 + utcM
-      let nextSession = null, minsUntil = Infinity
-      for (const s of sessions) {
-        const sMins = s.utcHour * 60 + s.utcMin
-        let diff = sMins - nowMins
-        if (diff < 0) diff += 24 * 60
-        if (diff < minsUntil) { minsUntil = diff; nextSession = s }
-      }
-      if (isWeekend) {
-        const daysUntilMon = utcD === 6 ? 2 : 1
-        return { label: 'London måndag', countdown: `${daysUntilMon}d ${8 - utcH}h` }
-      }
-      const h = Math.floor(minsUntil / 60), m = minsUntil % 60
-      const isOpen = sessions.some(s => {
-        const sMins = s.utcHour * 60 + s.utcMin
-        const eMins = sMins + (s.label === 'London' ? 210 : 180)
-        return nowMins >= sMins && nowMins < eMins
-      })
-      return {
-        label: isOpen ? (nowMins < 13 * 60 + 30 ? 'London öppen' : 'New York öppen') : `${nextSession?.label} öppnar om`,
-        countdown: isOpen ? '' : `${h}h ${m}m`,
-        isOpen,
-      }
-    }
-    setInfo(calc())
-    const t = setInterval(() => setInfo(calc()), 60000)
-    return () => clearInterval(t)
-  }, [])
-  return info
 }
 
 export default function Dashboard({ onNavigate }) {
@@ -271,36 +247,42 @@ export default function Dashboard({ onNavigate }) {
       id: 'welcome', title: 'Välkommen', span: 2,
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
-          <div className="card-body" style={{ paddingTop: 20, paddingBottom: 20 }}>
-            {/* Rad 1: hälsning + statistik */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 4 }}>Hej, {effectiveDisplayName}! 👋</div>
-                <div style={{ fontSize: 13, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
+          <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
+
+            {/* Enda raden: hälsning | statistik | klockor */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+
+              {/* Vänster: namn + datum */}
+              <div style={{ minWidth: 160 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
+                  Hej, {effectiveDisplayName}! 👋
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
-              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Total R</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: totalR >= 0 ? 'var(--green)' : 'var(--red)' }}>{totalR >= 0 ? '+' : ''}{totalR.toFixed(2)}R</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Win Rate</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' }}>{(winRate * 100).toFixed(1)}%</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Trades</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{trades.length}</div>
-                </div>
+
+              {/* Mitten: nyckeltal */}
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Total R', value: (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R', color: totalR >= 0 ? 'var(--green)' : 'var(--red)' },
+                  { label: 'Win Rate', value: (winRate * 100).toFixed(1) + '%', color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' },
+                  { label: 'Trades', value: trades.length, color: 'var(--text)' },
+                  { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '∞', color: pf >= 1.5 ? 'var(--accent)' : pf >= 1 ? 'var(--green)' : 'var(--red)' },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{s.label}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Höger: klockor – tar resten av utrymmet och justeras till höger */}
+              <div style={{ marginLeft: 'auto' }}>
+                <SessionClocks />
               </div>
             </div>
 
-            {/* Rad 2: sessionsklockor */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginBottom: 16 }}>
-              <SessionClocks />
-            </div>
-
-            {/* Rad 3: knappar */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* Knappar */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>✅ Checklist</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
