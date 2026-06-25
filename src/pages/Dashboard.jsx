@@ -19,53 +19,61 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-// ── Sessionsdefinitioner (UTC) ─────────────────────────────────────────────────
-// Tider baserade på faktiska handelssessioner:
-// Asia/Tokyo:  02:00–09:00 UTC  (Tokyo open kl 09:00 JST = 00:00 UTC, men likvid handel 02-09)
-// London:      08:00–16:30 UTC
-// New York:    13:30–20:00 UTC
+// ── Sessionsdefinitioner i LOKAL tid för respektive stad ──────────────────────
+// Öppet/stängt avgörs av lokal tid i varje stads tidszon – inga UTC-omräkningar.
+// London:   08:00–16:30 lokal tid (Europe/London)
+// New York: 09:30–16:00 lokal tid (America/New_York) – NYSE/futures
+// Tokyo:    09:00–15:30 lokal tid (Asia/Tokyo) – TSE, men FX/futures 00:00–06:00 lokal → vi visar TSE-tider
 const SESSIONS = [
   { label: 'London',   openH: 8,  openM: 0,  closeH: 16, closeM: 30, tz: 'Europe/London',    flag: '🇬🇧' },
-  { label: 'New York', openH: 13, openM: 30, closeH: 20, closeM: 0,  tz: 'America/New_York', flag: '🇺🇸' },
-  { label: 'Asia',     openH: 0,  openM: 0,  closeH: 9,  closeM: 0,  tz: 'Asia/Tokyo',       flag: '🇯🇵' },
+  { label: 'New York', openH: 9,  openM: 30, closeH: 16, closeM: 0,  tz: 'America/New_York', flag: '🇺🇸' },
+  { label: 'Tokyo',    openH: 9,  openM: 0,  closeH: 15, closeM: 30, tz: 'Asia/Tokyo',       flag: '🇯🇵' },
 ]
 
-function isSessionOpen(session, nowUtcMins) {
-  const open  = session.openH  * 60 + session.openM
-  const close = session.closeH * 60 + session.closeM
-  if (close > open) return nowUtcMins >= open && nowUtcMins < close
-  // wraps midnight (Asia: 00:00–09:00 wraps inte, men lägg in stöd ändå)
-  return nowUtcMins >= open || nowUtcMins < close
+// Hämtar H och M i en given tidszon direkt från Intl – helt korrekt, inga omräkningar
+function getLocalHM(date, tz) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(date)
+  const h = parseInt(parts.find(p => p.type === 'hour').value)
+  const m = parseInt(parts.find(p => p.type === 'minute').value)
+  const s = parseInt(parts.find(p => p.type === 'second').value)
+  return { h, m, s }
+}
+
+function isSessionOpen(session, date) {
+  const { h, m } = getLocalHM(date, session.tz)
+  const nowM  = h * 60 + m
+  const openM = session.openH * 60 + session.openM
+  const clsM  = session.closeH * 60 + session.closeM
+  return nowM >= openM && nowM < clsM
 }
 
 // ── Analog klocka ──────────────────────────────────────────────────────────────
-function AnalogClock({ session, nowUtc }) {
-  const SIZE = 90
+function AnalogClock({ session, now, userTz }) {
+  const SIZE = 100
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 4
 
-  // Lokal tid för sessionens tidszon
-  const localStr = nowUtc.toLocaleTimeString('sv-SE', {
-    timeZone: session.tz, hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
-  const [hStr, mStr, sStr] = localStr.split(':')
-  const hh = parseInt(hStr), mm = parseInt(mStr), ss = parseInt(sStr)
+  const { h: hh, m: mm, s: ss } = getLocalHM(now, session.tz)
+  const open = isSessionOpen(session, now)
 
-  const nowUtcMins = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes()
-  const open = isSessionOpen(session, nowUtcMins)
+  // Sessionstidens båge – i 12h-format på urtavlan
+  // Vi visar en båge från open till close i "12h-cirkelkoordinater"
+  const openMins12  = (session.openH  % 12) * 60 + session.openM
+  const closeMins12 = (session.closeH % 12) * 60 + session.closeM
 
-  const openMins  = session.openH  * 60 + session.openM
-  const closeMins = session.closeH * 60 + session.closeM
-
-  function minsToAngle(m) { return (m / (24 * 60)) * 360 - 90 }
+  function minsToAngle12(m) { return (m / (12 * 60)) * 360 - 90 }
   function toXY(angle, rad) {
     const a = (angle * Math.PI) / 180
     return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) }
   }
-  function arcPath(startM, endM, rad) {
-    const p1 = toXY(minsToAngle(startM), rad)
-    const p2 = toXY(minsToAngle(endM),   rad)
-    const span = endM - startM
-    const large = (span > 12 * 60 || span < 0) ? 1 : 0
+  function arcPath12(startM, endM, rad) {
+    const a1 = minsToAngle12(startM), a2 = minsToAngle12(endM)
+    const p1 = toXY(a1, rad), p2 = toXY(a2, rad)
+    // Spann i 12h-minuter
+    let span = endM - startM
+    if (span <= 0) span += 12 * 60
+    const large = span > 6 * 60 ? 1 : 0
     return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${large} 1 ${p2.x} ${p2.y}`
   }
 
@@ -79,15 +87,15 @@ function AnalogClock({ session, nowUtc }) {
   }
 
   const hEnd = handEnd(hourDeg, r * 0.50)
-  const mEnd = handEnd(minDeg,  r * 0.68)
-  const sEnd = handEnd(secDeg,  r * 0.78)
+  const mEnd = handEnd(minDeg,  r * 0.66)
+  const sEnd = handEnd(secDeg,  r * 0.76)
 
   const arcStroke = open ? '#10b981' : '#ef4444'
 
   const ticks = Array.from({ length: 12 }, (_, i) => {
     const a = (i * 30 - 90) * Math.PI / 180
-    const inner = r * (i % 3 === 0 ? 0.78 : 0.84)
-    const outer = r * 0.94
+    const inner = r * (i % 3 === 0 ? 0.76 : 0.83)
+    const outer = r * 0.93
     return {
       x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a),
       x2: cx + outer * Math.cos(a), y2: cy + outer * Math.sin(a),
@@ -95,61 +103,71 @@ function AnalogClock({ session, nowUtc }) {
     }
   })
 
-  // Lokal tidssträng (HH:MM) att visa under klockan
-  const localTimeStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`
+  // Stadens lokala tid i siffror
+  const cityTime = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`
+
+  // Användarens egna lokala tid
+  const { h: uh, m: um, s: us } = getLocalHM(now, userTz)
+  const userTime = `${String(uh).padStart(2,'0')}:${String(um).padStart(2,'0')}:${String(us).padStart(2,'0')}`
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ filter: open ? 'drop-shadow(0 0 6px rgba(16,185,129,0.2))' : 'none' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
+        style={{ filter: open ? 'drop-shadow(0 0 8px rgba(16,185,129,0.25))' : 'none' }}>
         {/* Urtavla */}
-        <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.4)" stroke="var(--border2)" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.45)" stroke="var(--border2)" strokeWidth={1.5} />
 
         {/* Sessionsbåge längs kanten */}
         <path
-          d={arcPath(openMins, closeMins, r - 2.5)}
+          d={arcPath12(openMins12, closeMins12, r - 3)}
           fill="none"
           stroke={arcStroke}
-          strokeWidth={5}
+          strokeWidth={6}
           strokeLinecap="round"
-          opacity={open ? 0.8 : 0.3}
+          opacity={open ? 0.85 : 0.25}
         />
 
         {/* Timmarkeringar */}
         {ticks.map((t, i) => (
           <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
             stroke={t.major ? 'var(--text3)' : 'var(--text4)'}
-            strokeWidth={t.major ? 1.8 : 0.9} />
+            strokeWidth={t.major ? 2 : 1} />
         ))}
 
         {/* Timvisare */}
         <line x1={cx} y1={cy} x2={hEnd.x} y2={hEnd.y}
-          stroke="var(--text)" strokeWidth={3} strokeLinecap="round" />
+          stroke="var(--text)" strokeWidth={3.5} strokeLinecap="round" />
 
         {/* Minutvisare */}
         <line x1={cx} y1={cy} x2={mEnd.x} y2={mEnd.y}
-          stroke="var(--text2)" strokeWidth={2} strokeLinecap="round" />
+          stroke="var(--text2)" strokeWidth={2.5} strokeLinecap="round" />
 
         {/* Sekundvisare */}
         <line x1={cx} y1={cy} x2={sEnd.x} y2={sEnd.y}
-          stroke={open ? '#10b981' : '#ef4444'} strokeWidth={1.2} strokeLinecap="round" />
+          stroke={open ? '#10b981' : '#ef4444'} strokeWidth={1.5} strokeLinecap="round" />
 
         {/* Mittpunkt */}
-        <circle cx={cx} cy={cy} r={3} fill={open ? '#10b981' : '#ef4444'} />
+        <circle cx={cx} cy={cy} r={3.5} fill={open ? '#10b981' : '#ef4444'} />
       </svg>
 
-      {/* Etikett */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3, textAlign: 'center' }}>
+      {/* Stadsnamn */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>
         {session.flag} {session.label}
       </div>
 
-      {/* Lokal tid */}
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text3)' }}>
-        {localTimeStr}
+      {/* Stadens tid med sekunder */}
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>
+        {cityTime}
+      </div>
+
+      {/* Din lokala tid */}
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text4)' }}>
+        din tid: {userTime}
       </div>
 
       {/* Status-badge */}
       <div style={{
-        fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
+        fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
         background: open ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
         color: open ? '#10b981' : '#ef4444',
         letterSpacing: 0.6,
@@ -161,16 +179,20 @@ function AnalogClock({ session, nowUtc }) {
   )
 }
 
-// ── SessionClocks – uppdateras varje sekund ────────────────────────────────────
+// ── SessionClocks ──────────────────────────────────────────────────────────────
 function SessionClocks() {
   const [now, setNow] = useState(new Date())
+  // Hämta användarens tidszon direkt från webbläsaren
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
   return (
-    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', justifyContent: 'center' }}>
-      {SESSIONS.map(s => <AnalogClock key={s.label} session={s} nowUtc={now} />)}
+    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', justifyContent: 'center' }}>
+      {SESSIONS.map(s => <AnalogClock key={s.label} session={s} now={now} userTz={userTz} />)}
     </div>
   )
 }
@@ -248,8 +270,6 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-
-            {/* Enda raden: hälsning | statistik | klockor */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
 
               {/* Vänster: namn + datum */}
@@ -275,7 +295,7 @@ export default function Dashboard({ onNavigate }) {
                 ))}
               </div>
 
-              {/* Höger: klockor – tar resten av utrymmet och justeras till höger */}
+              {/* Höger: klockor */}
               <div style={{ marginLeft: 'auto' }}>
                 <SessionClocks />
               </div>
