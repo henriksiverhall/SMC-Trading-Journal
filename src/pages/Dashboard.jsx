@@ -25,14 +25,10 @@ const MARKET_SESSIONS = [
   { id: 'tokyo',  label: 'Tokyo',    flag: '🇯🇵', tz: 'Asia/Tokyo',       openH: 9,  openM: 0,  closeH: 15, closeM: 30 },
 ]
 
-// Instrument RTH-tider – alla i America/New_York lokal tid
-// Guld (XAU):     08:20–13:30 ET (COMEX RTH)
-// Olja (CL):      09:00–14:30 ET (NYMEX RTH)
-// ES/NQ/YM:       09:30–16:15 ET (CME RTH)
 const INSTRUMENTS = [
-  { id: 'xau',  label: 'Guld',      icon: '🥇', tz: 'America/New_York', openH: 8,  openM: 20, closeH: 13, closeM: 30 },
-  { id: 'cl',   label: 'Olja',      icon: '🛢️', tz: 'America/New_York', openH: 9,  openM: 0,  closeH: 14, closeM: 30 },
-  { id: 'es',   label: 'ES/NQ/YM',  icon: '📈', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 15 },
+  { id: 'xau', label: 'Guld',     icon: '🥇', tz: 'America/New_York', openH: 8,  openM: 20, closeH: 13, closeM: 30 },
+  { id: 'cl',  label: 'Olja',     icon: '🛢️', tz: 'America/New_York', openH: 9,  openM: 0,  closeH: 14, closeM: 30 },
+  { id: 'es',  label: 'ES/NQ/YM', icon: '📈', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 15 },
 ]
 
 function getHMS(date, tz) {
@@ -65,6 +61,7 @@ function sessionStatus(session, now) {
 }
 
 // ── SVG-klocka ─────────────────────────────────────────────────────────────────
+// Använder var(--bg3) för urtavlan – fungerar i mörkt och ljust tema.
 function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   const SIZE = 110
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
@@ -111,7 +108,8 @@ function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
       style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
-      <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.5)" stroke="var(--border2)" strokeWidth={1.5} />
+      {/* var(--bg3) istället för rgba(0,0,0,0.5) – fungerar i båda teman */}
+      <circle cx={cx} cy={cy} r={r} fill="var(--bg3)" stroke="var(--border2)" strokeWidth={1.5} />
       {arcD && (
         <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round"
           opacity={isOpen ? 0.85 : 0.25} />
@@ -143,7 +141,7 @@ function LocalClock({ now, localTz }) {
       <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
-      <div style={{ fontSize: 9, color: 'var(--text4)' }}>{cityName}</div>
+      <div style={{ fontSize: 9, color: 'var(--text3)' }}>{cityName}</div>
     </div>
   )
 }
@@ -164,7 +162,8 @@ function MarketClock({ session, now }) {
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 10, color: 'var(--text4)', marginBottom: 2 }}>
+        {/* Etikett i var(--text3) – synlig i båda teman */}
+        <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 3 }}>
           {status.isOpen ? 'Stänger om' : 'Öppnar om'}
         </div>
         <div style={{
@@ -172,7 +171,7 @@ function MarketClock({ session, now }) {
           color: statusColor, letterSpacing: 1,
           background: status.isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)',
           padding: '3px 10px', borderRadius: 6,
-          border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.2)'}`,
+          border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
         }}>
           {status.countdown}
         </div>
@@ -199,14 +198,16 @@ function SessionClocks() {
   return (
     <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <LocalClock now={now} localTz={localTz} />
-      <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', margin: '0 2px' }} />
+      {/* Separator – var(--border) fungerar i båda teman */}
+      <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 2px' }} />
       {MARKET_SESSIONS.map(s => <MarketClock key={s.id} session={s} now={now} />)}
     </div>
   )
 }
 
-// ── Instrumentnedräkningar (Guld / Olja / ES·NQ·YM) ───────────────────────────
-// Kompakt ruta till höger om klockorna. Bara nedräkning, ingen analog klocka.
+// ── Instrumentnedräkningar ─────────────────────────────────────────────────────
+// var(--bg3) och var(--border) för tema-kompatibilitet.
+// var(--text3) på rubriker – tydlig i både mörkt och ljust.
 function InstrumentCountdowns() {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -216,21 +217,23 @@ function InstrumentCountdowns() {
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', gap: 8,
-      background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--r)',
-      border: '1px solid var(--border)', padding: '10px 14px',
-      minWidth: 148,
+      display: 'flex', flexDirection: 'column', gap: 0,
+      background: 'var(--bg3)', borderRadius: 'var(--r)',
+      border: '1px solid var(--border2)', padding: '10px 14px',
+      minWidth: 152,
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 }}>
+      {/* Rubrik – var(--text3) synlig i båda teman */}
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
         RTH – New York ET
       </div>
-      {INSTRUMENTS.map(inst => {
+      {INSTRUMENTS.map((inst, idx) => {
         const status = sessionStatus(inst, now)
         const color = status.isOpen ? '#10b981' : '#ef4444'
         return (
           <div key={inst.id} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-            padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            padding: '7px 0',
+            borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
           }}>
             {/* Ikon + namn */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
@@ -242,8 +245,9 @@ function InstrumentCountdowns() {
               <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>
                 {status.countdown}
               </div>
-              <div style={{ fontSize: 9, color, opacity: 0.8, letterSpacing: 0.4 }}>
-                {status.isOpen ? '● öppen' : '○ stängd'}
+              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', letterSpacing: 0.3 }}>
+                <span style={{ color }}>{status.isOpen ? '●' : '○'}</span>
+                {' '}{status.isOpen ? 'öppen' : 'stängd'}
               </div>
             </div>
           </div>
@@ -319,7 +323,7 @@ export default function Dashboard({ onNavigate }) {
   const equityData = withR.map((t, i) => { cumR += t.result || 0; return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) } })
   const recent = [...trades].reverse().slice(0, 5)
   const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const sep = <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+  const sep = <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0 }} />
 
   const widgets = [
     {
@@ -327,7 +331,6 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            {/* Layout: [Namn+datum] | sep | [Statistik flex] | sep | [Klockor] | sep | [Instrument] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
@@ -350,12 +353,10 @@ export default function Dashboard({ onNavigate }) {
                 ))}
               </div>
               {sep}
-              {/* Klockor */}
               <div style={{ flexShrink: 0 }}>
                 <SessionClocks />
               </div>
               {sep}
-              {/* Instrument-nedräkningar */}
               <div style={{ flexShrink: 0 }}>
                 <InstrumentCountdowns />
               </div>
