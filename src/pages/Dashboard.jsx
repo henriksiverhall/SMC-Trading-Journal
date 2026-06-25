@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatR } from '../lib/constants'
+import { formatR, WORKER_URL } from '../lib/constants'
 import { normalizeTrades } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
@@ -31,6 +31,12 @@ const INSTRUMENTS = [
   { id: 'es',  label: 'ES/NQ/YM', icon: '📈', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 15 },
 ]
 
+const IMPACT_STYLE = {
+  High:   { color: '#ef4444', dot: '🔴' },
+  Medium: { color: '#f59e0b', dot: '🟠' },
+  Low:    { color: '#6b7280', dot: '🟡' },
+}
+
 function getHMS(date, tz) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
@@ -48,80 +54,38 @@ function sessionStatus(session, now) {
   const openSecs = session.openH  * 3600 + session.openM  * 60
   const clsSecs  = session.closeH * 3600 + session.closeM * 60
   const isOpen   = curSecs >= openSecs && curSecs < clsSecs
-  let secsTo = isOpen
-    ? clsSecs - curSecs
-    : curSecs < openSecs
-      ? openSecs - curSecs
-      : 24 * 3600 - curSecs + openSecs
-  const hh = Math.floor(secsTo / 3600)
-  const mm = Math.floor((secsTo % 3600) / 60)
-  const ss = secsTo % 60
+  let secsTo = isOpen ? clsSecs - curSecs : curSecs < openSecs ? openSecs - curSecs : 24 * 3600 - curSecs + openSecs
+  const hh = Math.floor(secsTo / 3600), mm = Math.floor((secsTo % 3600) / 60), ss = secsTo % 60
   const pad = n => String(n).padStart(2, '0')
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
 function ClockFace({ h, m, s, accentColor, session, isOpen }) {
-  const SIZE = 110
-  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
-
-  function toAngle(hour, min) {
-    return (((hour % 12) * 60 + min) / (12 * 60)) * 360 - 90
-  }
-  function pt(deg, rad) {
-    const a = (deg * Math.PI) / 180
-    return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) }
-  }
+  const SIZE = 110, cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
+  function toAngle(hour, min) { return (((hour % 12) * 60 + min) / (12 * 60)) * 360 - 90 }
+  function pt(deg, rad) { const a = (deg * Math.PI) / 180; return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) } }
   function sessionArc(rad) {
     if (!session) return null
-    const a1 = toAngle(session.openH, session.openM)
-    const a2 = toAngle(session.closeH, session.closeM)
+    const a1 = toAngle(session.openH, session.openM), a2 = toAngle(session.closeH, session.closeM)
     const p1 = pt(a1, rad), p2 = pt(a2, rad)
-    let span = a2 - a1
-    if (span < 0) span += 360
-    if (span > 270) return null
+    let span = a2 - a1; if (span < 0) span += 360; if (span > 270) return null
     return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${span > 180 ? 1 : 0} 1 ${p2.x} ${p2.y}`
   }
-
-  const arcD = sessionArc(r - 4)
-  const sessionColor = isOpen ? '#10b981' : '#ef4444'
-  const sDeg = s * 6
-  const mDeg = m * 6 + s * 0.1
-  const hDeg = (h % 12) * 30 + m * 0.5
-
-  function tip(deg, len) {
-    const a = ((deg - 90) * Math.PI) / 180
-    return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) }
-  }
-
+  const arcD = sessionArc(r - 4), sessionColor = isOpen ? '#10b981' : '#ef4444'
+  const sDeg = s * 6, mDeg = m * 6 + s * 0.1, hDeg = (h % 12) * 30 + m * 0.5
+  function tip(deg, len) { const a = ((deg - 90) * Math.PI) / 180; return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) } }
   const ticks = Array.from({ length: 12 }, (_, i) => {
-    const a = (i * 30 - 90) * Math.PI / 180
-    const inner = r * (i % 3 === 0 ? 0.74 : 0.83)
-    return {
-      x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a),
-      x2: cx + r * 0.93 * Math.cos(a), y2: cy + r * 0.93 * Math.sin(a),
-      major: i % 3 === 0,
-    }
+    const a = (i * 30 - 90) * Math.PI / 180, inner = r * (i % 3 === 0 ? 0.74 : 0.83)
+    return { x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a), x2: cx + r * 0.93 * Math.cos(a), y2: cy + r * 0.93 * Math.sin(a), major: i % 3 === 0 }
   })
-
   return (
-    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
-      style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
+    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
       <circle cx={cx} cy={cy} r={r} fill="var(--bg3)" stroke="var(--border2)" strokeWidth={1.5} />
-      {arcD && (
-        <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round"
-          opacity={isOpen ? 0.85 : 0.25} />
-      )}
-      {ticks.map((t, i) => (
-        <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-          stroke={t.major ? 'var(--text3)' : 'var(--text4)'}
-          strokeWidth={t.major ? 2 : 1} />
-      ))}
-      <line x1={cx} y1={cy} x2={tip(hDeg, r * 0.48).x} y2={tip(hDeg, r * 0.48).y}
-        stroke="var(--text)" strokeWidth={4} strokeLinecap="round" />
-      <line x1={cx} y1={cy} x2={tip(mDeg, r * 0.65).x} y2={tip(mDeg, r * 0.65).y}
-        stroke="var(--text2)" strokeWidth={2.8} strokeLinecap="round" />
-      <line x1={cx} y1={cy} x2={tip(sDeg, r * 0.76).x} y2={tip(sDeg, r * 0.76).y}
-        stroke={accentColor} strokeWidth={1.5} strokeLinecap="round" />
+      {arcD && <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round" opacity={isOpen ? 0.85 : 0.25} />}
+      {ticks.map((t, i) => <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={t.major ? 'var(--text3)' : 'var(--text4)'} strokeWidth={t.major ? 2 : 1} />)}
+      <line x1={cx} y1={cy} x2={tip(hDeg, r * 0.48).x} y2={tip(hDeg, r * 0.48).y} stroke="var(--text)" strokeWidth={4} strokeLinecap="round" />
+      <line x1={cx} y1={cy} x2={tip(mDeg, r * 0.65).x} y2={tip(mDeg, r * 0.65).y} stroke="var(--text2)" strokeWidth={2.8} strokeLinecap="round" />
+      <line x1={cx} y1={cy} x2={tip(sDeg, r * 0.76).x} y2={tip(sDeg, r * 0.76).y} stroke={accentColor} strokeWidth={1.5} strokeLinecap="round" />
       <circle cx={cx} cy={cy} r={3.5} fill={accentColor} />
     </svg>
   )
@@ -130,15 +94,12 @@ function ClockFace({ h, m, s, accentColor, session, isOpen }) {
 function LocalClock({ now, localTz }) {
   const { h, m, s } = getHMS(now, localTz)
   const pad = n => String(n).padStart(2, '0')
-  const cityName = localTz.split('/').pop().replace(/_/g, ' ')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <ClockFace h={h} m={m} s={s} accentColor="var(--accent)" />
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>🕐 Din tid</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
-        {pad(h)}:{pad(m)}:{pad(s)}
-      </div>
-      <div style={{ fontSize: 9, color: 'var(--text3)' }}>{cityName}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>{pad(h)}:{pad(m)}:{pad(s)}</div>
+      <div style={{ fontSize: 9, color: 'var(--text3)' }}>{localTz.split('/').pop().replace(/_/g, ' ')}</div>
     </div>
   )
 }
@@ -148,38 +109,16 @@ function MarketClock({ session, now }) {
   const status = sessionStatus(session, now)
   const pad = n => String(n).padStart(2, '0')
   const statusColor = status.isOpen ? '#10b981' : '#ef4444'
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <ClockFace h={h} m={m} s={s} accentColor={statusColor} session={session} isOpen={status.isOpen} />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>
-        {session.flag} {session.label}
-      </div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
-        {pad(h)}:{pad(m)}:{pad(s)}
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>{session.flag} {session.label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>{pad(h)}:{pad(m)}:{pad(s)}</div>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 3 }}>
-          {status.isOpen ? 'Stänger om' : 'Öppnar om'}
-        </div>
-        <div style={{
-          fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 800,
-          color: statusColor, letterSpacing: 1,
-          background: status.isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)',
-          padding: '3px 10px', borderRadius: 6,
-          border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
-        }}>
-          {status.countdown}
-        </div>
+        <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 3 }}>{status.isOpen ? 'Stänger om' : 'Öppnar om'}</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 800, color: statusColor, letterSpacing: 1, background: status.isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)', padding: '3px 10px', borderRadius: 6, border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}` }}>{status.countdown}</div>
       </div>
-      <div style={{
-        fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-        background: status.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
-        color: statusColor, letterSpacing: 0.7,
-        border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.25)'}`,
-      }}>
-        {status.isOpen ? '● ÖPPEN' : '○ STÄNGD'}
-      </div>
+      <div style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: status.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)', color: statusColor, letterSpacing: 0.7, border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.25)'}` }}>{status.isOpen ? '● ÖPPEN' : '○ STÄNGD'}</div>
     </div>
   )
 }
@@ -187,10 +126,7 @@ function MarketClock({ session, now }) {
 function SessionClocks() {
   const [now, setNow] = useState(new Date())
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   return (
     <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <LocalClock now={now} localTz={localTz} />
@@ -202,46 +138,96 @@ function SessionClocks() {
 
 function InstrumentCountdowns() {
   const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 0,
-      background: 'var(--bg3)', borderRadius: 'var(--r)',
-      border: '1px solid var(--border2)', padding: '10px 14px',
-      minWidth: 152,
-    }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
-        RTH – New York ET
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', padding: '10px 14px', minWidth: 152 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>RTH – New York ET</div>
       {INSTRUMENTS.map((inst, idx) => {
-        const status = sessionStatus(inst, now)
-        const color = status.isOpen ? '#10b981' : '#ef4444'
+        const status = sessionStatus(inst, now), color = status.isOpen ? '#10b981' : '#ef4444'
         return (
-          <div key={inst.id} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            padding: '7px 0',
-            borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
-          }}>
+          <div key={inst.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 0', borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
               <span style={{ fontSize: 13 }}>{inst.icon}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{inst.label}</span>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>
-                {status.countdown}
-              </div>
-              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', letterSpacing: 0.3 }}>
-                <span style={{ color }}>{status.isOpen ? '●' : '○'}</span>
-                {' '}{status.isOpen ? 'öppen' : 'stängd'}
-              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>{status.countdown}</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', letterSpacing: 0.3 }}><span style={{ color }}>{status.isOpen ? '●' : '○'}</span>{' '}{status.isOpen ? 'öppen' : 'stängd'}</div>
             </div>
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ── Kalender-widget: kompakt lista med dagens + kommande high/medium-impact events ──
+function CalendarWidget({ onNavigate }) {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showToday, setShowToday] = useState(true)
+  const today = new Date().toISOString().split('T')[0]
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/calendar?week=thisweek`)
+      .then(r => r.json())
+      .then(data => { setEvents(Array.isArray(data) ? data : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const highMedium = events.filter(e => e.impact === 'High' || e.impact === 'Medium')
+  const todayEvents = highMedium.filter(e => e.date?.split('T')[0] === today)
+  const upcomingEvents = highMedium.filter(e => e.date?.split('T')[0] > today).slice(0, 8)
+  const displayed = showToday ? todayEvents : upcomingEvents
+
+  function fmtTime(dateStr) {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+  }
+  function fmtDay(dateStr) {
+    return new Date(dateStr.split('T')[0] + 'T12:00:00Z').toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <div className="card" style={{ height: '100%' }}>
+      <div className="card-header">
+        <div className="card-title">📅 Ekonomisk kalender</div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <button onClick={() => setShowToday(true)}  className={`btn btn-sm ${showToday  ? 'btn-primary' : 'btn-ghost'}`}>Idag</button>
+          <button onClick={() => setShowToday(false)} className={`btn btn-sm ${!showToday ? 'btn-primary' : 'btn-ghost'}`}>Kommande</button>
+          <button onClick={() => onNavigate('calendar')} className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }}>Alla →</button>
+        </div>
+      </div>
+      <div className="card-body" style={{ padding: 0 }}>
+        {loading && <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>Laddar…</div>}
+        {!loading && displayed.length === 0 && (
+          <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>
+            {showToday ? 'Inga high/medium-impact nyheter idag.' : 'Inga kommande nyheter denna vecka.'}
+          </div>
+        )}
+        {!loading && displayed.map((ev, i) => {
+          const imp = IMPACT_STYLE[ev.impact] || IMPACT_STYLE.Low
+          const isToday = ev.date?.split('T')[0] === today
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 18px', borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              {/* Impact dot */}
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: imp.color, flexShrink: 0, display: 'inline-block' }} />
+              {/* Tid / Dag */}
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text4)', flexShrink: 0, width: isToday ? 40 : 80 }}>
+                {isToday ? fmtTime(ev.date) : fmtDay(ev.date)}
+              </div>
+              {/* Valuta */}
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', flexShrink: 0, width: 28 }}>{ev.country}</span>
+              {/* Namn */}
+              <span style={{ fontSize: 12, color: ev.impact === 'High' ? 'var(--text)' : 'var(--text2)', fontWeight: ev.impact === 'High' ? 600 : 400, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
+              {/* Forecast */}
+              {ev.forecast && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text4)', flexShrink: 0 }}>{ev.forecast}</span>}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -320,22 +306,14 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            {/* Layout: [Namn+datum] | mellanrum | [Klockor] | sep | [RTH] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flexShrink: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
-                  Hej, {effectiveDisplayName}! 👋
-                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>Hej, {effectiveDisplayName}! 👋</div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
-              {/* Klockor – marginLeft auto trycks mot höger */}
-              <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                <SessionClocks />
-              </div>
+              <div style={{ marginLeft: 'auto', flexShrink: 0 }}><SessionClocks /></div>
               {sep}
-              <div style={{ flexShrink: 0 }}>
-                <InstrumentCountdowns />
-              </div>
+              <div style={{ flexShrink: 0 }}><InstrumentCountdowns /></div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
@@ -343,21 +321,19 @@ export default function Dashboard({ onNavigate }) {
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>📓 Journal</button>
               {unreadBroadcast > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
-                  style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>
-                  ✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}
-                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}</button>
               )}
               {openThreads > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
-                  style={{ borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>
-                  🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}
-                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}</button>
               )}
             </div>
           </div>
         </div>
       )
+    },
+    {
+      id: 'calendar', title: 'Ekonomisk kalender',
+      content: <CalendarWidget onNavigate={onNavigate} />
     },
     {
       id: 'today', title: 'Idag',
