@@ -20,9 +20,19 @@ function CustomTooltip({ active, payload }) {
 }
 
 const MARKET_SESSIONS = [
-  { id: 'london', label: 'London',   flag: '\uD83C\uDDEC\uD83C\uDDE7', tz: 'Europe/London',    openH: 8,  openM: 0,  closeH: 16, closeM: 30 },
-  { id: 'ny',     label: 'New York', flag: '\uD83C\uDDFA\uD83C\uDDF8', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 0  },
-  { id: 'tokyo',  label: 'Tokyo',    flag: '\uD83C\uDDEF\uD83C\uDDF5', tz: 'Asia/Tokyo',       openH: 9,  openM: 0,  closeH: 15, closeM: 30 },
+  { id: 'london', label: 'London',   flag: '🇬🇧', tz: 'Europe/London',    openH: 8,  openM: 0,  closeH: 16, closeM: 30 },
+  { id: 'ny',     label: 'New York', flag: '🇺🇸', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 0  },
+  { id: 'tokyo',  label: 'Tokyo',    flag: '🇯🇵', tz: 'Asia/Tokyo',       openH: 9,  openM: 0,  closeH: 15, closeM: 30 },
+]
+
+// Instrument RTH-tider – alla i America/New_York lokal tid
+// Guld (XAU):     08:20–13:30 ET (COMEX RTH)
+// Olja (CL):      09:00–14:30 ET (NYMEX RTH)
+// ES/NQ/YM:       09:30–16:15 ET (CME RTH)
+const INSTRUMENTS = [
+  { id: 'xau',  label: 'Guld',      icon: '🥇', tz: 'America/New_York', openH: 8,  openM: 20, closeH: 13, closeM: 30 },
+  { id: 'cl',   label: 'Olja',      icon: '🛢️', tz: 'America/New_York', openH: 9,  openM: 0,  closeH: 14, closeM: 30 },
+  { id: 'es',   label: 'ES/NQ/YM',  icon: '📈', tz: 'America/New_York', openH: 9,  openM: 30, closeH: 16, closeM: 15 },
 ]
 
 function getHMS(date, tz) {
@@ -55,14 +65,12 @@ function sessionStatus(session, now) {
 }
 
 // ── SVG-klocka ─────────────────────────────────────────────────────────────────
-// Urtavlans kant är alltid neutral (var(--border2)) – aldrig status-färgad.
-// Sessionsbågen (tunn, 3px) visar öppen/stängd längs kanten.
 function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   const SIZE = 110
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
 
   function toAngle(hour, min) {
-    return ((( hour % 12) * 60 + min) / (12 * 60)) * 360 - 90
+    return (((hour % 12) * 60 + min) / (12 * 60)) * 360 - 90
   }
   function pt(deg, rad) {
     const a = (deg * Math.PI) / 180
@@ -75,16 +83,16 @@ function ClockFace({ h, m, s, accentColor, session, isOpen }) {
     const p1 = pt(a1, rad), p2 = pt(a2, rad)
     let span = a2 - a1
     if (span < 0) span += 360
-    if (span > 270) return null  // felaktig – rita inte
+    if (span > 270) return null
     return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${span > 180 ? 1 : 0} 1 ${p2.x} ${p2.y}`
   }
 
   const arcD = sessionArc(r - 4)
   const sessionColor = isOpen ? '#10b981' : '#ef4444'
-
   const sDeg = s * 6
   const mDeg = m * 6 + s * 0.1
   const hDeg = (h % 12) * 30 + m * 0.5
+
   function tip(deg, len) {
     const a = ((deg - 90) * Math.PI) / 180
     return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) }
@@ -103,12 +111,9 @@ function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
       style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
-      {/* Urtavla – alltid neutral kant */}
       <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.5)" stroke="var(--border2)" strokeWidth={1.5} />
-      {/* Sessionsbåge – tunn, längs kanten */}
       {arcD && (
-        <path d={arcD} fill="none"
-          stroke={sessionColor} strokeWidth={3} strokeLinecap="round"
+        <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round"
           opacity={isOpen ? 0.85 : 0.25} />
       )}
       {ticks.map((t, i) => (
@@ -134,7 +139,7 @@ function LocalClock({ now, localTz }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <ClockFace h={h} m={m} s={s} accentColor="var(--accent)" />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>\uD83D\uDD50 Din tid</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>🕐 Din tid</div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
@@ -151,20 +156,16 @@ function MarketClock({ session, now }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      {/* Sekundvisaren och mittpunkten får statusfärg, urtavlan neutral */}
       <ClockFace h={h} m={m} s={s} accentColor={statusColor} session={session} isOpen={status.isOpen} />
-
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>
         {session.flag} {session.label}
       </div>
-
       <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
-
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 10, color: 'var(--text4)', marginBottom: 2 }}>
-          {status.isOpen ? 'St\u00e4nger om' : '\u00d6ppnar om'}
+          {status.isOpen ? 'Stänger om' : 'Öppnar om'}
         </div>
         <div style={{
           fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 800,
@@ -176,14 +177,13 @@ function MarketClock({ session, now }) {
           {status.countdown}
         </div>
       </div>
-
       <div style={{
         fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
         background: status.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
         color: statusColor, letterSpacing: 0.7,
         border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.25)'}`,
       }}>
-        {status.isOpen ? '\u25cf \u00d6PPEN' : '\u25cb ST\u00c4NGD'}
+        {status.isOpen ? '● ÖPPEN' : '○ STÄNGD'}
       </div>
     </div>
   )
@@ -205,6 +205,54 @@ function SessionClocks() {
   )
 }
 
+// ── Instrumentnedräkningar (Guld / Olja / ES·NQ·YM) ───────────────────────────
+// Kompakt ruta till höger om klockorna. Bara nedräkning, ingen analog klocka.
+function InstrumentCountdowns() {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 8,
+      background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--r)',
+      border: '1px solid var(--border)', padding: '10px 14px',
+      minWidth: 148,
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 }}>
+        RTH – New York ET
+      </div>
+      {INSTRUMENTS.map(inst => {
+        const status = sessionStatus(inst, now)
+        const color = status.isOpen ? '#10b981' : '#ef4444'
+        return (
+          <div key={inst.id} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+          }}>
+            {/* Ikon + namn */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+              <span style={{ fontSize: 13 }}>{inst.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{inst.label}</span>
+            </div>
+            {/* Nedräkning + status */}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>
+                {status.countdown}
+              </div>
+              <div style={{ fontSize: 9, color, opacity: 0.8, letterSpacing: 0.4 }}>
+                {status.isOpen ? '● öppen' : '○ stängd'}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Dashboard({ onNavigate }) {
   const { user, userSettings, impersonating, unreadBroadcast, openThreads } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
@@ -221,9 +269,9 @@ export default function Dashboard({ onNavigate }) {
 
   if (loading) return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Dashboard" subtitle={impersonating ? `\uD83D\uDC41 Visar: ${impersonating.email}` : undefined} />
+      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Laddar\u2026</div>
+        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
       </div>
     </div>
   )
@@ -275,14 +323,15 @@ export default function Dashboard({ onNavigate }) {
 
   const widgets = [
     {
-      id: 'welcome', title: 'V\u00e4lkommen', span: 2,
+      id: 'welcome', title: 'Välkommen', span: 2,
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
+            {/* Layout: [Namn+datum] | sep | [Statistik flex] | sep | [Klockor] | sep | [Instrument] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
-                  Hej, {effectiveDisplayName}! \uD83D\uDC4B
+                  Hej, {effectiveDisplayName}! 👋
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
@@ -292,7 +341,7 @@ export default function Dashboard({ onNavigate }) {
                   { label: 'Total R', value: (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R', color: totalR >= 0 ? 'var(--green)' : 'var(--red)' },
                   { label: 'Win Rate', value: (winRate * 100).toFixed(1) + '%', color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' },
                   { label: 'Trades', value: trades.length, color: 'var(--text)' },
-                  { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '\u221e', color: pf >= 1.5 ? 'var(--accent)' : pf >= 1 ? 'var(--green)' : 'var(--red)' },
+                  { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '∞', color: pf >= 1.5 ? 'var(--accent)' : pf >= 1 ? 'var(--green)' : 'var(--red)' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{s.label}</div>
@@ -301,25 +350,31 @@ export default function Dashboard({ onNavigate }) {
                 ))}
               </div>
               {sep}
+              {/* Klockor */}
               <div style={{ flexShrink: 0 }}>
                 <SessionClocks />
+              </div>
+              {sep}
+              {/* Instrument-nedräkningar */}
+              <div style={{ flexShrink: 0 }}>
+                <InstrumentCountdowns />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>{String.fromCodePoint(0x2705)} Checklist</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>{String.fromCodePoint(0x1F4CA)} Analytics</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>{String.fromCodePoint(0x1F4D3)} Journal</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('checklist')}>✅ Checklist</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>📓 Journal</button>
               {unreadBroadcast > 0 && (
                 <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
                   style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>
-                  {String.fromCodePoint(0x2709, 0xFE0F)} {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}
+                  ✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}
                 </button>
               )}
               {openThreads > 0 && (
                 <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')}
                   style={{ borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>
-                  {String.fromCodePoint(0x1F3AB)} {openThreads} \u00f6ppet \u00e4rende{openThreads > 1 ? 'n' : ''}
+                  🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}
                 </button>
               )}
             </div>
@@ -331,10 +386,10 @@ export default function Dashboard({ onNavigate }) {
       id: 'today', title: 'Idag',
       content: (
         <div className="card" style={{ height: '100%' }}>
-          <div className="card-header"><div className="card-title">{String.fromCodePoint(0x1F4C5)} Idag</div></div>
+          <div className="card-header"><div className="card-title">📅 Idag</div></div>
           <div className="card-body">
             {todayTrades.length === 0 ? (
-              <div style={{ color: 'var(--text4)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Inga trades idag \u00e4n</div>
+              <div style={{ color: 'var(--text4)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Inga trades idag än</div>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
@@ -343,7 +398,7 @@ export default function Dashboard({ onNavigate }) {
                 </div>
                 {todayTrades.slice(-3).reverse().map(t => (
                   <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 12 }}>
-                    <span style={{ color: 'var(--text3)' }}>{t.symbol || '\u2014'} \u00b7 {t.time || ''}</span>
+                    <span style={{ color: 'var(--text3)' }}>{t.symbol || '—'} · {t.time || ''}</span>
                     <span className={t.result > 0 ? 'r-pos' : t.result < 0 ? 'r-neg' : 'r-neu'}>{formatR(t.result)}</span>
                   </div>
                 ))}
@@ -361,14 +416,14 @@ export default function Dashboard({ onNavigate }) {
           <div className="card-body">
             <div className="stats-grid">
               {[
-                { label: 'Trades', value: trades.length, sub: `${wins.length}V \u00b7 ${losses.length}F` },
+                { label: 'Trades', value: trades.length, sub: `${wins.length}V · ${losses.length}F` },
                 { label: 'Win Rate', value: (winRate * 100).toFixed(1) + '%', cls: winRate >= 0.5 ? 'positive' : 'negative' },
                 { label: 'Total R', value: (totalR > 0 ? '+' : '') + totalR.toFixed(2) + 'R', cls: totalR > 0 ? 'positive' : totalR < 0 ? 'negative' : '' },
-                { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '\u221e', cls: pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative' },
-                { label: 'Expectancy', value: expectancy != null ? (expectancy > 0 ? '+' : '') + expectancy + 'R' : '\u2014', cls: expectancy > 0 ? 'positive' : expectancy < 0 ? 'negative' : '', sub: 'per trade' },
+                { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '∞', cls: pf >= 1.5 ? 'accent' : pf >= 1 ? 'positive' : 'negative' },
+                { label: 'Expectancy', value: expectancy != null ? (expectancy > 0 ? '+' : '') + expectancy + 'R' : '—', cls: expectancy > 0 ? 'positive' : expectancy < 0 ? 'negative' : '', sub: 'per trade' },
                 { label: 'Max DD', value: maxDD > 0 ? '-' + maxDD.toFixed(2) + 'R' : '0.00R', cls: maxDD > 0 ? 'negative' : '' },
-                { label: 'Recovery Factor', value: recoveryFactor != null ? recoveryFactor : '\u2014', cls: recoveryFactor >= 2 ? 'positive' : recoveryFactor < 1 ? 'negative' : '', sub: 'netto/max DD' },
-                { label: 'L\u00e4ngsta svit', value: longestWin > 0 ? `${longestWin}V / ${longestLoss}F` : '\u2014', sub: 'vinst / f\u00f6rlust' },
+                { label: 'Recovery Factor', value: recoveryFactor != null ? recoveryFactor : '—', cls: recoveryFactor >= 2 ? 'positive' : recoveryFactor < 1 ? 'negative' : '', sub: 'netto/max DD' },
+                { label: 'Längsta svit', value: longestWin > 0 ? `${longestWin}V / ${longestLoss}F` : '—', sub: 'vinst / förlust' },
               ].map(s => (
                 <div key={s.label} className="stat-card">
                   <div className="stat-label">{s.label}</div>
@@ -388,7 +443,7 @@ export default function Dashboard({ onNavigate }) {
           <div className="card-header"><div className="card-title">Equity Curve (R)</div></div>
           <div className="card-body" style={{ paddingTop: 12 }}>
             {equityData.length < 2 ? (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>Logga minst 2 trades f\u00f6r att se equity curve</div>
+              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>Logga minst 2 trades för att se equity curve</div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={equityData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -410,20 +465,20 @@ export default function Dashboard({ onNavigate }) {
         <div className="card" style={{ height: '100%' }}>
           <div className="card-header">
             <div className="card-title">Senaste trades</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>Se alla \u2192</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>Se alla →</button>
           </div>
           {recent.length === 0 ? (
-            <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade \u00e4nnu.</div>
+            <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
           ) : recent.map(t => (
             <div key={t.id} style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'background 0.1s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <strong style={{ fontSize: 13, color: 'var(--text)' }}>{t.symbol || '\u2014'}</strong>
+                  <strong style={{ fontSize: 13, color: 'var(--text)' }}>{t.symbol || '—'}</strong>
                   {t.direction && <span className={`badge badge-${t.direction}`}>{t.direction}</span>}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{t.date} \u00b7 {t.strategy || '\u2014'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{t.date} · {t.strategy || '—'}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {t.outcome && <span className={`badge badge-${t.outcome}`}>{t.outcome}</span>}
@@ -438,17 +493,17 @@ export default function Dashboard({ onNavigate }) {
       id: 'streak', title: 'Streak & form',
       content: (
         <div className="card" style={{ height: '100%' }}>
-          <div className="card-header"><div className="card-title">{String.fromCodePoint(0x1F525)} Streak & Form</div></div>
+          <div className="card-header"><div className="card-title">🔥 Streak & Form</div></div>
           <div className="card-body">
             <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
               <div>
                 <div className="stat-label" style={{ marginBottom: 4 }}>Nuvarande streak</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: streakType === 'W' ? 'var(--green)' : streakType === 'L' ? 'var(--red)' : 'var(--text3)' }}>
-                  {streak > 0 ? `${streak} ${streakType === 'W' ? 'vinster' : 'f\u00f6rluster'}` : '\u2014'}
+                  {streak > 0 ? `${streak} ${streakType === 'W' ? 'vinster' : 'förluster'}` : '—'}
                 </div>
               </div>
               <div>
-                <div className="stat-label" style={{ marginBottom: 4 }}>L\u00e4ngsta</div>
+                <div className="stat-label" style={{ marginBottom: 4 }}>Längsta</div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.8 }}>
                   <span style={{ color: 'var(--green)' }}>{longestWin}V</span> / <span style={{ color: 'var(--red)' }}>{longestLoss}F</span>
                 </div>
@@ -456,7 +511,7 @@ export default function Dashboard({ onNavigate }) {
             </div>
             <div className="stat-label" style={{ marginBottom: 6 }}>Senaste 10 trades</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {last10.length === 0 ? <span style={{ color: 'var(--text4)', fontSize: 12 }}>Inga trades \u00e4n</span>
+              {last10.length === 0 ? <span style={{ color: 'var(--text4)', fontSize: 12 }}>Inga trades än</span>
                 : last10.map((t, i) => (
                   <div key={i} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: t.outcome === 'W' ? 'var(--green-dim)' : t.outcome === 'L' ? 'var(--red-dim)' : 'var(--bg4)', color: t.outcome === 'W' ? 'var(--green)' : t.outcome === 'L' ? 'var(--red)' : 'var(--text3)' }}>{t.outcome}</div>
                 ))}
@@ -469,7 +524,7 @@ export default function Dashboard({ onNavigate }) {
 
   return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Dashboard" subtitle={impersonating ? `\uD83D\uDC41 Visar: ${impersonating.email}` : undefined} actions={
+      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} actions={
         <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Log Trade</button>
       } />
       <div className="page-content">
