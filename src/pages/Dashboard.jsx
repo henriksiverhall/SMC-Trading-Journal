@@ -60,8 +60,6 @@ function sessionStatus(session, now) {
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-// ── SVG-klocka ─────────────────────────────────────────────────────────────────
-// Använder var(--bg3) för urtavlan – fungerar i mörkt och ljust tema.
 function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   const SIZE = 110
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
@@ -108,7 +106,6 @@ function ClockFace({ h, m, s, accentColor, session, isOpen }) {
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
       style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
-      {/* var(--bg3) istället för rgba(0,0,0,0.5) – fungerar i båda teman */}
       <circle cx={cx} cy={cy} r={r} fill="var(--bg3)" stroke="var(--border2)" strokeWidth={1.5} />
       {arcD && (
         <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round"
@@ -162,7 +159,6 @@ function MarketClock({ session, now }) {
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
       <div style={{ textAlign: 'center' }}>
-        {/* Etikett i var(--text3) – synlig i båda teman */}
         <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 3 }}>
           {status.isOpen ? 'Stänger om' : 'Öppnar om'}
         </div>
@@ -198,16 +194,12 @@ function SessionClocks() {
   return (
     <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <LocalClock now={now} localTz={localTz} />
-      {/* Separator – var(--border) fungerar i båda teman */}
       <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 2px' }} />
       {MARKET_SESSIONS.map(s => <MarketClock key={s.id} session={s} now={now} />)}
     </div>
   )
 }
 
-// ── Instrumentnedräkningar ─────────────────────────────────────────────────────
-// var(--bg3) och var(--border) för tema-kompatibilitet.
-// var(--text3) på rubriker – tydlig i både mörkt och ljust.
 function InstrumentCountdowns() {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -222,7 +214,6 @@ function InstrumentCountdowns() {
       border: '1px solid var(--border2)', padding: '10px 14px',
       minWidth: 152,
     }}>
-      {/* Rubrik – var(--text3) synlig i båda teman */}
       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
         RTH – New York ET
       </div>
@@ -235,12 +226,10 @@ function InstrumentCountdowns() {
             padding: '7px 0',
             borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
           }}>
-            {/* Ikon + namn */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
               <span style={{ fontSize: 13 }}>{inst.icon}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{inst.label}</span>
             </div>
-            {/* Nedräkning + status */}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>
                 {status.countdown}
@@ -331,6 +320,7 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
+            {/* Layout: [Namn+datum] | sep | [Klockor] | sep | [Instrument] */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>
@@ -339,21 +329,7 @@ export default function Dashboard({ onNavigate }) {
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
               {sep}
-              <div style={{ display: 'flex', gap: 20, flex: 1, justifyContent: 'flex-end' }}>
-                {[
-                  { label: 'Total R', value: (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R', color: totalR >= 0 ? 'var(--green)' : 'var(--red)' },
-                  { label: 'Win Rate', value: (winRate * 100).toFixed(1) + '%', color: winRate >= 0.5 ? 'var(--green)' : 'var(--red)' },
-                  { label: 'Trades', value: trades.length, color: 'var(--text)' },
-                  { label: 'Profit Factor', value: isFinite(pf) ? pf.toFixed(2) : '∞', color: pf >= 1.5 ? 'var(--accent)' : pf >= 1 ? 'var(--green)' : 'var(--red)' },
-                ].map(s => (
-                  <div key={s.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{s.label}</div>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
-                  </div>
-                ))}
-              </div>
-              {sep}
-              <div style={{ flexShrink: 0 }}>
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
                 <SessionClocks />
               </div>
               {sep}
