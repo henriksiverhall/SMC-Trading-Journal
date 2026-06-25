@@ -340,7 +340,6 @@ function BroadcastTab({ adminId }) {
   )
 }
 
-// SupportTab: ingen maxWidth/margin här – page-content-klassen på Admin-sidan hanterar bredd precis som Profile
 function SupportTab({ adminId }) {
   const [threads, setThreads] = useState([])
   const [users, setUsers] = useState({})
@@ -466,8 +465,7 @@ export default function Admin() {
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
-      {/* maxWidth 860 på page-content, precis som Profile.jsx */}
-      <div className="page-content" style={{ maxWidth: 860 }}>
+      <div className="page-content" style={{ maxWidth: 1100 }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? 'var(--text)' : 'var(--text3)', padding: '10px 16px', borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
