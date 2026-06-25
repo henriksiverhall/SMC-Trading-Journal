@@ -38,34 +38,63 @@ function getHMS(date, tz) {
   }
 }
 
-// Beräknar ÖPPEN/STÄNGD och nedräkning baserat på stadens lokala tid
+// ÖPPEN/STÄNGD + nedräkning med sekunder
 function sessionStatus(session, now) {
-  const { h, m } = getHMS(now, session.tz)
-  const cur   = h * 60 + m
-  const open  = session.openH  * 60 + session.openM
-  const close = session.closeH * 60 + session.closeM
-  const isOpen = cur >= open && cur < close
-  let minsTo = isOpen ? close - cur : (cur < open ? open - cur : 24 * 60 - cur + open)
-  const hh = Math.floor(minsTo / 60), mm = minsTo % 60
-  return { isOpen, countdown: `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}` }
+  const { h, m, s } = getHMS(now, session.tz)
+  const curSecs  = h * 3600 + m * 60 + s
+  const openSecs = session.openH  * 3600 + session.openM  * 60
+  const clsSecs  = session.closeH * 3600 + session.closeM * 60
+  const isOpen   = curSecs >= openSecs && curSecs < clsSecs
+
+  let secsTo = isOpen
+    ? clsSecs - curSecs
+    : curSecs < openSecs
+      ? openSecs - curSecs
+      : 24 * 3600 - curSecs + openSecs
+
+  const hh = Math.floor(secsTo / 3600)
+  const mm = Math.floor((secsTo % 3600) / 60)
+  const ss = secsTo % 60
+  const pad = n => String(n).padStart(2, '0')
+  return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-// ── SVG-urtavla (återanvänds av alla klockor) ──────────────────────────────────
-function ClockFace({ h, m, s, rimColor, arcOpenM12, arcCloseM12, isOpen }) {
+// ── SVG-klocka ─────────────────────────────────────────────────────────────────
+// Sessionsbågen ritas med verkliga 12h-vinklar.
+// Varje session har unika open/close-positioner på urtavlan.
+function ClockFace({ h, m, s, rimColor, session, isOpen }) {
   const SIZE = 110
   const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
 
-  function angle12(mins) { return (mins / (12 * 60)) * 360 - 90 }
+  // Konvertera en 24h-timme + minut till 12h-vinkel (grader, 12 = top = -90°)
+  function toAngle(hour, min) {
+    const h12 = hour % 12  // 0–11
+    return ((h12 * 60 + min) / (12 * 60)) * 360 - 90
+  }
   function pt(deg, rad) {
     const a = (deg * Math.PI) / 180
     return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) }
   }
-  function arc(m1, m2, rad) {
-    const p1 = pt(angle12(m1), rad), p2 = pt(angle12(m2), rad)
-    let span = m2 - m1; if (span <= 0) span += 12 * 60
-    return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${span > 6 * 60 ? 1 : 0} 1 ${p2.x} ${p2.y}`
+
+  // Sessionsbåge: rita från open till close medsols (kort väg om < 6h, lång om > 6h)
+  function sessionArc(rad) {
+    if (!session) return null
+    const a1 = toAngle(session.openH, session.openM)
+    const a2 = toAngle(session.closeH, session.closeM)
+    const p1 = pt(a1, rad), p2 = pt(a2, rad)
+    // Spann i grader (medsols)
+    let span = a2 - a1
+    if (span < 0) span += 360
+    // Trimma om nästan hela cirkeln (> 270° = något är fel) → ingen båge
+    if (span > 270) return null
+    const large = span > 180 ? 1 : 0
+    return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${large} 1 ${p2.x} ${p2.y}`
   }
 
+  const arcD = sessionArc(r - 3.5)
+  const sessionColor = isOpen !== undefined ? (isOpen ? '#10b981' : '#ef4444') : rimColor
+
+  // Visarvinklar
   const sDeg = s * 6
   const mDeg = m * 6 + s * 0.1
   const hDeg = (h % 12) * 30 + m * 0.5
@@ -75,7 +104,6 @@ function ClockFace({ h, m, s, rimColor, arcOpenM12, arcCloseM12, isOpen }) {
     return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) }
   }
 
-  const sessionColor = isOpen !== undefined ? (isOpen ? '#10b981' : '#ef4444') : rimColor
   const ticks = Array.from({ length: 12 }, (_, i) => {
     const a = (i * 30 - 90) * Math.PI / 180
     const inner = r * (i % 3 === 0 ? 0.74 : 0.83)
@@ -88,26 +116,25 @@ function ClockFace({ h, m, s, rimColor, arcOpenM12, arcCloseM12, isOpen }) {
 
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
-      style={{ filter: (isOpen === true) ? `drop-shadow(0 0 8px ${sessionColor}44)` : 'none' }}>
+      style={{ filter: (isOpen === true) ? `drop-shadow(0 0 6px ${sessionColor}55)` : 'none' }}>
       <circle cx={cx} cy={cy} r={r} fill="rgba(0,0,0,0.5)" stroke={rimColor} strokeWidth={2} />
-      {/* Sessionsbåge – endast på marknadsklockor */}
-      {arcOpenM12 !== undefined && (
-        <path d={arc(arcOpenM12, arcCloseM12, r - 3.5)} fill="none"
-          stroke={sessionColor} strokeWidth={7} strokeLinecap="round"
-          opacity={isOpen ? 0.9 : 0.22} />
+      {arcD && (
+        <path d={arcD} fill="none"
+          stroke={sessionColor} strokeWidth={5} strokeLinecap="round"
+          opacity={isOpen ? 0.85 : 0.2} />
       )}
       {ticks.map((t, i) => (
         <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
           stroke={t.major ? 'var(--text3)' : 'var(--text4)'}
-          strokeWidth={t.major ? 2.2 : 1.1} />
+          strokeWidth={t.major ? 2 : 1} />
       ))}
       <line x1={cx} y1={cy} x2={tip(hDeg, r * 0.48).x} y2={tip(hDeg, r * 0.48).y}
         stroke="var(--text)" strokeWidth={4} strokeLinecap="round" />
       <line x1={cx} y1={cy} x2={tip(mDeg, r * 0.65).x} y2={tip(mDeg, r * 0.65).y}
         stroke="var(--text2)" strokeWidth={2.8} strokeLinecap="round" />
       <line x1={cx} y1={cy} x2={tip(sDeg, r * 0.76).x} y2={tip(sDeg, r * 0.76).y}
-        stroke={rimColor} strokeWidth={1.8} strokeLinecap="round" />
-      <circle cx={cx} cy={cy} r={4} fill={rimColor} />
+        stroke={rimColor} strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r={3.5} fill={rimColor} />
     </svg>
   )
 }
@@ -120,9 +147,7 @@ function LocalClock({ now, localTz }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <ClockFace h={h} m={m} s={s} rimColor="var(--accent)" />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>
-        🕐 Din tid
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>🕐 Din tid</div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
@@ -132,50 +157,39 @@ function LocalClock({ now, localTz }) {
 }
 
 // ── Klocka 2–4: Marknadsklocka ────────────────────────────────────────────────
-// Analog visar sessionens stads lokala tid.
-// Digital visar stadens tid HH:MM:SS.
-// Under: nedräkning till open/close, tydlig storlek.
-// Badge: ÖPPEN / STÄNGD.
 function MarketClock({ session, now }) {
-  // Stadens lokala tid – används för visare OCH digital display
   const { h, m, s } = getHMS(now, session.tz)
   const status = sessionStatus(session, now)
   const pad = n => String(n).padStart(2, '0')
-
-  // Sessionsbåge i 12h-koordinater (stadens lokala öppettider)
-  const arcOpenM12  = (session.openH  % 12) * 60 + session.openM
-  const arcCloseM12 = (session.closeH % 12) * 60 + session.closeM
-
   const statusColor = status.isOpen ? '#10b981' : '#ef4444'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <ClockFace
-        h={h} m={m} s={s}
-        rimColor={statusColor}
-        arcOpenM12={arcOpenM12}
-        arcCloseM12={arcCloseM12}
-        isOpen={status.isOpen}
-      />
+      <ClockFace h={h} m={m} s={s} rimColor={statusColor} session={session} isOpen={status.isOpen} />
 
-      {/* Stadsnamn */}
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>
         {session.flag} {session.label}
       </div>
 
-      {/* Stadens lokala tid HH:MM:SS */}
+      {/* Lokal tid i staden HH:MM:SS */}
       <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>
         {pad(h)}:{pad(m)}:{pad(s)}
       </div>
 
-      {/* Nedräkning – tydlig storlek */}
-      <div style={{
-        fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800,
-        color: statusColor, letterSpacing: 0.5,
-        background: status.isOpen ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.08)',
-        padding: '2px 8px', borderRadius: 6,
-      }}>
-        {status.isOpen ? `stänger ${status.countdown}` : `öppnar ${status.countdown}`}
+      {/* Nedräkning med sekunder – tydlig */}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 10, color: 'var(--text4)', marginBottom: 2 }}>
+          {status.isOpen ? 'Stänger om' : 'Öppnar om'}
+        </div>
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 800,
+          color: statusColor, letterSpacing: 1,
+          background: status.isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)',
+          padding: '3px 10px', borderRadius: 6,
+          border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.2)'}`,
+        }}>
+          {status.countdown}
+        </div>
       </div>
 
       {/* Status-badge */}
@@ -203,9 +217,7 @@ function SessionClocks() {
     <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <LocalClock now={now} localTz={localTz} />
       <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', margin: '0 2px' }} />
-      {MARKET_SESSIONS.map(s => (
-        <MarketClock key={s.id} session={s} now={now} />
-      ))}
+      {MARKET_SESSIONS.map(s => <MarketClock key={s.id} session={s} now={now} />)}
     </div>
   )
 }
