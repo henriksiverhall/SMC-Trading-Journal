@@ -442,6 +442,120 @@ function SupportTab({ adminId }) {
   )
 }
 
+// ── System-flik: kalender-refresh + status ─────────────────────────────────────
+function SystemTab() {
+  const [calStatus, setCalStatus] = useState(null)   // { thisweek, nextweek, fetched_at }
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshResult, setRefreshResult] = useState(null)  // { ok, results, error }
+
+  useEffect(() => { loadCalStatus() }, [])
+
+  async function loadCalStatus() {
+    const { data } = await sb.from('calendar_cache').select('week_key, fetched_at, data').order('week_key')
+    if (data) {
+      const byWeek = {}
+      data.forEach(r => byWeek[r.week_key] = { fetched_at: r.fetched_at, count: Array.isArray(r.data) ? r.data.length : 0 })
+      setCalStatus(byWeek)
+    }
+  }
+
+  async function triggerRefresh() {
+    setRefreshing(true)
+    setRefreshResult(null)
+    try {
+      // Hämtar KANBAN_SECRET från user_settings (lagras inte i frontend – vi behöver ett annat sätt)
+      // Istället anropar vi refresh via Supabase service_role direkt – men det går inte från frontend.
+      // Lösning: vi har en dedikerad admin-endpoint utan secret om användaren är admin (JWT-skyddad).
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session?.access_token) throw new Error('Ingen aktiv session')
+      const resp = await fetch(`${WORKER_URL}/calendar/refresh-admin`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) throw new Error(json.error || `HTTP ${resp.status}`)
+      setRefreshResult({ ok: true, results: json.results })
+      await loadCalStatus()
+    } catch (e) {
+      setRefreshResult({ ok: false, error: e.message })
+    }
+    setRefreshing(false)
+  }
+
+  const weekLabel = { thisweek: 'Denna vecka', nextweek: 'Nästa vecka' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Kalender-cache */}
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">📅 Ekonomisk kalender – cache</div>
+          <button className="btn btn-primary btn-sm" onClick={triggerRefresh} disabled={refreshing}>
+            {refreshing ? '⏳ Hämtar…' : '↻ Uppdatera nu'}
+          </button>
+        </div>
+        <div className="card-body">
+          <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.6 }}>
+            Kalenderdata hämtas automatiskt varje natt från ForexFactory och cachas i Supabase.
+            Klicka "Uppdatera nu" för att trigga en manuell refresh och verifiera att hämtningen fungerar.
+          </p>
+
+          {/* Cache-status per vecka */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            {['thisweek', 'nextweek'].map(wk => {
+              const info = calStatus?.[wk]
+              return (
+                <div key={wk} style={{
+                  flex: 1, padding: '14px 16px', background: 'var(--bg3)',
+                  borderRadius: 'var(--r)', border: `1px solid ${info ? 'var(--border2)' : 'var(--border)'}`,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                    {weekLabel[wk]}
+                  </div>
+                  {info ? (
+                    <>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>
+                        {info.count} event
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text4)' }}>
+                        Senast hämtad: {new Date(info.fetched_at).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, color: 'var(--text4)' }}>Ingen data i cache</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Resultat efter refresh */}
+          {refreshResult && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 'var(--r)', fontSize: 13,
+              background: refreshResult.ok ? 'var(--green-dim)' : 'rgba(239,68,68,0.1)',
+              border: `1px solid ${refreshResult.ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
+              color: refreshResult.ok ? 'var(--green)' : 'var(--red)',
+            }}>
+              {refreshResult.ok ? (
+                <div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>✓ Refresh lyckades</div>
+                  {Object.entries(refreshResult.results || {}).map(([wk, r]) => (
+                    <div key={wk} style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
+                      {weekLabel[wk]}: {r.ok ? `✓ ${r.events} event hämtade` : `✗ ${r.error}`}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div><span style={{ fontWeight: 700 }}>✗ Refresh misslyckades:</span> {refreshResult.error}</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const { user, isAdmin, unreadInbox } = useAuth()
   const [tab, setTab] = useState('users')
@@ -451,6 +565,7 @@ export default function Admin() {
     { id: 'support',   label: unreadInbox > 0 ? `🎫 Support (${unreadInbox} ny)` : '🎫 Support' },
     { id: 'broadcast', label: '📢 Meddelanden' },
     { id: 'branding',  label: '🖼 Branding' },
+    { id: 'system',    label: '⚙️ System' },
   ]
 
   if (!isAdmin) return (
@@ -477,6 +592,7 @@ export default function Admin() {
         {tab === 'support'   && <SupportTab adminId={user?.id} />}
         {tab === 'broadcast' && <BroadcastTab adminId={user?.id} />}
         {tab === 'branding'  && <BrandingTab adminId={user?.id} />}
+        {tab === 'system'    && <SystemTab />}
       </div>
     </div>
   )
