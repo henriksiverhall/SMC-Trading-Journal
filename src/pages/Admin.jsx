@@ -1,3 +1,6 @@
+// ── System-flik: ersätt bara SystemTab och BrandingTab – resten av Admin.jsx är oförändrat ──
+// OBS: Denna fil är komplett Admin.jsx
+
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -82,11 +85,7 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   )
 
   const inp = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '7px 10px', fontSize: 13, fontFamily: 'var(--font)', boxSizing: 'border-box' }
-  const SECTIONS = [
-    { id: 'info', label: 'Info' },
-    { id: 'email', label: '✏️ E-post' },
-    { id: 'resetpw', label: '📧 Återställning' },
-  ]
+  const SECTIONS = [{ id: 'info', label: 'Info' }, { id: 'email', label: '✏️ E-post' }, { id: 'resetpw', label: '📧 Återställning' }]
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
@@ -136,12 +135,8 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
               )}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {u.user_id !== adminId && (
-                <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>
-              )}
-              {u.user_id !== adminId && (
-                <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>
-              )}
+              {u.user_id !== adminId && <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>}
+              {u.user_id !== adminId && <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
             </div>
           </>
         )}
@@ -442,11 +437,12 @@ function SupportTab({ adminId }) {
   )
 }
 
-// ── System-flik: kalender-refresh + status ─────────────────────────────────────
+// ── System-flik ────────────────────────────────────────────────────────────────
+// Workern returnerar: { primary: { ok, source, events, from, to, error }, fallback: {...} | null }
 function SystemTab() {
-  const [calStatus, setCalStatus] = useState(null)   // { thisweek, nextweek, fetched_at }
+  const [calStatus, setCalStatus] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [refreshResult, setRefreshResult] = useState(null)  // { ok, results, error }
+  const [refreshResult, setRefreshResult] = useState(null)
 
   useEffect(() => { loadCalStatus() }, [])
 
@@ -463,9 +459,6 @@ function SystemTab() {
     setRefreshing(true)
     setRefreshResult(null)
     try {
-      // Hämtar KANBAN_SECRET från user_settings (lagras inte i frontend – vi behöver ett annat sätt)
-      // Istället anropar vi refresh via Supabase service_role direkt – men det går inte från frontend.
-      // Lösning: vi har en dedikerad admin-endpoint utan secret om användaren är admin (JWT-skyddad).
       const { data: { session } } = await sb.auth.getSession()
       if (!session?.access_token) throw new Error('Ingen aktiv session')
       const resp = await fetch(`${WORKER_URL}/calendar/refresh-admin`, {
@@ -473,7 +466,7 @@ function SystemTab() {
       })
       const json = await resp.json()
       if (!resp.ok || json.error) throw new Error(json.error || `HTTP ${resp.status}`)
-      setRefreshResult({ ok: true, results: json.results })
+      setRefreshResult({ ok: true, data: json })
       await loadCalStatus()
     } catch (e) {
       setRefreshResult({ ok: false, error: e.message })
@@ -481,11 +474,11 @@ function SystemTab() {
     setRefreshing(false)
   }
 
-  const weekLabel = { thisweek: 'Denna vecka', nextweek: 'Nästa vecka' }
+  const info = calStatus?.['thisweek']
+  const sourceLabel = { eodhd: 'EODHD', ff: 'ForexFactory' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Kalender-cache */}
       <div className="card">
         <div className="card-header">
           <div className="card-title">📅 Ekonomisk kalender – cache</div>
@@ -495,37 +488,29 @@ function SystemTab() {
         </div>
         <div className="card-body">
           <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.6 }}>
-            Kalenderdata hämtas automatiskt varje natt från ForexFactory och cachas i Supabase.
-            Klicka "Uppdatera nu" för att trigga en manuell refresh och verifiera att hämtningen fungerar.
+            Kalenderdata hämtas automatiskt varje natt via <strong>EODHD</strong> (14 dagar framåt) med ForexFactory som fallback.
+            Klicka "Uppdatera nu" för att trigga en manuell refresh.
           </p>
 
-          {/* Cache-status per vecka */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            {['thisweek', 'nextweek'].map(wk => {
-              const info = calStatus?.[wk]
-              return (
-                <div key={wk} style={{
-                  flex: 1, padding: '14px 16px', background: 'var(--bg3)',
-                  borderRadius: 'var(--r)', border: `1px solid ${info ? 'var(--border2)' : 'var(--border)'}`,
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-                    {weekLabel[wk]}
+          {/* Cache-status – en ruta för 14-dagarsperioden */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ padding: '14px 16px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${info ? 'var(--border2)' : 'var(--border)'}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                Cachad kalenderdata (14 dagar framåt)
+              </div>
+              {info ? (
+                <>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 24, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>
+                    {info.count} event
                   </div>
-                  {info ? (
-                    <>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>
-                        {info.count} event
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text4)' }}>
-                        Senast hämtad: {new Date(info.fetched_at).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 13, color: 'var(--text4)' }}>Ingen data i cache</div>
-                  )}
-                </div>
-              )
-            })}
+                  <div style={{ fontSize: 11, color: 'var(--text4)' }}>
+                    Senast hämtad: {new Date(info.fetched_at).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--text4)' }}>Ingen data i cache</div>
+              )}
+            </div>
           </div>
 
           {/* Resultat efter refresh */}
@@ -536,16 +521,35 @@ function SystemTab() {
               border: `1px solid ${refreshResult.ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
               color: refreshResult.ok ? 'var(--green)' : 'var(--red)',
             }}>
-              {refreshResult.ok ? (
-                <div>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>✓ Refresh lyckades</div>
-                  {Object.entries(refreshResult.results || {}).map(([wk, r]) => (
-                    <div key={wk} style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
-                      {weekLabel[wk]}: {r.ok ? `✓ ${r.events} event hämtade` : `✗ ${r.error}`}
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              {refreshResult.ok ? (() => {
+                const { primary, fallback } = refreshResult.data
+                const used = primary?.ok ? primary : fallback
+                return (
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>✓ Refresh lyckades</div>
+                    {primary?.ok ? (
+                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                        Källa: <strong>{sourceLabel[primary.source] || primary.source}</strong> · {primary.events} event · {primary.from} → {primary.to}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 4 }}>
+                          EODHD misslyckades: {primary?.error}
+                        </div>
+                        {fallback?.ok ? (
+                          <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                            Fallback: <strong>{sourceLabel[fallback.source] || fallback.source}</strong> · {fallback.events} event
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: 'var(--red)' }}>
+                            Fallback misslyckades också: {fallback?.error}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              })() : (
                 <div><span style={{ fontWeight: 700 }}>✗ Refresh misslyckades:</span> {refreshResult.error}</div>
               )}
             </div>
