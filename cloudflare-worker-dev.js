@@ -1,6 +1,5 @@
-// FF_WEEKS ändrad till ['thisweek'] – nextweek finns inte som FF-endpoint
-// Cloudflare Worker – Anthropic API proxy + Kanban API + Market Data Sync + Calendar
-// Secrets: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, KANBAN_SECRET
+// Cloudflare Worker – Anthropic API proxy + Kanban + Market Data + Calendar (EODHD primär, FF fallback)
+// Secrets: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, KANBAN_SECRET, EODHD_API_KEY
 
 const ALLOWED_ORIGINS = [
   'https://smc-trading-journal-dev.henrik-siverhall.workers.dev',
@@ -18,7 +17,265 @@ function corsHeaders(origin) {
 }
 
 const ADMIN_USER_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671';
-const FF_WEEKS = ['thisweek'];  // nextweek-URL finns inte hos FF
+
+// ── Impact-mappning för EODHD event-typer ────────────────────────────────────
+// High   = typiskt >0.3% prisrörelse, marknadsmovande
+// Medium = viktiga men mer förutsägbara, eller regionalt viktiga
+// Low    = bakgrundsdata, tal, indikatorer med liten direkt effekt
+const IMPACT_MAP = {
+  // ── USA – High Impact ────────────────────────────────────────────────────────
+  'Non-Farm Payrolls': 'High',
+  'Nonfarm Payrolls': 'High',
+  'Unemployment Rate': 'High',
+  'CPI': 'High',
+  'Consumer Price Index': 'High',
+  'Core CPI': 'High',
+  'Core Consumer Price Index': 'High',
+  'PCE Price Index': 'High',
+  'Core PCE Price Index': 'High',
+  'Personal Consumption Expenditures': 'High',
+  'Fed Interest Rate Decision': 'High',
+  'Federal Funds Rate': 'High',
+  'FOMC Statement': 'High',
+  'FOMC Press Conference': 'High',
+  'Fed Chair Powell Speech': 'High',
+  'Fed Chair Speech': 'High',
+  'GDP Growth Rate': 'High',
+  'GDP': 'High',
+  'Advance GDP': 'High',
+  'Preliminary GDP': 'High',
+  'Final GDP': 'High',
+  'GDP Price Index': 'High',
+  'Retail Sales': 'High',
+  'Core Retail Sales': 'High',
+  'ISM Manufacturing PMI': 'High',
+  'ISM Services PMI': 'High',
+  'ISM Non-Manufacturing PMI': 'High',
+  'PPI': 'High',
+  'Producer Price Index': 'High',
+  'Core PPI': 'High',
+  'Initial Jobless Claims': 'High',
+  'Jobless Claims': 'High',
+  'Average Hourly Earnings': 'High',
+  'JOLTS Job Openings': 'High',
+  'ADP Employment Change': 'High',
+  'Trade Balance': 'High',
+  'Durable Goods Orders': 'High',
+  'Consumer Confidence': 'High',
+  'CB Consumer Confidence': 'High',
+  'Michigan Consumer Sentiment': 'High',
+  'UoM Consumer Sentiment': 'High',
+  'New Home Sales': 'High',
+  'Existing Home Sales': 'High',
+  'Housing Starts': 'High',
+  'Building Permits': 'High',
+  // ── Centralbanker – High Impact ──────────────────────────────────────────────
+  'ECB Interest Rate Decision': 'High',
+  'ECB Monetary Policy Statement': 'High',
+  'ECB Press Conference': 'High',
+  'ECB President Lagarde Speech': 'High',
+  'BoE Interest Rate Decision': 'High',
+  'Bank of England Interest Rate': 'High',
+  'MPC Vote': 'High',
+  'BoJ Interest Rate Decision': 'High',
+  'Bank of Japan Interest Rate': 'High',
+  'BoC Interest Rate Decision': 'High',
+  'Bank of Canada Interest Rate': 'High',
+  'RBA Interest Rate Decision': 'High',
+  'Cash Rate': 'High',
+  'SNB Interest Rate Decision': 'High',
+  'RBNZ Interest Rate Decision': 'High',
+  'Riksbank Interest Rate': 'High',
+  // ── Europa – High Impact ─────────────────────────────────────────────────────
+  'German CPI': 'High',
+  'German GDP': 'High',
+  'German ZEW Economic Sentiment': 'High',
+  'German Ifo Business Climate': 'High',
+  'Eurozone CPI': 'High',
+  'Euro Area CPI': 'High',
+  'Flash CPI': 'High',
+  'Eurozone GDP': 'High',
+  'Euro Area GDP': 'High',
+  'Eurozone Unemployment': 'High',
+  'UK CPI': 'High',
+  'UK GDP': 'High',
+  'UK Unemployment Rate': 'High',
+  'Claimant Count Change': 'High',
+  'UK Retail Sales': 'High',
+  'French CPI': 'High',
+  'Italian CPI': 'High',
+  'Spanish CPI': 'High',
+  // ── Asien/Övrigt – High Impact ───────────────────────────────────────────────
+  'Japan CPI': 'High',
+  'Tokyo CPI': 'High',
+  'Japan GDP': 'High',
+  'China CPI': 'High',
+  'China GDP': 'High',
+  'Caixin Manufacturing PMI': 'High',
+  'NBS Manufacturing PMI': 'High',
+  'Australia CPI': 'High',
+  'Canada Employment Change': 'High',
+  'Canada Unemployment Rate': 'High',
+  'Canada CPI': 'High',
+  'Canada GDP': 'High',
+  'Oil Inventories': 'High',
+  'Crude Oil Inventories': 'High',
+  'EIA Crude Oil Stocks Change': 'High',
+  'OPEC Meeting': 'High',
+  // ── Medium Impact ────────────────────────────────────────────────────────────
+  'Flash Manufacturing PMI': 'Medium',
+  'Flash Services PMI': 'Medium',
+  'Markit Manufacturing PMI': 'Medium',
+  'Markit Services PMI': 'Medium',
+  'Manufacturing PMI': 'Medium',
+  'Services PMI': 'Medium',
+  'Composite PMI': 'Medium',
+  'Industrial Production': 'Medium',
+  'Manufacturing Production': 'Medium',
+  'Capacity Utilization': 'Medium',
+  'Factory Orders': 'Medium',
+  'Business Inventories': 'Medium',
+  'Wholesale Inventories': 'Medium',
+  'Import Price Index': 'Medium',
+  'Export Price Index': 'Medium',
+  'Current Account': 'Medium',
+  'Budget Balance': 'Medium',
+  'Federal Budget Balance': 'Medium',
+  'Goods Trade Balance': 'Medium',
+  'Pending Home Sales': 'Medium',
+  'Case-Shiller Home Price': 'Medium',
+  'NAHB Housing Market Index': 'Medium',
+  'Philadelphia Fed Manufacturing': 'Medium',
+  'Empire State Manufacturing': 'Medium',
+  'Richmond Fed Manufacturing': 'Medium',
+  'Kansas City Fed Manufacturing': 'Medium',
+  'Chicago PMI': 'Medium',
+  'Dallas Fed Manufacturing': 'Medium',
+  'Beige Book': 'Medium',
+  'FOMC Minutes': 'Medium',
+  'Fed Minutes': 'Medium',
+  'ECB Minutes': 'Medium',
+  'BoE Minutes': 'Medium',
+  'BoE Inflation Report': 'Medium',
+  'Monetary Policy Report': 'Medium',
+  'German Factory Orders': 'Medium',
+  'German Industrial Production': 'Medium',
+  'German Retail Sales': 'Medium',
+  'German Trade Balance': 'Medium',
+  'Eurozone Industrial Production': 'Medium',
+  'Eurozone Trade Balance': 'Medium',
+  'Eurozone Retail Sales': 'Medium',
+  'Eurozone Sentix Investor Confidence': 'Medium',
+  'GfK Consumer Confidence': 'Medium',
+  'ZEW Economic Sentiment': 'Medium',
+  'Ifo Business Climate': 'Medium',
+  'UK Manufacturing PMI': 'Medium',
+  'UK Services PMI': 'Medium',
+  'UK Construction PMI': 'Medium',
+  'UK Housing Price Index': 'Medium',
+  'UK Average Earnings': 'Medium',
+  'Japan Tankan': 'Medium',
+  'Japan Industrial Production': 'Medium',
+  'Japan Retail Sales': 'Medium',
+  'Japan Trade Balance': 'Medium',
+  'Australia Employment Change': 'Medium',
+  'Australia Unemployment Rate': 'Medium',
+  'Australia Retail Sales': 'Medium',
+  'Australia Trade Balance': 'Medium',
+  'China Trade Balance': 'Medium',
+  'China Industrial Production': 'Medium',
+  'China Retail Sales': 'Medium',
+  'Canada Retail Sales': 'Medium',
+  'Canada Trade Balance': 'Medium',
+  'Canada Manufacturing Sales': 'Medium',
+  'Natural Gas Storage': 'Medium',
+  'EIA Natural Gas Stocks Change': 'Medium',
+  'API Crude Oil Stock Change': 'Medium',
+  'Unemployment Claims': 'Medium',
+  'Continuing Jobless Claims': 'Medium',
+  'Personal Income': 'Medium',
+  'Personal Spending': 'Medium',
+  'Consumer Spending': 'Medium',
+  'Core Durable Goods Orders': 'Medium',
+  'Capital Expenditure': 'Medium',
+  'GDP Annual Growth Rate': 'Medium',
+  'Inflation Rate': 'Medium',
+  'Core Inflation Rate': 'Medium',
+  'Producer Prices': 'Medium',
+  'Retail Price Index': 'Medium',
+};
+
+function getImpact(eventType) {
+  if (!eventType) return 'Low';
+  if (IMPACT_MAP[eventType]) return IMPACT_MAP[eventType];
+  const upper = eventType.toUpperCase();
+  for (const [key, impact] of Object.entries(IMPACT_MAP)) {
+    if (upper.includes(key.toUpperCase())) return impact;
+  }
+  const highKw = ['INTEREST RATE', 'RATE DECISION', 'NFP', 'NON-FARM', 'CPI', 'INFLATION', 'GDP', 'FOMC', 'FED CHAIR', 'ECB PRESIDENT', 'BOE GOVERNOR', 'BOJ GOVERNOR', 'UNEMPLOYMENT RATE', 'PAYROLL', 'JOLTS'];
+  const medKw  = ['PMI', 'RETAIL SALES', 'INDUSTRIAL', 'TRADE BALANCE', 'HOUSING', 'CONSUMER CONFIDENCE', 'SENTIMENT', 'FACTORY', 'INVENTORIES', 'MINUTES', 'BEIGE BOOK', 'EARNINGS', 'PRODUCTION'];
+  if (highKw.some(k => upper.includes(k))) return 'High';
+  if (medKw.some(k => upper.includes(k)))  return 'Medium';
+  return 'Low';
+}
+
+const COUNTRY_TO_CURRENCY = {
+  US: 'USD', EA: 'EUR', EU: 'EUR', DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR',
+  GB: 'GBP', JP: 'JPY', CA: 'CAD', AU: 'AUD', NZ: 'NZD', CH: 'CHF',
+  CN: 'CNY', KR: 'KRW', SE: 'SEK', NO: 'NOK', DK: 'DKK', MX: 'MXN',
+  BR: 'BRL', IN: 'INR', SG: 'SGD', HK: 'HKD',
+};
+
+function normalizeEodhdEvent(ev) {
+  const country = COUNTRY_TO_CURRENCY[ev.country] || ev.country || 'USD';
+  const impact  = getImpact(ev.type);
+  const dateStr = ev.date ? ev.date.replace(' ', 'T') + '-04:00' : null;
+  return {
+    title:    ev.type     || '',
+    country,
+    date:     dateStr,
+    impact,
+    actual:   ev.actual   != null ? String(ev.actual)   : '',
+    forecast: ev.estimate != null ? String(ev.estimate) : '',
+    previous: ev.previous != null ? String(ev.previous) : '',
+  };
+}
+
+async function calendarRefreshFromEodhd(env) {
+  const today = new Date();
+  const from  = today.toISOString().slice(0, 10);
+  const to    = new Date(today.getTime() + 13 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const url   = `https://eodhd.com/api/economic-events?api_token=${env.EODHD_API_KEY}&from=${from}&to=${to}&fmt=json`;
+  try {
+    const resp = await fetch(url, { headers: { 'User-Agent': 'TradeLog/2.0' } });
+    if (!resp.ok) return { ok: false, error: `EODHD HTTP ${resp.status}`, source: 'eodhd' };
+    const raw = await resp.json();
+    if (!Array.isArray(raw)) return { ok: false, error: 'EODHD non-array response', source: 'eodhd' };
+    const normalized = raw.map(normalizeEodhdEvent);
+    await calendarWriteCache(env, 'thisweek', normalized);
+    return { ok: true, events: normalized.length, source: 'eodhd', from, to };
+  } catch (e) { return { ok: false, error: e.message, source: 'eodhd' }; }
+}
+
+async function calendarRefreshFromFF(env) {
+  const ffUrl = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
+  try {
+    const resp = await fetch(ffUrl, { headers: { 'User-Agent': 'TradeLog/2.0' } });
+    if (!resp.ok) return { ok: false, error: `FF HTTP ${resp.status}`, source: 'ff' };
+    const text = await resp.text();
+    if (text.trim().startsWith('<')) return { ok: false, error: 'FF rate-limited', source: 'ff' };
+    let data; try { data = JSON.parse(text); } catch (e) { return { ok: false, error: 'JSON parse failed', source: 'ff' }; }
+    await calendarWriteCache(env, 'thisweek', data);
+    return { ok: true, events: data.length, source: 'ff' };
+  } catch (e) { return { ok: false, error: e.message, source: 'ff' }; }
+}
+
+async function calendarRefresh(env) {
+  const eodhd = await calendarRefreshFromEodhd(env);
+  if (eodhd.ok) return { primary: eodhd, fallback: null };
+  const ff = await calendarRefreshFromFF(env);
+  return { primary: eodhd, fallback: ff };
+}
 
 const TRACKED_SYMBOLS = [
   { symbol: 'NQ=F',     label: 'NQ/MNQ – Nasdaq-100 futures' },
@@ -68,19 +325,6 @@ async function calendarWriteCache(env, weekKey, data) {
   return res.ok;
 }
 
-async function calendarRefreshFromFF(env, weekKey) {
-  const ffUrl = `https://nfs.faireconomy.media/ff_calendar_${weekKey}.json`;
-  try {
-    const resp = await fetch(ffUrl, { headers: { 'User-Agent': 'TradeLog/2.0 (+https://journal.smctrading.se)' } });
-    if (!resp.ok) return { ok: false, error: `FF HTTP ${resp.status}` };
-    const text = await resp.text();
-    if (text.trim().startsWith('<')) return { ok: false, error: 'FF returned HTML – blocked or rate-limited' };
-    let data; try { data = JSON.parse(text); } catch (e) { return { ok: false, error: 'JSON parse failed' }; }
-    await calendarWriteCache(env, weekKey, data);
-    return { ok: true, events: data.length };
-  } catch (e) { return { ok: false, error: e.message }; }
-}
-
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin');
@@ -90,28 +334,25 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/calendar') {
-      const safeWeek = 'thisweek';
       try {
-        const cached = await calendarReadCache(env, safeWeek);
+        const cached = await calendarReadCache(env, 'thisweek');
         if (!cached) return json(cors, { error: 'Ingen kalenderdata i cache.' }, 503);
-        return new Response(JSON.stringify(cached.data), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=3600', ...cors } });
+        return new Response(JSON.stringify(cached.data), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=3600', ...cors },
+        });
       } catch (e) { return json(cors, { error: e.message }, 500); }
     }
 
     if (url.pathname === '/calendar/refresh') {
       const secret = request.headers.get('X-Kanban-Secret');
       if (secret !== env.KANBAN_SECRET) return json(cors, { error: 'Unauthorized' }, 401);
-      const results = {};
-      for (const week of FF_WEEKS) results[week] = await calendarRefreshFromFF(env, week);
-      return json(cors, { refreshed: true, results });
+      return json(cors, await calendarRefresh(env));
     }
 
     if (url.pathname === '/calendar/refresh-admin') {
       const isAdmin = await verifyAdminJWT(env, request.headers.get('Authorization'));
       if (!isAdmin) return json(cors, { error: 'Unauthorized' }, 401);
-      const results = {};
-      for (const week of FF_WEEKS) results[week] = await calendarRefreshFromFF(env, week);
-      return json(cors, { refreshed: true, results });
+      return json(cors, await calendarRefresh(env));
     }
 
     if (url.pathname === '/test-yahoo') {
@@ -169,10 +410,10 @@ export default {
       if (!isAdmin) return json(cors, { error: 'Unauthorized' }, 401);
       const body = await request.json().catch(() => ({}));
       const { userId, updates } = body;
-      if (!userId || !updates) return json(cors, { error: 'userId och updates kravs' }, 400);
+      if (!userId || !updates) return json(cors, { error: 'userId och updates krävs' }, 400);
       const safeUpdates = {};
       if (updates.email) safeUpdates.email = updates.email;
-      if (Object.keys(safeUpdates).length === 0) return json(cors, { error: 'Inget giltigt falt' }, 400);
+      if (Object.keys(safeUpdates).length === 0) return json(cors, { error: 'Inget giltigt fält' }, 400);
       const res = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` },
@@ -207,10 +448,8 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    for (const week of FF_WEEKS) {
-      const result = await calendarRefreshFromFF(env, week);
-      console.log(`Calendar refresh [${week}]:`, JSON.stringify(result));
-    }
+    const result = await calendarRefresh(env);
+    console.log('Calendar refresh:', JSON.stringify(result));
     const cronExpr = event.cron;
     const minuteMatch = cronExpr.match(/^(\d+)\s/);
     const minute = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
@@ -218,7 +457,7 @@ export default {
     if (group.length) {
       const results = [];
       for (const entry of group) results.push(await syncOneSymbol(env, entry));
-      console.log(`Market sync:`, JSON.stringify(results));
+      console.log('Market sync:', JSON.stringify(results));
     }
   },
 };
