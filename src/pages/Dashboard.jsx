@@ -32,9 +32,9 @@ const INSTRUMENTS = [
 ]
 
 const IMPACT_STYLE = {
-  High:   { color: '#ef4444', dot: '🔴' },
-  Medium: { color: '#f59e0b', dot: '🟠' },
-  Low:    { color: '#6b7280', dot: '🟡' },
+  High:   { color: '#ef4444' },
+  Medium: { color: '#f59e0b' },
+  Low:    { color: '#6b7280' },
 }
 
 function getHMS(date, tz) {
@@ -51,7 +51,7 @@ function getHMS(date, tz) {
 function sessionStatus(session, now) {
   const { h, m, s } = getHMS(now, session.tz)
   const curSecs  = h * 3600 + m * 60 + s
-  const openSecs = session.openH  * 3600 + session.openM  * 60
+  const openSecs = session.openH * 3600 + session.openM * 60
   const clsSecs  = session.closeH * 3600 + session.closeM * 60
   const isOpen   = curSecs >= openSecs && curSecs < clsSecs
   let secsTo = isOpen ? clsSecs - curSecs : curSecs < openSecs ? openSecs - curSecs : 24 * 3600 - curSecs + openSecs
@@ -161,7 +161,10 @@ function InstrumentCountdowns() {
   )
 }
 
-// ── Kalender-widget: kompakt lista med dagens + kommande high/medium-impact events ──
+// ── Kalender-widget ────────────────────────────────────────────────────────────
+// Visar high/medium-impact events från Supabase-cache.
+// "Idag" = dagens events. "Kommande" = resten av denna + nästa vecka (FF uppdaterar
+// sin thisweek-fil fredagskvällen/söndagen med nästa veckas data automatiskt).
 function CalendarWidget({ onNavigate }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -176,16 +179,18 @@ function CalendarWidget({ onNavigate }) {
   }, [])
 
   const highMedium = events.filter(e => e.impact === 'High' || e.impact === 'Medium')
-  const todayEvents = highMedium.filter(e => e.date?.split('T')[0] === today)
-  const upcomingEvents = highMedium.filter(e => e.date?.split('T')[0] > today).slice(0, 8)
+  const todayEvents   = highMedium.filter(e => e.date?.split('T')[0] === today)
+  // Kommande = allt från och med imorgon, max 10 rader
+  const upcomingEvents = highMedium.filter(e => e.date?.split('T')[0] > today).slice(0, 10)
   const displayed = showToday ? todayEvents : upcomingEvents
 
   function fmtTime(dateStr) {
-    if (!dateStr) return ''
+    if (!dateStr) return '—'
     return new Date(dateStr).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
   }
   function fmtDay(dateStr) {
-    return new Date(dateStr.split('T')[0] + 'T12:00:00Z').toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+    return new Date(dateStr.split('T')[0] + 'T12:00:00Z')
+      .toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
   return (
@@ -202,27 +207,22 @@ function CalendarWidget({ onNavigate }) {
         {loading && <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>Laddar…</div>}
         {!loading && displayed.length === 0 && (
           <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>
-            {showToday ? 'Inga high/medium-impact nyheter idag.' : 'Inga kommande nyheter denna vecka.'}
+            {showToday ? 'Inga high/medium-impact nyheter idag.' : 'Inga kommande nyheter i cachen — refresha via Admin → System.'}
           </div>
         )}
         {!loading && displayed.map((ev, i) => {
           const imp = IMPACT_STYLE[ev.impact] || IMPACT_STYLE.Low
           const isToday = ev.date?.split('T')[0] === today
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 18px', borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
-              {/* Impact dot */}
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: imp.color, flexShrink: 0, display: 'inline-block' }} />
-              {/* Tid / Dag */}
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text4)', flexShrink: 0, width: isToday ? 40 : 80 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text4)', flexShrink: 0, width: isToday ? 38 : 76 }}>
                 {isToday ? fmtTime(ev.date) : fmtDay(ev.date)}
               </div>
-              {/* Valuta */}
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', flexShrink: 0, width: 28 }}>{ev.country}</span>
-              {/* Namn */}
               <span style={{ fontSize: 12, color: ev.impact === 'High' ? 'var(--text)' : 'var(--text2)', fontWeight: ev.impact === 'High' ? 600 : 400, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</span>
-              {/* Forecast */}
               {ev.forecast && <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text4)', flexShrink: 0 }}>{ev.forecast}</span>}
             </div>
           )
@@ -300,6 +300,9 @@ export default function Dashboard({ onNavigate }) {
   const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
   const sep = <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0 }} />
 
+  // span saknas (= halvbredd) på alla widgets utom welcome.
+  // Användaren kan via "Anpassa widgets" och DragGrid välja ordning.
+  // span: 2 = helbredd (2 av 2 kolumner). Ingen span = halvbredd (1 av 2).
   const widgets = [
     {
       id: 'welcome', title: 'Välkommen', span: 2,
@@ -362,7 +365,8 @@ export default function Dashboard({ onNavigate }) {
       )
     },
     {
-      id: 'stats', title: 'Statistik', span: 2,
+      id: 'stats', title: 'Statistik',
+      // Halvbredd default – användaren kan dra/ändra via Anpassa widgets
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Statistik</div></div>
@@ -390,7 +394,8 @@ export default function Dashboard({ onNavigate }) {
       )
     },
     {
-      id: 'equity', title: 'Equity Curve', span: 2,
+      id: 'equity', title: 'Equity Curve',
+      // Halvbredd default
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Equity Curve (R)</div></div>
