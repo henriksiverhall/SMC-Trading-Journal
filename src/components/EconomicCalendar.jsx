@@ -12,6 +12,36 @@ const IMPACT_STYLE = {
   Holiday: { color: 'var(--text4)', label: '📅', bg: 'transparent', border: 'transparent' },
 }
 
+// Räknar ut nästa veckas måndag och söndag
+function getNextWeekRange() {
+  const now = new Date()
+  const dayOfWeek = now.getDay() // 0=sön, 1=mån...
+  const daysToNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
+  const nextMonday = new Date(now)
+  nextMonday.setDate(now.getDate() + daysToNextMonday)
+  const nextSunday = new Date(nextMonday)
+  nextSunday.setDate(nextMonday.getDate() + 6)
+  return {
+    from: nextMonday.toISOString().slice(0, 10),
+    to:   nextSunday.toISOString().slice(0, 10),
+  }
+}
+
+// Räknar ut denna veckas måndag och söndag
+function getThisWeekRange() {
+  const now = new Date()
+  const dayOfWeek = now.getDay()
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(now)
+  monday.setDate(now.getDate() + daysToMonday)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return {
+    from: monday.toISOString().slice(0, 10),
+    to:   sunday.toISOString().slice(0, 10),
+  }
+}
+
 function impactDot(impact) {
   const s = IMPACT_STYLE[impact] || IMPACT_STYLE.Low
   return <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0, marginRight: 4 }} />
@@ -29,26 +59,28 @@ function fmtTime(dateStr) {
 function groupByDay(events) {
   const map = {}
   for (const e of events) {
-    const day = e.date.split('T')[0]
+    const day = e.date?.split('T')[0]
+    if (!day) continue
     if (!map[day]) map[day] = []
     map[day].push(e)
   }
   return Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
 }
 
+// view: 'thisweek' | 'nextweek' | 'today'
 export default function EconomicCalendar() {
   const [events, setEvents]         = useState([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
+  const [view, setView]             = useState('thisweek')
   const [impacts, setImpacts]       = useState(['High', 'Medium'])
   const [currencies, setCurrencies] = useState(DEFAULT_CURRENCIES)
-  const [showOnlyToday, setShowOnlyToday] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${WORKER_URL}/calendar?week=thisweek`)
+      const res = await fetch(`${WORKER_URL}/calendar`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -62,10 +94,18 @@ export default function EconomicCalendar() {
 
   useEffect(() => { load() }, [load])
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toISOString().slice(0, 10)
+  const thisWeek = getThisWeekRange()
+  const nextWeek = getNextWeekRange()
+
   const filtered = events.filter(e => {
     const day = e.date?.split('T')[0]
-    if (showOnlyToday && day !== today) return false
+    if (!day) return false
+    // Datumfilter per vy
+    if (view === 'today'    && day !== today) return false
+    if (view === 'thisweek' && (day < thisWeek.from || day > thisWeek.to)) return false
+    if (view === 'nextweek' && (day < nextWeek.from || day > nextWeek.to)) return false
+    // Impact- och valutafilter
     if (!impacts.includes(e.impact)) return false
     if (!currencies.includes(e.country)) return false
     return true
@@ -86,10 +126,11 @@ export default function EconomicCalendar() {
       {/* Filterrad */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 0 12px', borderBottom: '1px solid var(--border)' }}>
 
-        {/* Idag / Hela veckan */}
+        {/* Vy-knappar */}
         <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => setShowOnlyToday(false)} className={`btn btn-sm ${!showOnlyToday ? 'btn-primary' : 'btn-ghost'}`}>Denna vecka</button>
-          <button onClick={() => setShowOnlyToday(true)}  className={`btn btn-sm ${showOnlyToday  ? 'btn-primary' : 'btn-ghost'}`}>Idag</button>
+          <button onClick={() => setView('thisweek')} className={`btn btn-sm ${view === 'thisweek' ? 'btn-primary' : 'btn-ghost'}`}>Denna vecka</button>
+          <button onClick={() => setView('nextweek')} className={`btn btn-sm ${view === 'nextweek' ? 'btn-primary' : 'btn-ghost'}`}>Nästa vecka</button>
+          <button onClick={() => setView('today')}    className={`btn btn-sm ${view === 'today'    ? 'btn-primary' : 'btn-ghost'}`}>Idag</button>
           <button onClick={load} className="btn btn-sm btn-ghost" title="Ladda om">↻</button>
         </div>
 
@@ -136,7 +177,13 @@ export default function EconomicCalendar() {
       {/* Innehåll */}
       {loading && <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar kalender…</div>}
       {error   && <div style={{ padding: '16px 0', color: 'var(--red)', fontSize: 13 }}>⚠️ {error}</div>}
-      {!loading && !error && grouped.length === 0 && <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>Inga händelser matchar filtret.</div>}
+      {!loading && !error && grouped.length === 0 && (
+        <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>
+          {view === 'nextweek'
+            ? 'Inga händelser för nästa vecka i cachen – trigga refresh i Admin → System.'
+            : 'Inga händelser matchar filtret.'}
+        </div>
+      )}
 
       {!loading && !error && grouped.map(([day, dayEvents]) => {
         const isToday = day === today
