@@ -5,12 +5,11 @@ const TradingViewWidget = memo(function TradingViewWidget() {
   const container = useRef()
 
   useEffect(() => {
-    // Rensa container vid re-render
     if (container.current) container.current.innerHTML = ''
 
     const wrapper = document.createElement('div')
     wrapper.className = 'tradingview-widget-container__widget'
-    wrapper.style.height = '800px'
+    wrapper.style.height = '100%'
     wrapper.style.width = '100%'
     container.current.appendChild(wrapper)
 
@@ -25,7 +24,7 @@ const TradingViewWidget = memo(function TradingViewWidget() {
       countryFilter: 'us,ca,eu,fr,de,gb,au,nz,jp,ch',
       importanceFilter: '-1,0,1',
       width: '100%',
-      height: '800',
+      height: '100%',
     })
     container.current.appendChild(script)
   }, [])
@@ -34,16 +33,17 @@ const TradingViewWidget = memo(function TradingViewWidget() {
     <div
       ref={container}
       className="tradingview-widget-container"
-      style={{ minHeight: 800, width: '100%' }}
+      style={{ height: '100%', width: '100%' }}
     />
   )
 })
 
 export default function Calendar() {
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Topbar title="Ekonomisk kalender" subtitle="TradingView · realtidsdata" />
-      <div className="page-content">
+      {/* Fyller resten av viewporten under topbaren */}
+      <div style={{ flex: 1, overflow: 'hidden', padding: '16px 24px' }}>
         <TradingViewWidget />
       </div>
     </div>
