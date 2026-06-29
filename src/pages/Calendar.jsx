@@ -5,31 +5,37 @@ const TradingViewWidget = memo(function TradingViewWidget() {
   const container = useRef()
 
   useEffect(() => {
+    // Rensa container vid re-render
+    if (container.current) container.current.innerHTML = ''
+
+    const wrapper = document.createElement('div')
+    wrapper.className = 'tradingview-widget-container__widget'
+    wrapper.style.height = '800px'
+    wrapper.style.width = '100%'
+    container.current.appendChild(wrapper)
+
     const script = document.createElement('script')
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js'
     script.type = 'text/javascript'
     script.async = true
     script.innerHTML = JSON.stringify({
       colorTheme: 'dark',
-      isTransparent: true,
+      isTransparent: false,
       locale: 'en',
       countryFilter: 'us,ca,eu,fr,de,gb,au,nz,jp,ch',
       importanceFilter: '-1,0,1',
       width: '100%',
-      height: '100%',
+      height: '800',
     })
     container.current.appendChild(script)
   }, [])
 
   return (
-    <div className="tradingview-widget-container" ref={container} style={{ height: '100%', minHeight: 700 }}>
-      <div className="tradingview-widget-container__widget" style={{ height: 'calc(100% - 32px)' }} />
-      <div className="tradingview-widget-copyright" style={{ fontSize: 11, color: 'var(--text4)', padding: '6px 0' }}>
-        <a href="https://www.tradingview.com/economic-calendar/" rel="noopener nofollow" target="_blank"
-          style={{ color: 'var(--accent)', textDecoration: 'none' }}>Economic Calendar</a>
-        <span> by TradingView</span>
-      </div>
-    </div>
+    <div
+      ref={container}
+      className="tradingview-widget-container"
+      style={{ minHeight: 800, width: '100%' }}
+    />
   )
 })
 
