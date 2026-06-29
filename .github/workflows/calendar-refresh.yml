@@ -1,0 +1,22 @@
+name: Calendar Refresh
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+    - cron: '0 22 * * 0'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Fetch FF calendar and update Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_DEV }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY_DEV }}
+        run: node .github/scripts/calendar-refresh.js
