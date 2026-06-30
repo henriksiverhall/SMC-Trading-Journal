@@ -2,6 +2,18 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.42-dev',
+    date: '2026-06-29',
+    entries: [
+      { type: 'feature', text: 'Ekonomisk kalender (full sida): bytt till inbäddad TradingView Economic Calendar-widget. Löser problemet med nästa veckas data permanent – realtidsdata, inget eget API behövs. Mörkt tema, fyller hela fönsterhöjden under topbaren.' },
+      { type: 'fix', text: 'Dashboard-widgeten för kalender behålls med vår egen Supabase-cache (FF-data) – separat från full-sidans TradingView-widget.' },
+      { type: 'infra', text: 'Undersökt: EODHD free-plan tillåter inte economic-events-endpointen (403 "Only EOD data allowed for free users"). Kräver betald plan (Fundamental Data API $59.99/mån eller All-In-One $99.99/mån) för att fungera. Kod och secret är på plats – börjar fungera automatiskt vid uppgradering.' },
+      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar både Cloudflare Workers OCH Supabase Edge Functions IP-ranges (502/403/404). Supabase Edge Function "calendar-refresh" deployad men kan inte nå FF från Supabase-infrastruktur heller.' },
+      { type: 'infra', text: 'Påbörjat men EJ klart: GitHub Actions-workflow för automatisk kalender-refresh (.github/scripts/calendar-refresh.js skapad, .github/workflows/calendar-refresh.yml kunde INTE skapas via MCP p.g.a. behörighetsbegränsning – måste skapas manuellt via GitHub web-UI, ännu ej genomfört framgångsrikt).' },
+      { type: 'improvement', text: 'Tillfällig lösning: Dashboard-widgetens cache måste tills vidare uppdateras manuellt via direkt SQL i Supabase tills GitHub Actions är på plats eller EODHD uppgraderas.' },
+    ]
+  },
+  {
     version: 'v2.0.41-dev',
     date: '2026-06-27',
     entries: [
