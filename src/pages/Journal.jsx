@@ -225,7 +225,7 @@ export default function Journal() {
       setChartUrlInput(''); setChartCustomTag('')
     } catch (e) {
       setChartLinks(l => [...l, { id: crypto.randomUUID(), url: trimmed, tag: resolveChartTag(), type: 'link' }])
-      setChartError(`Kunde inte ladda ner bilden automatiskt (${e.message}) – sparad som länk istället.`)
+      setChartError(`Kunde inte ladda ner bilden automatiskt (${e.message}). TradingView blockerar ofta direkthämtning – använd "Ladda upp skärmbild" istället. Länken sparades.`)
       setChartUrlInput(''); setChartCustomTag('')
     } finally {
       setChartBusy(false)
@@ -801,7 +801,7 @@ export default function Journal() {
                       <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>🔗</span>
                     )}
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', flexShrink: 0 }}>{c.tag}</span>
-                    <a href={c.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{c.url}</a>
+                    <a href={c.url} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{c.url}</a>
                     <button type="button" onClick={() => removeChartLink(c.id)}
                       style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
                   </div>
