@@ -2,6 +2,24 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.44-dev',
+    date: '2026-06-30',
+    entries: [
+      { type: 'fix', text: 'Journal: chart-länkar i listan trunkeras nu korrekt med "..." istället för att bryta ut på höger sida (display:block på länken krävdes för att overflow/textOverflow skulle fungera).' },
+      { type: 'fix', text: 'Journal: tydligare felmeddelande när automatisk bildhämtning misslyckas (t.ex. TradingView 403) – förklarar att "Ladda upp skärmbild" bör användas istället.' },
+      { type: 'infra', text: 'Bekräftat: TradingView blockerar serverside-hämtning av snapshot-bilder (403) oavsett User-Agent. Detta är en känd begränsning, ej fixbar utan TradingView-inloggning/signerad URL server-side. Manuell skärmdumpsuppladdning är rekommenderad väg för TradingView-bilder.' },
+    ]
+  },
+  {
+    version: 'v2.0.43-dev',
+    date: '2026-06-30',
+    entries: [
+      { type: 'feature', text: 'Journal: chart-fältet ersatt med multiimage-stöd – flera bilder/länkar per trade, var och en taggad (4h/1h/15m/5m/1m/Entry/SL/TP/Exit/Övrigt eller egen tagg). Stöd för både URL-hämtning och direkt filuppladdning från datorn.' },
+      { type: 'infra', text: 'Cloudflare Worker: ny R2-bucket "tradelog-trade-images" (binding TRADE_IMAGES) samt nya endpoints POST /trade-images/save, GET /trade-images/:key (publik proxy-läsning), DELETE /trade-images/:key (JWT, ägarskyddad).' },
+      { type: 'feature', text: 'Journal: detaljmodalen visar nu alla charts grupperade per tagg med 88x88px miniatyrer (bilder) eller länk-ikon, klickbara för att öppna i nytt fönster.' },
+    ]
+  },
+  {
     version: 'v2.0.42-dev',
     date: '2026-06-29',
     entries: [
@@ -71,7 +89,7 @@ const CHANGELOG = [
     date: '2026-06-24',
     entries: [
       { type: 'fix', text: 'Analytics RR-optimerare och SL-optimering: tabellerna är nu kollapsade per default.' },
-      { type: 'fix', text: 'Dashboard välkommen-widget: “X nytt” ändrat till “X nytt meddelande”.' },
+      { type: 'fix', text: 'Dashboard välkommen-widget: "X nytt" ändrat till "X nytt meddelande".' },
     ]
   },
   {
@@ -85,7 +103,7 @@ const CHANGELOG = [
     version: 'v2.0.33-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'AuthPage: “Glömt lösenord”-modal.' },
+      { type: 'feature', text: 'AuthPage: "Glömt lösenord"-modal.' },
     ]
   },
   {
