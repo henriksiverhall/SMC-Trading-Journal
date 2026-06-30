@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { EMOTIONS, GRADES, getFuturesSpec, gradeColor, formatR } from '../lib/constants'
+import { EMOTIONS, GRADES, getFuturesSpec, gradeColor, formatR, WORKER_URL } from '../lib/constants'
 import { normalizeTrades } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 
@@ -43,6 +43,9 @@ const FIELD_LABELS = {
   emotion: 'Känsla', chart: 'Chart/Skärmbild', notes: 'Noteringar',
 }
 
+// Förvalda taggar för chart-länkar/bilder. "Egen…" låter användaren skriva fritext.
+const CHART_TAGS = ['4h', '1h', '15m', '5m', '1m', 'Entry', 'SL', 'TP', 'Exit', 'Övrigt']
+
 function normalizeRows(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return DEFAULT_FIELD_ROWS
   const seen = new Set()
@@ -52,7 +55,6 @@ function normalizeRows(rows) {
     r.forEach(id => seen.add(id))
     if (r.length) cleaned.push(r)
   }
-  // Any field id missing from the saved layout (e.g. newly added field) gets its own row at the end
   const missing = ALL_FIELD_IDS.filter(id => !seen.has(id))
   missing.forEach(id => cleaned.push([id]))
   return cleaned
@@ -64,7 +66,6 @@ function getCustomFields() {
 }
 function setCustomFields(fields) { localStorage.setItem('tl_custom_fields', JSON.stringify(fields)) }
 
-// ── Defaults ──────────────────────────────────────────────────────────────────
 const DEFAULT_FORM = {
   date: new Date().toISOString().split('T')[0],
   time: '',
@@ -88,7 +89,6 @@ const DEFAULT_FORM = {
 const EMPTY_SCALE   = () => ({ id: crypto.randomUUID(), price: '', contracts: '1' })
 const EMPTY_TARGET  = () => ({ id: crypto.randomUUID(), price: '', contracts: '' })
 
-// ── R computation ─────────────────────────────────────────────────────────────
 function computeRValues(f, scales, targets) {
   const entry = getWeightedEntry(f, scales)
   const sl    = parseFloat(f.sl)
@@ -105,7 +105,6 @@ function computeRValues(f, scales, targets) {
   } else if (f.outcome === 'L') {
     r = -1
   } else if (f.outcome === 'W') {
-    // Prioritize actual_exit if set
     const actualExit = parseFloat(f.actual_exit)
     if (actualExit && !isNaN(actualExit)) {
       r = parseFloat((Math.abs(actualExit - entry) / risk).toFixed(2))
@@ -153,7 +152,6 @@ function getTotalContracts(f, scales) {
   return (parseFloat(f.contracts) || 1) + scales.reduce((a, s) => a + (parseFloat(s.contracts) || 1), 0)
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function Journal() {
   const { user, userSettings, saveSettings, impersonating } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
@@ -187,11 +185,85 @@ export default function Journal() {
   const [newFieldName, setNewFieldName] = useState('')
   const [newFieldType, setNewFieldType] = useState('text')
   const [draggingField, setDraggingField] = useState(null)
-  const [dropHint, setDropHint] = useState(null) // { id, mode: 'before'|'after'|'pair'|'swap' }
+  const [dropHint, setDropHint] = useState(null)
   const [attemptedSave, setAttemptedSave] = useState(false)
   const formRef = useRef(null)
 
-  // Load field layout from userSettings (synced across devices)
+  // ── Chart links/images (multiimage) state ─────────────────────────────────
+  const [chartLinks, setChartLinks] = useState([]) // [{ id, url, tag, type: 'link'|'image' }]
+  const [chartUrlInput, setChartUrlInput] = useState('')
+  const [chartTagInput, setChartTagInput] = useState(CHART_TAGS[0])
+  const [chartCustomTag, setChartCustomTag] = useState('')
+  const [chartBusy, setChartBusy] = useState(false)
+  const [chartError, setChartError] = useState('')
+  const fileInputRef = useRef(null)
+
+  function resolveChartTag() {
+    return chartTagInput === '__custom__' ? (chartCustomTag.trim() || 'Övrigt') : chartTagInput
+  }
+
+  async function getAuthHeader() {
+    const { data } = await sb.auth.getSession()
+    const token = data?.session?.access_token
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  async function addChartFromUrl() {
+    const trimmed = chartUrlInput.trim()
+    if (!trimmed) return
+    setChartBusy(true); setChartError('')
+    try {
+      const authHeader = await getAuthHeader()
+      const res = await fetch(`${WORKER_URL}/trade-images/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ url: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
+      setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.url, tag: resolveChartTag(), type: 'image' }])
+      setChartUrlInput(''); setChartCustomTag('')
+    } catch (e) {
+      setChartLinks(l => [...l, { id: crypto.randomUUID(), url: trimmed, tag: resolveChartTag(), type: 'link' }])
+      setChartError(`Kunde inte ladda ner bilden automatiskt (${e.message}) – sparad som länk istället.`)
+      setChartUrlInput(''); setChartCustomTag('')
+    } finally {
+      setChartBusy(false)
+    }
+  }
+
+  async function addChartFromFile(file) {
+    if (!file) return
+    setChartBusy(true); setChartError('')
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(r.result.split(',')[1])
+        r.onerror = () => reject(new Error('Kunde inte läsa filen'))
+        r.readAsDataURL(file)
+      })
+      const authHeader = await getAuthHeader()
+      const res = await fetch(`${WORKER_URL}/trade-images/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ base64, mimeType: file.type || 'image/png' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
+      setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.url, tag: resolveChartTag(), type: 'image' }])
+      setChartCustomTag('')
+    } catch (e) {
+      setChartError(`Uppladdning misslyckades: ${e.message}`)
+    } finally {
+      setChartBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function removeChartLink(id) {
+    setChartLinks(l => l.filter(c => c.id !== id))
+  }
+
   useEffect(() => {
     setFieldRowsState(normalizeRows(userSettings?.widgets?.journal_fields?.rows))
     const saved = userSettings?.widgets?.journal_fields?.requiredFields
@@ -216,12 +288,12 @@ export default function Journal() {
   }
 
   function isFieldFilled(id) {
+    if (id === 'chart') return chartLinks.length > 0
     const key = FIELD_FORM_KEY[id] || id
     const v = form[key]
     return v !== undefined && v !== null && String(v).trim() !== ''
   }
 
-  // Load account/risk settings from userSettings
   useEffect(() => {
     if (!user) return
     loadTrades()
@@ -231,10 +303,8 @@ export default function Journal() {
       risk_pct: userSettings?.riskPct ? String(userSettings.riskPct) : f.risk_pct,
       account_size: userSettings?.accountSize ? String(userSettings.accountSize) : f.account_size,
     }))
-    // Hämta strategier från checklistor
     sb.from('checklists').select('name').eq('user_id', effectiveUserId).order('created_at')
       .then(({ data }) => { if (data) setChecklistStrategies(data.map(c => c.name)) })
-    // Lyssna på trades sparade från PiP-fönstret (bara om ej impersonating)
     if (!impersonating) {
       const bc = new BroadcastChannel('tradelog')
       bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
@@ -262,20 +332,14 @@ export default function Journal() {
     setCalcR(r); setCalcUSD(usd)
   }
 
-  // Scale-in
   function addScaleIn() { setScaleIns(s => [...s, EMPTY_SCALE()]) }
   function removeScaleIn(id) { const n = scaleIns.filter(s => s.id !== id); setScaleIns(n); recalc(form, n, targets) }
   function updateScaleIn(id, field, val) { const n = scaleIns.map(s => s.id === id ? { ...s, [field]: val } : s); setScaleIns(n); recalc(form, n, targets) }
 
-  // Targets
   function addTarget() { setTargets(t => [...t, EMPTY_TARGET()]) }
   function removeTarget(id) { const n = targets.filter(t => t.id !== id); setTargets(n); recalc(form, scaleIns, n) }
   function updateTarget(id, field, val) { const n = targets.map(t => t.id === id ? { ...t, [field]: val } : t); setTargets(n); recalc(form, scaleIns, n) }
 
-  // ── Drag & drop for field layout ──────────────────────────────────────────
-  // Rules: drop on a solo field -> pair into a 2-col row. Drop on a field that
-  // already shares a row -> swap positions. Drop near the top/bottom edge of
-  // any field -> insert as a new full-width row before/after it.
   function findFieldPos(rows, id) {
     for (let r = 0; r < rows.length; r++) {
       const c = rows[r].indexOf(id)
@@ -321,7 +385,6 @@ export default function Journal() {
           rows[toPos[0]][toPos[1]] = fromId
         }
       } else {
-        // Remove fromId from its current row first (drop empty rows)
         const fromPos = findFieldPos(rows, fromId)
         if (fromPos) {
           rows[fromPos[0]].splice(fromPos[1], 1)
@@ -343,7 +406,6 @@ export default function Journal() {
     setDropHint(null)
   }
 
-  // Custom fields
   function addCustomField() {
     if (!newFieldName.trim()) return
     const nf = { id: crypto.randomUUID(), name: newFieldName.trim(), type: newFieldType }
@@ -357,7 +419,6 @@ export default function Journal() {
     setCustomValues(v => { const n = { ...v }; delete n[id]; return n })
   }
 
-  // Risk $ calculation
   const spec = getFuturesSpec(form.symbol)
   const weightedEntry = getWeightedEntry(form, scaleIns)
   const riskPct = parseFloat(form.risk_pct)
@@ -365,7 +426,6 @@ export default function Journal() {
   const riskDollar = (riskPct && accountSize) ? parseFloat((accountSize * riskPct / 100).toFixed(2)) : null
   const missingRequiredFields = requiredFields.filter(id => !isFieldFilled(id))
 
-  // Save
   async function handleSave(e) {
     e.preventDefault()
     if (missingRequiredFields.length > 0) { setAttemptedSave(true); return }
@@ -400,6 +460,7 @@ export default function Journal() {
         ...(targets.length > 0 ? { _targets: targets } : {}),
         ...(riskPct ? { _risk_pct: riskPct } : {}),
         ...(accountSize ? { _account_size: accountSize } : {}),
+        ...(chartLinks.length > 0 ? { _chartLinks: chartLinks } : {}),
         ...Object.fromEntries(customFields.map(f => [f.name, customValues[f.id] || null])),
       },
     }
@@ -412,7 +473,6 @@ export default function Journal() {
     }
 
     if (!error) {
-      // Save risk/account to userSettings
       if (riskPct || accountSize) {
         await saveSettings({ riskPct: riskPct || userSettings?.riskPct, accountSize: accountSize || userSettings?.accountSize })
       }
@@ -436,6 +496,7 @@ export default function Journal() {
     setCalcR(null); setCalcUSD(null)
     setScaleIns([]); setTargets([])
     setCustomValues({})
+    setChartLinks([]); setChartUrlInput(''); setChartCustomTag(''); setChartError('')
     setAttemptedSave(false)
     setEditingId(null)
   }
@@ -445,6 +506,8 @@ export default function Journal() {
     const cd = trade.custom_data || {}
     setScaleIns(cd._scaleIns || [])
     setTargets(cd._targets || [])
+    setChartLinks(Array.isArray(cd._chartLinks) ? cd._chartLinks : (trade.chart_link ? [{ id: crypto.randomUUID(), url: trade.chart_link, tag: 'Övrigt', type: 'link' }] : []))
+    setChartError('')
     setCustomValues(
       Object.fromEntries(customFields.map(f => [f.id, cd[f.name] || '']))
     )
@@ -481,7 +544,6 @@ export default function Journal() {
 
   const rColor = calcR > 0 ? 'var(--green)' : calcR < 0 ? 'var(--red)' : 'var(--text3)'
 
-  // Render each form section
   function reqMark(id) {
     return requiredFields.includes(id) ? <span style={{ color: 'var(--red)', marginLeft: 4, fontWeight: 700 }}>*</span> : null
   }
@@ -727,9 +789,58 @@ export default function Journal() {
       case 'chart':
         return (
           <div className="form-group" style={{ marginBottom: 14 }}>
-            <label className="form-label">Chart / Skärmbild{reqMark('chart')}</label>
-            <input type="url" className="form-control" placeholder="URL eller länk till chart…"
-              value={form.chart_link || ''} onChange={e => updateForm('chart_link', e.target.value)} style={{ marginTop: 6 }} />
+            <label className="form-label">Chart / Skärmbilder{reqMark('chart')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>flera, med tagg</span></label>
+
+            {chartLinks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6, marginBottom: 10 }}>
+                {chartLinks.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }}>
+                    {c.type === 'image' ? (
+                      <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border2)' }} />
+                    ) : (
+                      <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>🔗</span>
+                    )}
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', flexShrink: 0 }}>{c.tag}</span>
+                    <a href={c.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.url}</a>
+                    <button type="button" onClick={() => removeChartLink(c.id)}
+                      style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+              <select className="form-control" style={{ flex: 1 }} value={chartTagInput} onChange={e => setChartTagInput(e.target.value)}>
+                {CHART_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+                <option value="__custom__">Egen tagg…</option>
+              </select>
+              {chartTagInput === '__custom__' && (
+                <input type="text" className="form-control" style={{ flex: 1 }} placeholder="Taggnamn"
+                  value={chartCustomTag} onChange={e => setChartCustomTag(e.target.value)} />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input type="url" className="form-control" placeholder="Länk till TradingView-bild eller annan chart-URL…"
+                value={chartUrlInput} onChange={e => setChartUrlInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addChartFromUrl() } }} />
+              <button type="button" className="btn btn-ghost btn-sm" disabled={chartBusy || !chartUrlInput.trim()} onClick={addChartFromUrl}>
+                {chartBusy ? '…' : '+ Lägg till'}
+              </button>
+            </div>
+
+            <div style={{ marginTop: 8 }}>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => addChartFromFile(e.target.files?.[0])} />
+              <button type="button" className="btn btn-ghost btn-sm" disabled={chartBusy} style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => fileInputRef.current?.click()}>
+                📤 Ladda upp skärmbild från datorn
+              </button>
+            </div>
+
+            {chartError && (
+              <div style={{ fontSize: 11, color: 'var(--amber, #f59e0b)', marginTop: 6 }}>{chartError}</div>
+            )}
           </div>
         )
       case 'notes':
@@ -775,7 +886,6 @@ export default function Journal() {
       <div className="page-content">
         <div style={{ display: 'grid', gridTemplateColumns: 'clamp(420px, 27vw, 520px) 1fr', gap: 20, alignItems: 'start' }}>
 
-          {/* ── Form ── */}
           <div className="card" style={{
             position: 'sticky',
             top: 'calc(var(--topbar-h) + 24px)',
@@ -792,7 +902,6 @@ export default function Journal() {
               </div>
             </div>
 
-            {/* Field manager */}
             {showFieldMgr && (
               <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Obligatoriska fält</div>
@@ -894,14 +1003,12 @@ export default function Journal() {
             </div>
           </div>
 
-          {/* ── Table ── */}
           <div className="card">
             <div className="card-header">
               <div className="card-title">Trade Journal ({trades.length})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
             </div>
 
-            {/* Filterrad */}
             {trades.length > 0 && (() => {
               const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort()
               return (
@@ -1016,7 +1123,6 @@ export default function Journal() {
         </div>
       </div>
 
-      {/* ── Detail modal ── */}
       {selectedModal && (
         <div className="modal-backdrop open" onClick={e => e.target === e.currentTarget && setSelectedModal(null)}>
           <div className="modal">
@@ -1065,6 +1171,33 @@ export default function Journal() {
                   <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 6 }}>Targets</div>
                   {selectedModal.custom_data._targets.map((t, i) => (
                     <div key={i} style={{ color: 'var(--text3)', fontFamily: 'var(--mono)' }}>TP {i + 2}: {t.price} · {t.contracts} ktr</div>
+                  ))}
+                </div>
+              )}
+
+              {Array.isArray(selectedModal.custom_data?._chartLinks) && selectedModal.custom_data._chartLinks.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 8, fontSize: 12 }}>Charts</div>
+                  {Object.entries(
+                    selectedModal.custom_data._chartLinks.reduce((acc, c) => {
+                      ;(acc[c.tag] = acc[c.tag] || []).push(c)
+                      return acc
+                    }, {})
+                  ).map(([tag, items]) => (
+                    <div key={tag} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{tag}</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {items.map(c => (
+                          <a key={c.id} href={c.url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                            {c.type === 'image' ? (
+                              <img src={c.url} alt={tag} style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }} />
+                            ) : (
+                              <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r)', border: '1px dashed var(--border2)', fontSize: 22 }}>🔗</div>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
