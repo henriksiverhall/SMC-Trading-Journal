@@ -193,7 +193,7 @@ export default function Journal() {
       const data = await res.json()
 
       // Worker konverterade TV "Copy link" → S3-URL men S3 blockerar server-side fetch.
-      // Spara S3-URL:en som klickbar länk istället – den öppnas korrekt i browsern.
+      // Spara S3-URL:en som klickbar länk – öppnas korrekt i browsern.
       if (data.tvBlocked && data.s3url) {
         setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.s3url, tag: resolveChartTag(), type: 'link' }])
         setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klickbar länk (öppnas i nytt fönster). Vill du se miniatyrbilden direkt i journalen, använd "Ladda upp skärmbild" istället.')
@@ -273,7 +273,6 @@ export default function Journal() {
 
   // [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
   // autoFillFromTv och tvChannel borttagna – TV Replay stödjer inte alerts.
-  // Koden finns bevarad i Drive: TradeLog_JournalTool.pine
 
   useEffect(() => {
     if (!user) return
@@ -289,11 +288,6 @@ export default function Journal() {
     if (!impersonating) {
       const bc = new BroadcastChannel('tradelog')
       bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
-
-      // [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
-      // TV Replay stödjer inte alerts – Supabase Realtime-kanalen för tv_pending borttagen.
-      // const tvChannel = sb.channel(`tv-autofill-${effectiveUserId}`) ...
-
       return () => { bc.close() }
     }
   }, [effectiveUserId])
@@ -642,11 +636,14 @@ export default function Journal() {
           {chartLinks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6, marginBottom: 10 }}>
               {chartLinks.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', minWidth: 0 }}>
-                  {c.type === 'image' ? <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border2)' }} /> : <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>🔗</span>}
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', flexShrink: 0 }}>{c.tag}</span>
-                  <a href={c.url} target="_blank" rel="noreferrer" title={c.url} style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{c.url}</a>
-                  <button type="button" onClick={() => removeChartLink(c.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
+                // Grid: [ikon 36px] [tagg auto] [länk växer+trunkeras] [✕ 24px]
+                <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '36px auto 1fr 24px', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', overflow: 'hidden' }}>
+                  {c.type === 'image'
+                    ? <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border2)' }} />
+                    : <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔗</span>}
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{c.tag}</span>
+                  <a href={c.url} target="_blank" rel="noreferrer" title={c.url} style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.url}</a>
+                  <button type="button" onClick={() => removeChartLink(c.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
                 </div>
               ))}
             </div>
