@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.44-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'fix', text: 'Journal: chart-rad bytt till grid-layout (36px | auto | 1fr | 24px) – URL trunkeras korrekt med "…" och ✕-knappen hamnar alltid längst till höger oavsett URL-längd.' },
+      { type: 'fix', text: 'Profil: TradingView-fliken dold (SHOW_TV_TAB=false) – Pine Script Journal Tool parkerad, se Roadmap. Kod och TvOnboarding-komponent bevarade för framtida bruk.' },
+      { type: 'feature', text: 'Worker + Journal: TradingView "Copy link"-URL:er (tradingview.com/x/{ID}) konverteras automatiskt till S3 PNG-URL (s3.tradingview.com/snapshots/{c}/{ID}.png). Om S3 blockerar server-side-fetch sparas S3-URL:en som klickbar länk istället.' },
+    ]
+  },
+  {
     version: 'v2.0.43-dev',
     date: '2026-07-01',
     entries: [
@@ -17,44 +26,23 @@ const CHANGELOG = [
       { type: 'feature', text: 'Dold metadata från TradingView sparas per trade (_tv_meta): timeframe, ATR14, RSI14, EMA20/50, VWAP, bar OHLCV, session-typ, pointvalue, is_backtest-flagga. Används framöver i analytics och AI-analys.' },
       { type: 'feature', text: 'Profil: ny flik "TradingView" med steg-för-steg installationsguide (5 steg), kopiera-knapp för webhook-URL, återskapa-token, testping med realtidsfeedback (✅ Ansluten!).' },
       { type: 'infra', text: 'Supabase: ny tabell tv_pending (user_id, payload JSONB, consumed, created_at) med RLS och Realtime aktiverat. Ny RPC update_tv_token för säker token-rotation.' },
-      { type: 'infra', text: 'Worker: nya endpoints POST /tv-webhook/:token (tar emot Pine Script-data), POST /tv-webhook-ping/:token (testanslutning), POST /tv-webhook-regen (JWT, roterar token). Webhook-tokens genererade för alla befintliga users.' },
-    ]
-  },
-  {
-    version: 'v2.0.44-dev',
-    date: '2026-06-30',
-    entries: [
-      { type: 'fix', text: 'Journal: chart-länkar i listan trunkeras nu korrekt med "..." istället för att bryta ut på höger sida (display:block på länken krävdes för att overflow/textOverflow skulle fungera).' },
-      { type: 'fix', text: 'Journal: tydligare felmeddelande när automatisk bildhämtning misslyckas (t.ex. TradingView 403) – förklarar att "Ladda upp skärmbild" bör användas istället.' },
-      { type: 'infra', text: 'Bekräftat: TradingView blockerar serverside-hämtning av snapshot-bilder (403) oavsett User-Agent. Manuell skärmdumpsuppladdning rekommenderas. Löses framöver via TradingView-integrationen (Pine Script screenshot).' },
+      { type: 'infra', text: 'Worker: nya endpoints POST /tv-webhook/:token, POST /tv-webhook-ping/:token, POST /tv-webhook-regen.' },
     ]
   },
   {
     version: 'v2.0.43-dev',
     date: '2026-06-30',
     entries: [
-      { type: 'feature', text: 'Journal: chart-fältet ersatt med multiimage-stöd – flera bilder/länkar per trade, var och en taggad (4h/1h/15m/5m/1m/Entry/SL/TP/Exit/Övrigt eller egen tagg). Stöd för både URL-hämtning och direkt filuppladdning från datorn.' },
-      { type: 'infra', text: 'Cloudflare Worker: ny R2-bucket "tradelog-trade-images" (binding TRADE_IMAGES) samt nya endpoints POST /trade-images/save, GET /trade-images/:key (publik proxy-läsning), DELETE /trade-images/:key (JWT, ägarskyddad).' },
-      { type: 'feature', text: 'Journal: detaljmodalen visar nu alla charts grupperade per tagg med 88x88px miniatyrer (bilder) eller länk-ikon, klickbara för att öppna i nytt fönster.' },
+      { type: 'feature', text: 'Journal: chart-fältet ersatt med multiimage-stöd – flera bilder/länkar per trade, var och en taggad. Stöd för URL-hämtning och direkt filuppladdning.' },
+      { type: 'infra', text: 'Cloudflare Worker: ny R2-bucket "tradelog-trade-images" samt endpoints /trade-images/save, /trade-images/:key (GET/DELETE).' },
     ]
   },
   {
     version: 'v2.0.42-dev',
     date: '2026-06-29',
     entries: [
-      { type: 'feature', text: 'Ekonomisk kalender (full sida): bytt till inbäddad TradingView Economic Calendar-widget. Löser problemet med nästa veckas data permanent – realtidsdata, inget eget API behövs. Mörkt tema, fyller hela fönsterhöjden under topbaren.' },
-      { type: 'fix', text: 'Dashboard-widgeten för kalender behålls med vår egen Supabase-cache (FF-data) – separat från full-sidans TradingView-widget.' },
-      { type: 'infra', text: 'Undersökt: EODHD free-plan tillåter inte economic-events-endpointen. Kräver betald plan. Kod och secret på plats – fungerar automatiskt vid uppgradering.' },
-      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar Cloudflare Workers och Supabase Edge Functions IP-ranges. TradingView embedded widget är enda fungerande lösningen.' },
-    ]
-  },
-  {
-    version: 'v2.0.41-dev',
-    date: '2026-06-27',
-    entries: [
-      { type: 'feature', text: 'Ekonomisk kalender: EODHD API som primär källa. Hämtar 14 dagar framåt. ForexFactory som automatisk fallback.' },
-      { type: 'feature', text: 'Impact-klassificering: 100+ event-typer mappade till Hög/Medium/Låg.' },
-      { type: 'feature', text: 'Dashboard: kalender-widget med Idag/Kommande-läge, high/medium-impact events.' },
+      { type: 'feature', text: 'Ekonomisk kalender (full sida): bytt till inbäddad TradingView Economic Calendar-widget. Realtidsdata, inget eget API.' },
+      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar Cloudflare Workers IP-ranges. TradingView embedded widget är enda fungerande lösningen.' },
     ]
   },
   {
@@ -62,13 +50,6 @@ const CHANGELOG = [
     date: '2026-06-27',
     entries: [
       { type: 'feature', text: 'Dashboard: analoga sessionsklockor (Din tid + London/NY/Tokyo), RTH-instrumentruta med nedräkning.' },
-    ]
-  },
-  {
-    version: 'v2.0.39-dev',
-    date: '2026-06-25',
-    entries: [
-      { type: 'feature', text: 'Ekonomisk kalender: ny sida i sidomenyn med ForexFactory-data, filter på impact/valuta/period.' },
     ]
   },
   {
