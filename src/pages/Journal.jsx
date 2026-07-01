@@ -743,7 +743,7 @@ export default function Journal() {
                 })}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={saving}>{saving ? 'Sparar…' : editingId ? '💾 Spara ändringar' : '🔖 Spara trade'}</button>
-                  {editingId && <button type="button" className="btn btn-ghost" onClick={resetForm}>Avbryt</button>}
+                  <button type="button" className="btn btn-ghost" onClick={resetForm} title="Rensa formuläret">↺ Rensa</button>
                 </div>
                 {attemptedSave && missingRequiredFields.length > 0 && (
                   <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>Fyll i: {missingRequiredFields.map(id => FIELD_LABELS[id] || id).join(', ')}</div>
