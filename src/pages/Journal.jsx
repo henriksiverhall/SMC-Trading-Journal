@@ -191,6 +191,16 @@ export default function Journal() {
         body: JSON.stringify({ url: trimmed }),
       })
       const data = await res.json()
+
+      // Worker konverterade TV "Copy link" → S3-URL men S3 blockerar server-side fetch.
+      // Spara S3-URL:en som klickbar länk istället – den öppnas korrekt i browsern.
+      if (data.tvBlocked && data.s3url) {
+        setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.s3url, tag: resolveChartTag(), type: 'link' }])
+        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klickbar länk (öppnas i nytt fönster). Vill du se miniatyrbilden direkt i journalen, använd "Ladda upp skärmbild" istället.')
+        setChartUrlInput(''); setChartCustomTag('')
+        return
+      }
+
       if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
       setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.url, tag: resolveChartTag(), type: 'image' }])
       setChartUrlInput(''); setChartCustomTag('')
@@ -282,19 +292,9 @@ export default function Journal() {
 
       // [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
       // TV Replay stödjer inte alerts – Supabase Realtime-kanalen för tv_pending borttagen.
-      // const tvChannel = sb.channel(`tv-autofill-${effectiveUserId}`)
-      //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tv_pending',
-      //     filter: `user_id=eq.${effectiveUserId}` }, ({ new: row }) => {
-      //     const p = row?.payload
-      //     if (!p || p._type === 'ping') return
-      //     autoFillFromTv(p)
-      //     sb.from('tv_pending').update({ consumed: true }).eq('id', row.id)
-      //   }).subscribe()
+      // const tvChannel = sb.channel(`tv-autofill-${effectiveUserId}`) ...
 
-      return () => {
-        bc.close()
-        // tvChannel.unsubscribe()
-      }
+      return () => { bc.close() }
     }
   }, [effectiveUserId])
 
@@ -659,7 +659,7 @@ export default function Journal() {
             {chartTagInput === '__custom__' && <input type="text" className="form-control" style={{ flex: 1 }} placeholder="Taggnamn" value={chartCustomTag} onChange={e => setChartCustomTag(e.target.value)} />}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input type="url" className="form-control" placeholder="Länk till TradingView-bild eller annan chart-URL…" value={chartUrlInput} onChange={e => setChartUrlInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addChartFromUrl() } }} />
+            <input type="url" className="form-control" placeholder="Klistra in TV 'Copy link' eller annan chart-URL…" value={chartUrlInput} onChange={e => setChartUrlInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addChartFromUrl() } }} />
             <button type="button" className="btn btn-ghost btn-sm" disabled={chartBusy || !chartUrlInput.trim()} onClick={addChartFromUrl}>{chartBusy ? '…' : '+ Lägg till'}</button>
           </div>
           <div style={{ marginTop: 8 }}>
