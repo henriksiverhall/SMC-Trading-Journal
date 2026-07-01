@@ -2,12 +2,23 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.45-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'feature', text: 'TradingView-integration: Pine Script v6-indikator (TradeLog Connector) skickar trade-data till TradeLog via webhook. Entry, SL, TP, symbol, riktning, datum och tid auto-fylls i Journal-formuläret i realtid via Supabase Realtime.' },
+      { type: 'feature', text: 'Dold metadata från TradingView sparas per trade (_tv_meta): timeframe, ATR14, RSI14, EMA20/50, VWAP, bar OHLCV, session-typ, pointvalue, is_backtest-flagga. Används framöver i analytics och AI-analys.' },
+      { type: 'feature', text: 'Profil: ny flik "TradingView" med steg-för-steg installationsguide (5 steg), kopiera-knapp för webhook-URL, återskapa-token, testping med realtidsfeedback (✅ Ansluten!).' },
+      { type: 'infra', text: 'Supabase: ny tabell tv_pending (user_id, payload JSONB, consumed, created_at) med RLS och Realtime aktiverat. Ny RPC update_tv_token för säker token-rotation.' },
+      { type: 'infra', text: 'Worker: nya endpoints POST /tv-webhook/:token (tar emot Pine Script-data), POST /tv-webhook-ping/:token (testanslutning), POST /tv-webhook-regen (JWT, roterar token). Webhook-tokens genererade för alla befintliga users.' },
+    ]
+  },
+  {
     version: 'v2.0.44-dev',
     date: '2026-06-30',
     entries: [
       { type: 'fix', text: 'Journal: chart-länkar i listan trunkeras nu korrekt med "..." istället för att bryta ut på höger sida (display:block på länken krävdes för att overflow/textOverflow skulle fungera).' },
       { type: 'fix', text: 'Journal: tydligare felmeddelande när automatisk bildhämtning misslyckas (t.ex. TradingView 403) – förklarar att "Ladda upp skärmbild" bör användas istället.' },
-      { type: 'infra', text: 'Bekräftat: TradingView blockerar serverside-hämtning av snapshot-bilder (403) oavsett User-Agent. Detta är en känd begränsning, ej fixbar utan TradingView-inloggning/signerad URL server-side. Manuell skärmdumpsuppladdning är rekommenderad väg för TradingView-bilder.' },
+      { type: 'infra', text: 'Bekräftat: TradingView blockerar serverside-hämtning av snapshot-bilder (403) oavsett User-Agent. Manuell skärmdumpsuppladdning rekommenderas. Löses framöver via TradingView-integrationen (Pine Script screenshot).' },
     ]
   },
   {
@@ -25,92 +36,46 @@ const CHANGELOG = [
     entries: [
       { type: 'feature', text: 'Ekonomisk kalender (full sida): bytt till inbäddad TradingView Economic Calendar-widget. Löser problemet med nästa veckas data permanent – realtidsdata, inget eget API behövs. Mörkt tema, fyller hela fönsterhöjden under topbaren.' },
       { type: 'fix', text: 'Dashboard-widgeten för kalender behålls med vår egen Supabase-cache (FF-data) – separat från full-sidans TradingView-widget.' },
-      { type: 'infra', text: 'Undersökt: EODHD free-plan tillåter inte economic-events-endpointen (403 "Only EOD data allowed for free users"). Kräver betald plan (Fundamental Data API $59.99/mån eller All-In-One $99.99/mån) för att fungera. Kod och secret är på plats – börjar fungera automatiskt vid uppgradering.' },
-      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar både Cloudflare Workers OCH Supabase Edge Functions IP-ranges (502/403/404). Supabase Edge Function "calendar-refresh" deployad men kan inte nå FF från Supabase-infrastruktur heller.' },
-      { type: 'infra', text: 'Påbörjat men EJ klart: GitHub Actions-workflow för automatisk kalender-refresh (.github/scripts/calendar-refresh.js skapad, .github/workflows/calendar-refresh.yml kunde INTE skapas via MCP p.g.a. behörighetsbegränsning – måste skapas manuellt via GitHub web-UI, ännu ej genomfört framgångsrikt).' },
-      { type: 'improvement', text: 'Tillfällig lösning: Dashboard-widgetens cache måste tills vidare uppdateras manuellt via direkt SQL i Supabase tills GitHub Actions är på plats eller EODHD uppgraderas.' },
+      { type: 'infra', text: 'Undersökt: EODHD free-plan tillåter inte economic-events-endpointen. Kräver betald plan. Kod och secret på plats – fungerar automatiskt vid uppgradering.' },
+      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar Cloudflare Workers och Supabase Edge Functions IP-ranges. TradingView embedded widget är enda fungerande lösningen.' },
     ]
   },
   {
     version: 'v2.0.41-dev',
     date: '2026-06-27',
     entries: [
-      { type: 'feature', text: 'Ekonomisk kalender: EODHD API som primär källa (officiellt REST API, ingen scraping). Hämtar 14 dagar framåt – täcker denna och nästa vecka alltid. ForexFactory behålls som automatisk fallback om EODHD misslyckas.' },
-      { type: 'feature', text: 'Impact-klassificering för EODHD: 100+ event-typer mappade till Hög/Medium/Låg i tre lager (exakt match, partiell match, keyword-fallback). Täcker NFP, CPI, GDP, räntebeslut, PMI, m.fl. för USD/EUR/GBP/JPY/CAD/AUD/NZD/CHF.' },
-      { type: 'feature', text: 'Admin System-flik: knapp för manuell kalender-refresh med tydligt resultat (lyckades/misslyckades, källa, antal event). Cache-status visas per vecka.' },
-      { type: 'feature', text: 'Dashboard: kalender-widget med Idag/Kommande-läge. Visar high/medium-impact events kompakt med impact-färg, tid, valuta och prognos. Klick på Alla → tar till full kalendersida.' },
-      { type: 'improvement', text: 'Dashboard: Statistik och Equity Curve är nu halvbredd (span 1) som default – kan ändras via Anpassa widgets.' },
-      { type: 'improvement', text: 'Supabase: calendar_history-tabell skapad för framtida historikarkiv (veckonyckel YYYY-WNN, week_start/week_end för datumfiltrering).' },
+      { type: 'feature', text: 'Ekonomisk kalender: EODHD API som primär källa. Hämtar 14 dagar framåt. ForexFactory som automatisk fallback.' },
+      { type: 'feature', text: 'Impact-klassificering: 100+ event-typer mappade till Hög/Medium/Låg.' },
+      { type: 'feature', text: 'Dashboard: kalender-widget med Idag/Kommande-läge, high/medium-impact events.' },
     ]
   },
   {
     version: 'v2.0.40-dev',
     date: '2026-06-27',
     entries: [
-      { type: 'feature', text: 'Dashboard: sessionsklockor visar varje stads lokala tid på analoga visare och digital display. Din tid-klocka accent-färgad. Sessionsbjåge visar marknadernas öppettider.' },
-      { type: 'fix', text: 'Sessionsbjågar: urtavlans kant alltid neutral (var(--border2)), sessionsbjågen 3px tunn. Ingen röd/grön ring runt hela klockan.' },
-      { type: 'feature', text: 'RTH-instrumentruta: Guld (08:20 ET), Olja (09:00 ET), ES/NQ/YM (09:30 ET) med nedräkning HH:MM:SS och öppen/stängd-status.' },
-      { type: 'improvement', text: 'Välkomstwidget: statistikblock borttaget, klockor högerställda mot RTH-rutan med separatorlinje emellan.' },
+      { type: 'feature', text: 'Dashboard: analoga sessionsklockor (Din tid + London/NY/Tokyo), RTH-instrumentruta med nedräkning.' },
     ]
   },
   {
     version: 'v2.0.39-dev',
     date: '2026-06-25',
     entries: [
-      { type: 'feature', text: 'Ekonomisk kalender: ny sida i sidomenyn. ForexFactory-data cachad i Supabase via Worker-proxy. Filter på impact, valuta och tidsperiod. Händelser grupperade per dag, sorterade på impact sedan tid.' },
-      { type: 'infra', text: 'Supabase: calendar_cache-tabell för caching av FF-kalenderdata. Automatisk refresh via scheduled Worker varje natt.' },
-      { type: 'feature', text: 'Admin System-flik: ny flik i Admin med kalender-cache-status och manuell refresh-knapp (JWT-skyddad).' },
-    ]
-  },
-  {
-    version: 'v2.0.38-dev',
-    date: '2026-06-25',
-    entries: [
-      { type: 'improvement', text: 'Dashboard: statistik borttagen från välkomstwidget – finns i Statistik-widget under. Klockor högerställda mot RTH-rutan.' },
-    ]
-  },
-  {
-    version: 'v2.0.37-dev',
-    date: '2026-06-25',
-    entries: [
-      { type: 'feature', text: 'Dashboard: 4 analoga sessionsklockor (Din tid + London/NY/Tokyo). Varje marknadsklocka visar stadens lokala tid, sessionsbjåge för handelstider, nedräkning HH:MM:SS till open/close. RTH-instrumentruta för Guld/Olja/ES·NQ·YM. Tema-kompatibla CSS-variabler.' },
+      { type: 'feature', text: 'Ekonomisk kalender: ny sida i sidomenyn med ForexFactory-data, filter på impact/valuta/period.' },
     ]
   },
   {
     version: 'v2.0.36-dev',
     date: '2026-06-25',
     entries: [
-      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält, max 10 rader, backtest-nycklar filtreras.' },
+      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält.' },
       { type: 'fix', text: 'Admin + Profile: maxWidth höjt till 1100px.' },
-    ]
-  },
-  {
-    version: 'v2.0.35-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'fix', text: 'Analytics RR-optimerare och SL-optimering: tabellerna är nu kollapsade per default.' },
-      { type: 'fix', text: 'Dashboard välkommen-widget: "X nytt" ändrat till "X nytt meddelande".' },
-    ]
-  },
-  {
-    version: 'v2.0.34-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'Admin e-postbyte skyddas av Supabase JWT.' },
-    ]
-  },
-  {
-    version: 'v2.0.33-dev',
-    date: '2026-06-24',
-    entries: [
-      { type: 'feature', text: 'AuthPage: "Glömt lösenord"-modal.' },
     ]
   },
   {
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. Separata unread-räknare.' },
+      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. AuthPage: Glömt lösenord-modal.' },
     ]
   },
   {
@@ -118,13 +83,6 @@ const CHANGELOG = [
     date: '2026-06-23',
     entries: [
       { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor, SL-optimerare, psykologisk analys.' },
-    ]
-  },
-  {
-    version: 'v2.0.21-dev',
-    date: '2026-06-23',
-    entries: [
-      { type: 'feature', text: 'Admin Branding: bakgrundsbilder, transparens per sida.' },
     ]
   },
   {
