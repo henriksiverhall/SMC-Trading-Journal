@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.43-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'fix', text: 'Journal: URL-text i chart-listan trunkeras nu korrekt med "…" – bryter inte längre ut utanför kortet.' },
+      { type: 'infra', text: 'TV Pine Script Journal Tool parkerad (se Roadmap). TV Replay stödjer inte alerts – Supabase Realtime-kanalen för tv_pending och autoFillFromTv borttagna. Koden bevarad kommenterad. Pine-filen sparad i Drive.' },
+    ]
+  },
+  {
     version: 'v2.0.45-dev',
     date: '2026-07-01',
     entries: [
