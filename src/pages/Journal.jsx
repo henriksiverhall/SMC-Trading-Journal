@@ -158,6 +158,7 @@ export default function Journal() {
   const formRef = useRef(null)
   const [tvMeta, setTvMeta] = useState(null)
   const [tvAutoFilled, setTvAutoFilled] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState(null)
 
   const [chartLinks, setChartLinks] = useState([])
   const [chartUrlInput, setChartUrlInput] = useState('')
@@ -191,16 +192,15 @@ export default function Journal() {
       const data = await res.json()
       if (data.tvBlocked && data.s3url) {
         setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.s3url, tag: resolveChartTag(), type: 'link' }])
-        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klänk (fönster öppnas vid klick). Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
-        setChartUrlInput(''); setChartCustomTag('')
-        return
+        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klänk. Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
+        setChartUrlInput(''); setChartCustomTag(''); return
       }
       if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
       setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.url, tag: resolveChartTag(), type: 'image' }])
       setChartUrlInput(''); setChartCustomTag('')
     } catch (e) {
       setChartLinks(l => [...l, { id: crypto.randomUUID(), url: trimmed, tag: resolveChartTag(), type: 'link' }])
-      setChartError(`Kunde inte ladda ner bilden (${e.message}). TradingView blockerar direkthämtning – använd "Ladda upp skärmbild". Länken sparades.`)
+      setChartError(`Kunde inte ladda ner bilden (${e.message}). Använd "Ladda upp skärmbild". Länken sparades.`)
       setChartUrlInput(''); setChartCustomTag('')
     } finally { setChartBusy(false) }
   }
@@ -225,12 +225,8 @@ export default function Journal() {
       if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
       setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.url, tag: resolveChartTag(), type: 'image' }])
       setChartCustomTag('')
-    } catch (e) {
-      setChartError(`Uppladdning misslyckades: ${e.message}`)
-    } finally {
-      setChartBusy(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+    } catch (e) { setChartError(`Uppladdning misslyckades: ${e.message}`) }
+    finally { setChartBusy(false); if (fileInputRef.current) fileInputRef.current.value = '' }
   }
 
   function removeChartLink(id) { setChartLinks(l => l.filter(c => c.id !== id)) }
@@ -246,18 +242,15 @@ export default function Journal() {
     const current = userSettings?.widgets || {}
     saveSettings({ widgets: { ...current, journal_fields: { ...(current.journal_fields || {}), rows } } })
   }
-
   function persistRequiredFields(fields) {
     setRequiredFieldsState(fields)
     const current = userSettings?.widgets || {}
     saveSettings({ widgets: { ...current, journal_fields: { ...(current.journal_fields || {}), requiredFields: fields } } })
   }
-
   function toggleRequired(id) {
     const next = requiredFields.includes(id) ? requiredFields.filter(f => f !== id) : [...requiredFields, id]
     persistRequiredFields(next)
   }
-
   function isFieldFilled(id) {
     if (id === 'chart') return chartLinks.length > 0
     const key = FIELD_FORM_KEY[id] || id
@@ -297,7 +290,6 @@ export default function Journal() {
       return next
     })
   }
-
   function recalc(f, sc, tg) { const { r, usd } = computeRValues(f, sc, tg); setCalcR(r); setCalcUSD(usd) }
 
   function addScaleIn() { setScaleIns(s => [...s, EMPTY_SCALE()]) }
@@ -311,7 +303,6 @@ export default function Journal() {
     for (let r = 0; r < rows.length; r++) { const c = rows[r].indexOf(id); if (c !== -1) return [r, c] }
     return null
   }
-
   function onFieldDragStart(e, id) {
     setDraggingField(id); e.dataTransfer.effectAllowed = 'move'
     const ghost = document.createElement('div')
@@ -319,7 +310,6 @@ export default function Journal() {
     document.body.appendChild(ghost); e.dataTransfer.setDragImage(ghost, 0, 0)
     setTimeout(() => document.body.removeChild(ghost), 0)
   }
-
   function onFieldDragOver(e, id) {
     e.preventDefault()
     if (id === draggingField) return
@@ -333,7 +323,6 @@ export default function Journal() {
     else mode = rowLen === 1 ? 'pair' : 'swap'
     setDropHint({ id, mode })
   }
-
   function onFieldDragEnd() {
     if (draggingField && dropHint && dropHint.id !== draggingField) {
       const fromId = draggingField, toId = dropHint.id, mode = dropHint.mode
@@ -399,6 +388,7 @@ export default function Journal() {
         ...(riskPct ? { _risk_pct: riskPct } : {}),
         ...(accountSize ? { _account_size: accountSize } : {}),
         ...(chartLinks.length > 0 ? { _chartLinks: chartLinks } : {}),
+        ...(tvMeta ? { _tv_meta: tvMeta } : {}),
         ...Object.fromEntries(customFields.map(f => [f.name, customValues[f.id] || null])),
       },
     }
@@ -627,12 +617,9 @@ export default function Journal() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6, marginBottom: 10 }}>
               {chartLinks.map(c => (
                 <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '36px auto 1fr 24px', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', overflow: 'hidden' }}>
-                  {c.type === 'image'
-                    ? <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border2)' }} />
-                    : <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔗</span>}
+                  {c.type === 'image' ? <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border2)' }} /> : <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔗</span>}
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap' }}>{c.tag}</span>
-                  <a href={c.url} target="_blank" rel="noreferrer" title={c.url}
-                    style={{ display: 'block', fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.url}</a>
+                  <a href={c.url} target="_blank" rel="noreferrer" title={c.url} style={{ display: 'block', fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.url}</a>
                   <button type="button" onClick={() => removeChartLink(c.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
                 </div>
               ))}
@@ -897,9 +884,15 @@ export default function Journal() {
                       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{tag}</div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {items.map(c => (
-                          <a key={c.id} href={c.url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
-                            {c.type === 'image' ? <img src={c.url} alt={tag} style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }} /> : <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r)', border: '1px dashed var(--border2)', fontSize: 22 }}>🔗</div>}
-                          </a>
+                          c.type === 'image' ? (
+                            <div key={c.id} onClick={() => setLightboxUrl(c.url)} title="Klicka för att förstora" style={{ cursor: 'zoom-in' }}>
+                              <img src={c.url} alt={tag} style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 'var(--r)', border: '1px solid var(--border2)', display: 'block' }} />
+                            </div>
+                          ) : (
+                            <a key={c.id} href={c.url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                              <div style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r)', border: '1px dashed var(--border2)', fontSize: 22 }}>🔗</div>
+                            </a>
+                          )
                         ))}
                       </div>
                     </div>
@@ -913,6 +906,14 @@ export default function Journal() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {lightboxUrl && (
+        <div onClick={() => setLightboxUrl(null)} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}>
+          <button onClick={() => setLightboxUrl(null)} style={{ position: 'absolute', top: 20, right: 24, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <a href={lightboxUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 20, right: 68, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 'var(--r)', color: '#fff', fontSize: 12, cursor: 'pointer', padding: '8px 12px', textDecoration: 'none' }}>⭡ Öppna original</a>
+          <img src={lightboxUrl} alt="Chart" onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 'var(--r2)', boxShadow: '0 24px 80px rgba(0,0,0,0.8)', objectFit: 'contain' }} />
         </div>
       )}
     </div>
