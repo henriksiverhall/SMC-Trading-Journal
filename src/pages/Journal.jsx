@@ -157,6 +157,7 @@ export default function Journal() {
   const [attemptedSave, setAttemptedSave] = useState(false)
   const formRef = useRef(null)
   const [tvMeta, setTvMeta] = useState(null)
+  // [PARKERAD – TV-integration] tvAutoFilled används ej längre (Pine Script Journal Tool parkerad, se Kanban)
   const [tvAutoFilled, setTvAutoFilled] = useState(false)
 
   // ── Chart multiimage state ────────────────────────────────────────────────
@@ -260,33 +261,9 @@ export default function Journal() {
     return v !== undefined && v !== null && String(v).trim() !== ''
   }
 
-  // Auto-fill Journal från TradingView-payload
-  function autoFillFromTv(p) {
-    setForm(f => ({
-      ...f,
-      symbol:      p.symbol      || f.symbol,
-      direction:   p.direction === 'Close' ? f.direction : (p.direction || f.direction),
-      entry:       p.entry       ? String(p.entry)     : f.entry,
-      sl:          p.sl          ? String(p.sl)        : f.sl,
-      tp:          p.tp          ? String(p.tp)        : f.tp,
-      contracts:   p.contracts   ? String(p.contracts) : f.contracts,
-      date:        p.date        || f.date,
-      time:        p.time        || f.time,
-      strategy:    p.strategy    || f.strategy,
-      actual_exit: p.direction === 'Close' ? String(p.entry || '') : f.actual_exit,
-      exit_date:   p.direction === 'Close' ? (p.date || f.exit_date) : f.exit_date,
-      exit_time:   p.direction === 'Close' ? (p.time || f.exit_time) : f.exit_time,
-    }))
-    if (p._meta) setTvMeta(p._meta)
-    const { r, usd } = computeRValues({
-      entry: p.entry, sl: p.sl, tp: p.tp,
-      outcome: '', contracts: p.contracts, symbol: p.symbol, actual_exit: '',
-    }, [], [])
-    setCalcR(r); setCalcUSD(usd)
-    formRef.current?.scrollIntoView({ behavior: 'smooth' })
-    setTvAutoFilled(true)
-    setTimeout(() => setTvAutoFilled(false), 4000)
-  }
+  // [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
+  // autoFillFromTv och tvChannel borttagna – TV Replay stödjer inte alerts.
+  // Koden finns bevarad i Drive: TradeLog_JournalTool.pine
 
   useEffect(() => {
     if (!user) return
@@ -303,24 +280,20 @@ export default function Journal() {
       const bc = new BroadcastChannel('tradelog')
       bc.onmessage = e => { if (e.data?.type === 'trade_saved') loadTrades() }
 
-      // TradingView Realtime auto-fill via Supabase Realtime
-      const tvChannel = sb.channel(`tv-autofill-${effectiveUserId}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tv_pending',
-          filter: `user_id=eq.${effectiveUserId}`,
-        }, ({ new: row }) => {
-          const p = row?.payload
-          if (!p || p._type === 'ping') return
-          autoFillFromTv(p)
-          sb.from('tv_pending').update({ consumed: true }).eq('id', row.id)
-        })
-        .subscribe()
+      // [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
+      // TV Replay stödjer inte alerts – Supabase Realtime-kanalen för tv_pending borttagen.
+      // const tvChannel = sb.channel(`tv-autofill-${effectiveUserId}`)
+      //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tv_pending',
+      //     filter: `user_id=eq.${effectiveUserId}` }, ({ new: row }) => {
+      //     const p = row?.payload
+      //     if (!p || p._type === 'ping') return
+      //     autoFillFromTv(p)
+      //     sb.from('tv_pending').update({ consumed: true }).eq('id', row.id)
+      //   }).subscribe()
 
       return () => {
         bc.close()
-        tvChannel.unsubscribe()
+        // tvChannel.unsubscribe()
       }
     }
   }, [effectiveUserId])
@@ -441,7 +414,7 @@ export default function Journal() {
         ...(riskPct ? { _risk_pct: riskPct } : {}),
         ...(accountSize ? { _account_size: accountSize } : {}),
         ...(chartLinks.length > 0 ? { _chartLinks: chartLinks } : {}),
-        ...(tvMeta ? { _tv_meta: tvMeta } : {}),
+        // ...(tvMeta ? { _tv_meta: tvMeta } : {}), // [PARKERAD – TV-integration]
         ...Object.fromEntries(customFields.map(f => [f.name, customValues[f.id] || null])),
       },
     }
@@ -669,10 +642,10 @@ export default function Journal() {
           {chartLinks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6, marginBottom: 10 }}>
               {chartLinks.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }}>
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', minWidth: 0 }}>
                   {c.type === 'image' ? <img src={c.url} alt={c.tag} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border2)' }} /> : <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>🔗</span>}
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 4, padding: '2px 7px', flexShrink: 0 }}>{c.tag}</span>
-                  <a href={c.url} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{c.url}</a>
+                  <a href={c.url} target="_blank" rel="noreferrer" title={c.url} style={{ fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{c.url}</a>
                   <button type="button" onClick={() => removeChartLink(c.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>✕</button>
                 </div>
               ))}
@@ -768,11 +741,6 @@ export default function Journal() {
             )}
 
             <div className="card-body">
-              {tvAutoFilled && (
-                <div style={{ background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: 14, fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
-                  ✅ Fylldes i automatiskt från TradingView
-                </div>
-              )}
               <form onSubmit={handleSave}>
                 {fieldRows.map(row => {
                   const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
