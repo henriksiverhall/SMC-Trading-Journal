@@ -5,6 +5,10 @@ import { APP_VERSION } from '../lib/constants'
 import Topbar from '../components/Topbar'
 import TvOnboarding from '../components/TvOnboarding'
 
+// [PARKERAD – TV Pine Script Journal Tool, se Kanban dev_tv_pinescript1]
+// TV-fliken dold från användaren men kod bevarad för framtida bruk.
+const SHOW_TV_TAB = false
+
 function TabBtn({ active, onClick, children }) {
   return (
     <button onClick={onClick} style={{
@@ -324,12 +328,13 @@ export default function Profile() {
       <div className="page-content" style={{ maxWidth: 1100 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
           <TabBtn active={tab === 'konto'} onClick={() => handleTabChange('konto')}>Konto</TabBtn>
-          <TabBtn active={tab === 'tradingview'} onClick={() => handleTabChange('tradingview')}>📊 TradingView</TabBtn>
+          {/* [PARKERAD] TV-fliken dold – Pine Script Journal Tool pausad, se Kanban */}
+          {SHOW_TV_TAB && <TabBtn active={tab === 'tradingview'} onClick={() => handleTabChange('tradingview')}>📊 TradingView</TabBtn>}
           <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}</TabBtn>
           <TabBtn active={tab === 'inbox'} onClick={() => handleTabChange('inbox')}>Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}</TabBtn>
         </div>
         {tab === 'konto'        && <KontoTab user={user} userSettings={userSettings} saveSettings={saveSettings} signOut={signOut} />}
-        {tab === 'tradingview'  && <TvOnboarding user={user} userSettings={userSettings} saveSettings={saveSettings} />}
+        {SHOW_TV_TAB && tab === 'tradingview' && <TvOnboarding user={user} userSettings={userSettings} saveSettings={saveSettings} />}
         {tab === 'broadcast'    && <BroadcastSection user={user} refreshUnread={refreshUnread} />}
         {tab === 'inbox'        && <InboxSection user={user} refreshUnread={refreshUnread} />}
       </div>
