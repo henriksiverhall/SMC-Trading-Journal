@@ -3,6 +3,7 @@ import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { APP_VERSION } from '../lib/constants'
 import Topbar from '../components/Topbar'
+import TvOnboarding from '../components/TvOnboarding'
 
 function TabBtn({ active, onClick, children }) {
   return (
@@ -81,9 +82,7 @@ function BroadcastSection({ user, refreshUnread }) {
               <span style={{ color: 'var(--text4)', fontSize: 12 }}>{isOpen ? '▲' : '▼'}</span>
             </div>
             {isOpen && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                {m.body}
-              </div>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{m.body}</div>
             )}
           </div>
         )
@@ -109,14 +108,12 @@ function InboxSection({ user, refreshUnread }) {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [threadMessages])
 
   async function loadThreads() {
-    const { data } = await sb.from('inbox_threads')
-      .select('*').eq('user_id', user.id).order('updated_at', { ascending: false })
+    const { data } = await sb.from('inbox_threads').select('*').eq('user_id', user.id).order('updated_at', { ascending: false })
     setThreads(data || []); setLoading(false)
   }
 
   async function loadMessages(threadId) {
-    const { data } = await sb.from('inbox_messages')
-      .select('*').eq('thread_id', threadId).order('created_at', { ascending: true })
+    const { data } = await sb.from('inbox_messages').select('*').eq('thread_id', threadId).order('created_at', { ascending: true })
     setThreadMessages(data || [])
     const unread = (data || []).filter(m => m.sender_id !== user.id && !m.read_at)
     if (unread.length > 0) {
@@ -128,9 +125,7 @@ function InboxSection({ user, refreshUnread }) {
   async function createThread() {
     if (!newSubject.trim() || !newBody.trim()) return
     setSending(true)
-    const { data: thread } = await sb.from('inbox_threads')
-      .insert({ user_id: user.id, subject: newSubject.trim(), status: 'open', thread_type: 'support' })
-      .select().single()
+    const { data: thread } = await sb.from('inbox_threads').insert({ user_id: user.id, subject: newSubject.trim(), status: 'open', thread_type: 'support' }).select().single()
     if (thread) {
       await sb.from('inbox_messages').insert({ thread_id: thread.id, sender_id: user.id, body: newBody.trim() })
       setNewSubject(''); setNewBody(''); setShowNew(false)
@@ -152,54 +147,32 @@ function InboxSection({ user, refreshUnread }) {
   if (activeThread) return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <button onClick={() => { setActiveThread(null); setThreadMessages([]) }}
-          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0, fontFamily: 'var(--font)' }}>
-          ← Tillbaka
-        </button>
+        <button onClick={() => { setActiveThread(null); setThreadMessages([]) }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0, fontFamily: 'var(--font)' }}>← Tillbaka</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{activeThread.subject}</div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 20, background: activeThread.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)', color: activeThread.status === 'open' ? 'var(--green)' : 'var(--text4)' }}>
-            {activeThread.status === 'open' ? '● Öppet' : '✓ Stängt'}
-          </span>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 20, background: activeThread.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)', color: activeThread.status === 'open' ? 'var(--green)' : 'var(--text4)' }}>{activeThread.status === 'open' ? '● Öppet' : '✓ Stängt'}</span>
         </div>
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, minHeight: 80 }}>
         {threadMessages.length === 0 && <div style={{ color: 'var(--text4)', fontSize: 12, padding: '12px 0' }}>Inga meddelanden än.</div>}
         {threadMessages.map(m => {
           const isMe = m.sender_id === user.id
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-              <div style={{
-                maxWidth: '72%', padding: '10px 14px',
-                background: isMe ? 'var(--accent-dim)' : 'var(--bg3)',
-                border: `1px solid ${isMe ? 'rgba(0,212,170,0.25)' : 'var(--border)'}`,
-                borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap',
-              }}>{m.body}</div>
-              <div style={{ fontSize: 10, color: 'var(--text4)', marginTop: 3, padding: '0 4px' }}>
-                {isMe ? 'Du' : 'Support'} · {formatTime(m.created_at)}
-              </div>
+              <div style={{ maxWidth: '72%', padding: '10px 14px', background: isMe ? 'var(--accent-dim)' : 'var(--bg3)', border: `1px solid ${isMe ? 'rgba(0,212,170,0.25)' : 'var(--border)'}`, borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</div>
+              <div style={{ fontSize: 10, color: 'var(--text4)', marginTop: 3, padding: '0 4px' }}>{isMe ? 'Du' : 'Support'} · {formatTime(m.created_at)}</div>
             </div>
           )
         })}
         <div ref={bottomRef} />
       </div>
-
       {activeThread.status === 'open' ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <textarea className="form-control" rows={2} placeholder="Skriv ett svar… (Ctrl+Enter)"
-            value={replyBody} onChange={e => setReplyBody(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendReply() }}
-            style={{ resize: 'none', flex: 1 }} />
-          <button className="btn btn-primary" onClick={sendReply} disabled={sending || !replyBody.trim()} style={{ flexShrink: 0 }}>
-            {sending ? '…' : 'Skicka'}
-          </button>
+          <textarea className="form-control" rows={2} placeholder="Skriv ett svar… (Ctrl+Enter)" value={replyBody} onChange={e => setReplyBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendReply() }} style={{ resize: 'none', flex: 1 }} />
+          <button className="btn btn-primary" onClick={sendReply} disabled={sending || !replyBody.trim()} style={{ flexShrink: 0 }}>{sending ? '…' : 'Skicka'}</button>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: 'var(--text4)', textAlign: 'center', padding: '12px 0', background: 'var(--bg3)', borderRadius: 'var(--r)' }}>
-          Detta ärende är stängt.
-        </div>
+        <div style={{ fontSize: 12, color: 'var(--text4)', textAlign: 'center', padding: '12px 0', background: 'var(--bg3)', borderRadius: 'var(--r)' }}>Detta ärende är stängt.</div>
       )}
     </div>
   )
@@ -209,7 +182,6 @@ function InboxSection({ user, refreshUnread }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
         <button className="btn btn-primary btn-sm" onClick={() => setShowNew(s => !s)}>{showNew ? 'Avbryt' : '+ Nytt ärende'}</button>
       </div>
-
       {showNew && (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: 16, marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>Nytt support-ärende</div>
@@ -221,23 +193,15 @@ function InboxSection({ user, refreshUnread }) {
             <label className="form-label">Meddelande</label>
             <textarea className="form-control" rows={4} placeholder="Beskriv i detalj…" value={newBody} onChange={e => setNewBody(e.target.value)} style={{ resize: 'vertical' }} />
           </div>
-          <button className="btn btn-primary" onClick={createThread} disabled={sending || !newSubject.trim() || !newBody.trim()}>
-            {sending ? 'Skickar…' : 'Skicka ärende'}
-          </button>
+          <button className="btn btn-primary" onClick={createThread} disabled={sending || !newSubject.trim() || !newBody.trim()}>{sending ? 'Skickar…' : 'Skicka ärende'}</button>
         </div>
       )}
-
       {!threads.length ? (
-        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
-          Inga ärenden ännu.<br /><span style={{ fontSize: 12 }}>Klicka "+ Nytt ärende" för att kontakta support.</span>
-        </div>
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga ärenden ännu.<br /><span style={{ fontSize: 12 }}>Klicka "+ Nytt ärende" för att kontakta support.</span></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {threads.map(t => (
-            <div key={t.id} onClick={() => setActiveThread(t)} style={{
-              background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)',
-              padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
-            }}
+            <div key={t.id} onClick={() => setActiveThread(t)} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
             >
@@ -245,9 +209,7 @@ function InboxSection({ user, refreshUnread }) {
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{t.subject}</div>
                 <div style={{ fontSize: 11, color: 'var(--text4)' }}>{t.thread_type === 'support' ? '🎫 Support' : '💬 Direkt'} · {formatTime(t.updated_at)}</div>
               </div>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, background: t.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)', color: t.status === 'open' ? 'var(--green)' : 'var(--text4)' }}>
-                {t.status === 'open' ? 'Öppet' : 'Stängt'}
-              </span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, background: t.status === 'open' ? 'var(--green-dim)' : 'var(--bg4)', color: t.status === 'open' ? 'var(--green)' : 'var(--text4)' }}>{t.status === 'open' ? 'Öppet' : 'Stängt'}</span>
               <span style={{ color: 'var(--text4)', fontSize: 12 }}>›</span>
             </div>
           ))}
@@ -317,26 +279,18 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
           </form>
         </div>
       </div>
-
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header"><div className="card-title">Byt lösenord</div></div>
         <div className="card-body">
           <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Nytt lösenord</label>
-              <input className="form-control" type="password" placeholder="Minst 6 tecken" value={pwNew} onChange={e => setPwNew(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Upprepa nytt lösenord</label>
-              <input className="form-control" type="password" placeholder="Upprepa lösenordet" value={pwRepeat} onChange={e => setPwRepeat(e.target.value)} style={{ borderColor: pwRepeat && pwRepeat !== pwNew ? 'var(--red)' : undefined }} />
-              {pwRepeat && pwRepeat !== pwNew && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>Lösenorden matchar inte</div>}
-            </div>
+            <div className="form-group"><label className="form-label">Nytt lösenord</label><input className="form-control" type="password" placeholder="Minst 6 tecken" value={pwNew} onChange={e => setPwNew(e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">Upprepa nytt lösenord</label><input className="form-control" type="password" placeholder="Upprepa lösenordet" value={pwRepeat} onChange={e => setPwRepeat(e.target.value)} style={{ borderColor: pwRepeat && pwRepeat !== pwNew ? 'var(--red)' : undefined }} />
+              {pwRepeat && pwRepeat !== pwNew && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>Lösenorden matchar inte</div>}</div>
             {pwMsg && <div className={pwMsg.includes('uppdaterat') ? 'auth-success' : 'auth-error'}>{pwMsg}</div>}
             <button type="submit" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} disabled={!pwNew || !pwRepeat || pwNew !== pwRepeat}>Uppdatera lösenord</button>
           </form>
         </div>
       </div>
-
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header"><div className="card-title">Integritet</div></div>
         <div className="card-body" style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
@@ -344,7 +298,6 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
           <p style={{ marginTop: 8 }}>Du kan när som helst begära full radering av dina uppgifter nedan.</p>
         </div>
       </div>
-
       <div className="card" style={{ border: '1px solid rgba(239,68,68,0.2)' }}>
         <div className="card-header"><div className="card-title" style={{ color: 'var(--red)' }}>Farlig zon</div></div>
         <div className="card-body">
@@ -362,9 +315,7 @@ export default function Profile() {
 
   function handleTabChange(newTab) {
     setTab(newTab)
-    if (newTab === 'broadcast' || newTab === 'inbox') {
-      refreshUnread(user?.id)
-    }
+    if (newTab === 'broadcast' || newTab === 'inbox') refreshUnread(user?.id)
   }
 
   return (
@@ -373,17 +324,14 @@ export default function Profile() {
       <div className="page-content" style={{ maxWidth: 1100 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
           <TabBtn active={tab === 'konto'} onClick={() => handleTabChange('konto')}>Konto</TabBtn>
-          <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>
-            Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}
-          </TabBtn>
-          <TabBtn active={tab === 'inbox'} onClick={() => handleTabChange('inbox')}>
-            Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}
-          </TabBtn>
+          <TabBtn active={tab === 'tradingview'} onClick={() => handleTabChange('tradingview')}>📊 TradingView</TabBtn>
+          <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}</TabBtn>
+          <TabBtn active={tab === 'inbox'} onClick={() => handleTabChange('inbox')}>Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}</TabBtn>
         </div>
-
-        {tab === 'konto'     && <KontoTab user={user} userSettings={userSettings} saveSettings={saveSettings} signOut={signOut} />}
-        {tab === 'broadcast' && <BroadcastSection user={user} refreshUnread={refreshUnread} />}
-        {tab === 'inbox'     && <InboxSection user={user} refreshUnread={refreshUnread} />}
+        {tab === 'konto'        && <KontoTab user={user} userSettings={userSettings} saveSettings={saveSettings} signOut={signOut} />}
+        {tab === 'tradingview'  && <TvOnboarding user={user} userSettings={userSettings} saveSettings={saveSettings} />}
+        {tab === 'broadcast'    && <BroadcastSection user={user} refreshUnread={refreshUnread} />}
+        {tab === 'inbox'        && <InboxSection user={user} refreshUnread={refreshUnread} />}
       </div>
     </div>
   )

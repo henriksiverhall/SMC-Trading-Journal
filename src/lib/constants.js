@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.0.44-dev'
+export const APP_VERSION = 'v2.0.45-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
 export const YAHOO_SYMBOL_MAP = {
@@ -30,7 +30,7 @@ export const EMOTIONS = [
   { id: 'Confident',     emoji: '💪', label: 'Confident' },
   { id: 'Hesitant',      emoji: '😟', label: 'Hesitant' },
   { id: 'FOMO',          emoji: '⚡', label: 'FOMO' },
-  { id: 'Revenge',       emoji: '😤', label: 'Revenge' },
+  { id: 'Revenge',       emoji: '😐', label: 'Revenge' },
   { id: 'Overconfident', emoji: '🎰', label: 'Over' },
 ]
 
