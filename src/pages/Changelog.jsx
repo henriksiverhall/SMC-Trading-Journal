@@ -1,1 +1,138 @@
-import Topbar from '../components/Topbar'\n\nconst CHANGELOG = [\n  {\n    version: 'v2.0.45-dev',\n    date: '2026-07-01',\n    entries: [\n      { type: 'fix', text: 'Journal: chart-länk display:block tillagd – ellipsis-trunkering fungerar nu korrekt i grid-layout. URL bryts inte längre ut till höger.' },\n      { type: 'feature', text: 'Worker: TradingView "Copy link"-URL:er (tradingview.com/x/{ID}) konverteras automatiskt till S3 PNG-URL (s3.tradingview.com/snapshots/{c}/{ID}.png). Om S3 blockerar server-side-fetch returneras S3-URL:en som klickbar länk (fungerar i browser).' },\n      { type: 'infra', text: 'Dokumenterat: TV S3 URL-mönster – subkatalogen är alltid första tecknet (lowercase) i bild-ID:t. Logik finns i worker tvShareToS3(). Cloudflare Workers blockeras av S3 (403) men URL:en fungerar direkt i browser.' },\n    ]\n  },\n  {\n    version: 'v2.0.44-dev',\n    date: '2026-07-01',\n    entries: [\n      { type: 'fix', text: 'Journal: chart-rad bytt till grid-layout (36px | auto | 1fr | 24px) – URL trunkeras med "…" och ✕-knappen hamnar alltid längst till höger.' },\n      { type: 'infra', text: 'Profil: TradingView-fliken dold (SHOW_TV_TAB=false) – Pine Script Journal Tool parkerad, se Roadmap. Kod och TvOnboarding-komponent bevarade.' },\n      { type: 'infra', text: 'TV Pine Script Journal Tool parkerad – TV Replay stödjer inte alerts. Supabase Realtime-kanal för tv_pending och autoFillFromTv borttagna. Koden bevarad kommenterad.' },\n    ]\n  },\n  {\n    version: 'v2.0.43-dev',\n    date: '2026-06-30',\n    entries: [\n      { type: 'feature', text: 'Journal: chart-fältet ersatt med multiimage-stöd – flera bilder/länkar per trade, var och en taggad (4h/1h/15m/5m/1m/Entry/SL/TP/Exit/Övrigt). Stöd för URL-hämtning och direkt filuppladdning.' },\n      { type: 'infra', text: 'Cloudflare Worker: ny R2-bucket "tradelog-trade-images" (binding TRADE_IMAGES) samt endpoints POST /trade-images/save, GET /trade-images/:key, DELETE /trade-images/:key.' },\n      { type: 'feature', text: 'Journal: detaljmodalen visar charts grupperade per tagg med 88x88px miniatyrer.' },\n    ]\n  },\n  {\n    version: 'v2.0.42-dev',\n    date: '2026-06-29',\n    entries: [\n      { type: 'feature', text: 'Ekonomisk kalender (full sida): bytt till inbäddad TradingView Economic Calendar-widget. Realtidsdata, inget eget API behövs.' },\n      { type: 'infra', text: 'Undersökt: ForexFactory, MQL5 och Investing.com blockerar Cloudflare Workers IP-ranges. TradingView embedded widget är enda fungerande lösningen.' },\n    ]\n  },\n  {\n    version: 'v2.0.40-dev',\n    date: '2026-06-27',\n    entries: [\n      { type: 'feature', text: 'Dashboard: analoga sessionsklockor (Din tid + London/NY/Tokyo), RTH-instrumentruta med nedräkning HH:MM:SS.' },\n    ]\n  },\n  {\n    version: 'v2.0.36-dev',\n    date: '2026-06-25',\n    entries: [\n      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält, max 10 rader.' },\n      { type: 'fix', text: 'Admin + Profile: maxWidth höjt till 1100px.' },\n    ]\n  },\n  {\n    version: 'v2.0.32-dev',\n    date: '2026-06-24',\n    entries: [\n      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. AuthPage: Glömt lösenord-modal.' },\n    ]\n  },\n  {\n    version: 'v2.0.23-dev',\n    date: '2026-06-23',\n    entries: [\n      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor, SL-optimerare, psykologisk analys.' },\n    ]\n  },\n  {\n    version: 'v2.0.19-dev',\n    date: '2026-06-22',\n    entries: [\n      { type: 'feature', text: 'Journal: filter, strategi-dropdown, kolumnsortering. PiP: BroadcastChannel live-uppdatering.' },\n    ]\n  },\n  {\n    version: 'v2.0.15-dev',\n    date: '2026-06-21',\n    entries: [\n      { type: 'feature', text: 'PiP-widget, Checklist portad, obligatoriska fält.' },\n    ]\n  },\n  {\n    version: 'v2.0.4-dev',\n    date: '2026-06-15',\n    entries: [\n      { type: 'feature', text: 'DragGrid widget-system, Meddelanden/Support, Journal MFE/MAE.' },\n    ]\n  },\n  {\n    version: 'v2.0.0-dev',\n    date: '2026-06-11',\n    entries: [\n      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers, Supabase. TradeLog v2.0 grund.' },\n    ]\n  },\n]\n\nconst TYPE_CONFIG = {\n  feature:     { label: 'Feature',     bg: 'rgba(0,212,170,0.12)',  color: 'var(--accent)' },\n  fix:         { label: 'Fix',         bg: 'rgba(239,68,68,0.12)',  color: '#ef4444' },\n  infra:       { label: 'Infra',       bg: 'rgba(99,102,241,0.12)', color: '#818cf8' },\n  improvement: { label: 'Förbättring', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' },\n}\n\nexport default function Changelog() {\n  return (\n    <div style={{ flex: 1 }}>\n      <Topbar title="Changelog" subtitle="Dev v2.0 – versionshistorik" />\n      <div className="page-content" style={{ maxWidth: 760 }}>\n        {CHANGELOG.map((release, ri) => (\n          <div key={release.version} style={{ marginBottom: 36 }}>\n            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>\n              <span style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: ri === 0 ? 'var(--accent)' : 'var(--text)', ...(ri === 0 ? { textShadow: '0 0 20px rgba(0,212,170,0.25)' } : {}) }}>{release.version}</span>\n              <span style={{ fontSize: 12, color: 'var(--text4)', fontFamily: 'var(--mono)' }}>{release.date}</span>\n              {ri === 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 20, padding: '2px 8px' }}>SENASTE</span>}\n            </div>\n            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>\n              {release.entries.map((entry, ei) => {\n                const cfg = TYPE_CONFIG[entry.type] || TYPE_CONFIG.feature\n                return (\n                  <div key={ei} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>\n                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 4, background: cfg.bg, color: cfg.color, flexShrink: 0, marginTop: 1, letterSpacing: 0.3, minWidth: 46, textAlign: 'center' }}>{cfg.label}</span>\n                    <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{entry.text}</span>\n                  </div>\n                )\n              })}\n            </div>\n            {ri < CHANGELOG.length - 1 && <div style={{ borderBottom: '1px solid var(--border)', marginTop: 28 }} />}\n          </div>\n        ))}\n      </div>\n    </div>\n  )\n}\n
+import Topbar from '../components/Topbar'
+
+const CHANGELOG = [
+  {
+    version: 'v2.0.46-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'feature', text: 'Journal: klick på bild i detaljmodalen öppnar lightbox-overlay (helskärm, svart bakgrund, zoom-out för att stänga, länk till original).' },
+      { type: 'feature', text: 'PiP: Logga trade-fliken helt ombyggd och identisk med standard Log Trade – scale-ins, targets, R-preview, Risk%/Kontostorlek, multiimage med tagg, filuppladdning, Känsla (EMOTIONS), sparar riskPct/accountSize till userSettings.' },
+    ]
+  },
+  {
+    version: 'v2.0.45-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'fix', text: 'Journal: chart-länk display:block – ellipsis-trunkering fungerar korrekt i grid-layout.' },
+      { type: 'feature', text: 'Worker: TV "Copy link"-URL:er konverteras auto till S3 PNG-URL. S3-URL sparas som klickbar länk om server-side fetch blockeras.' },
+    ]
+  },
+  {
+    version: 'v2.0.44-dev',
+    date: '2026-07-01',
+    entries: [
+      { type: 'fix', text: 'Journal: chart-rad grid-layout (36px | auto | 1fr | 24px) – URL trunkeras, ✕-knapp alltid höger.' },
+      { type: 'infra', text: 'TV Pine Script Journal Tool parkerad – Replay stödjer inte alerts. Profil TV-flik dold.' },
+    ]
+  },
+  {
+    version: 'v2.0.43-dev',
+    date: '2026-06-30',
+    entries: [
+      { type: 'feature', text: 'Journal: multiimage-stöd – flera bilder/länkar per trade med tagg. URL-hämtning + filuppladdning. R2-bucket tradelog-trade-images.' },
+      { type: 'feature', text: 'Journal: detaljmodalen visar charts per tagg, 88×88px miniatyrer.' },
+    ]
+  },
+  {
+    version: 'v2.0.42-dev',
+    date: '2026-06-29',
+    entries: [
+      { type: 'feature', text: 'Ekonomisk kalender: inbäddad TradingView Economic Calendar-widget.' },
+    ]
+  },
+  {
+    version: 'v2.0.40-dev',
+    date: '2026-06-27',
+    entries: [
+      { type: 'feature', text: 'Dashboard: analoga sessionsklockor (London/NY/Tokyo + din tid), RTH-instrumentruta.' },
+    ]
+  },
+  {
+    version: 'v2.0.36-dev',
+    date: '2026-06-25',
+    entries: [
+      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält.' },
+      { type: 'fix', text: 'Admin + Profile: maxWidth höjt till 1100px.' },
+    ]
+  },
+  {
+    version: 'v2.0.32-dev',
+    date: '2026-06-24',
+    entries: [
+      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. AuthPage: Glömt lösenord-modal.' },
+    ]
+  },
+  {
+    version: 'v2.0.23-dev',
+    date: '2026-06-23',
+    entries: [
+      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor, SL-optimerare, psykologisk analys.' },
+    ]
+  },
+  {
+    version: 'v2.0.19-dev',
+    date: '2026-06-22',
+    entries: [
+      { type: 'feature', text: 'Journal: filter, strategi-dropdown, kolumnsortering. PiP: BroadcastChannel live-uppdatering.' },
+    ]
+  },
+  {
+    version: 'v2.0.15-dev',
+    date: '2026-06-21',
+    entries: [
+      { type: 'feature', text: 'PiP-widget, Checklist portad, obligatoriska fält.' },
+    ]
+  },
+  {
+    version: 'v2.0.4-dev',
+    date: '2026-06-15',
+    entries: [
+      { type: 'feature', text: 'DragGrid widget-system, Meddelanden/Support, Journal MFE/MAE.' },
+    ]
+  },
+  {
+    version: 'v2.0.0-dev',
+    date: '2026-06-11',
+    entries: [
+      { type: 'infra', text: 'React 18 + Vite 5, Cloudflare Workers, Supabase. TradeLog v2.0 grund.' },
+    ]
+  },
+]
+
+const TYPE_CONFIG = {
+  feature:     { label: 'Feature',     bg: 'rgba(0,212,170,0.12)',  color: 'var(--accent)' },
+  fix:         { label: 'Fix',         bg: 'rgba(239,68,68,0.12)',  color: '#ef4444' },
+  infra:       { label: 'Infra',       bg: 'rgba(99,102,241,0.12)', color: '#818cf8' },
+  improvement: { label: 'Förbättring', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' },
+}
+
+export default function Changelog() {
+  return (
+    <div style={{ flex: 1 }}>
+      <Topbar title="Changelog" subtitle="Dev v2.0 – versionshistorik" />
+      <div className="page-content" style={{ maxWidth: 760 }}>
+        {CHANGELOG.map((release, ri) => (
+          <div key={release.version} style={{ marginBottom: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: ri === 0 ? 'var(--accent)' : 'var(--text)', ...(ri === 0 ? { textShadow: '0 0 20px rgba(0,212,170,0.25)' } : {}) }}>{release.version}</span>
+              <span style={{ fontSize: 12, color: 'var(--text4)', fontFamily: 'var(--mono)' }}>{release.date}</span>
+              {ri === 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 20, padding: '2px 8px' }}>SENASTE</span>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {release.entries.map((entry, ei) => {
+                const cfg = TYPE_CONFIG[entry.type] || TYPE_CONFIG.feature
+                return (
+                  <div key={ei} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 4, background: cfg.bg, color: cfg.color, flexShrink: 0, marginTop: 1, letterSpacing: 0.3, minWidth: 46, textAlign: 'center' }}>{cfg.label}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{entry.text}</span>
+                  </div>
+                )
+              })}
+            </div>
+            {ri < CHANGELOG.length - 1 && <div style={{ borderBottom: '1px solid var(--border)', marginTop: 28 }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
