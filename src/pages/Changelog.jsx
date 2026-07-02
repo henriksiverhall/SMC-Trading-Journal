@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.54-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Dashboard: widgetgriden satt permanent till 1 kolumn (var 2 på desktop). Widgets kan därmed aldrig hamna sida vid sida längre, oavsett skärmbredd – löser mobilbuggen på roten istället för fler brytpunkts-hack. Gör även "Anpassa widgets" till en rak lista utan gissningar om vad som legat på samma rad.' },
+    ]
+  },
+  {
     version: 'v2.0.53-dev',
     date: '2026-07-02',
     entries: [
