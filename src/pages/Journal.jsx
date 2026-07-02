@@ -720,7 +720,7 @@ export default function Journal() {
                   const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
                   if (cells.length === 0) return null
                   return (
-                    <div key={row.join('-')} style={{ display: 'grid', gridTemplateColumns: cells.length === 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                    <div key={row.join('-')} className={cells.length === 2 ? 'field-row-2col' : undefined} style={{ display: 'grid', gridTemplateColumns: cells.length === 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
                       {cells.map(({ id, content }) => {
                         const isDragging = draggingField === id
                         const hint = dropHint?.id === id ? dropHint.mode : null
