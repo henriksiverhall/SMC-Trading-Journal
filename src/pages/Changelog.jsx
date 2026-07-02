@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.55-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Journal: Datum/Tid/Exit datum/Exit tid-fälten stack ut till höger om skärmen på mobil (iOS Safari) trots att alla andra fält hade korrekt bredd. Orsak: input[type=date] och input[type=time] kan strunta i width:100% på iOS och behålla sin egen bredd. Explicit CSS-regel tvingar nu dessa fälttyper att respektera containerns bredd.' },
+    ]
+  },
+  {
     version: 'v2.0.54-dev',
     date: '2026-07-02',
     entries: [
