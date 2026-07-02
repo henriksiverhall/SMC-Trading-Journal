@@ -2,6 +2,16 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.49-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'feature', text: 'Full mobil/platta-anpassning: sidebar blir en overlay-drawer med hamburgermeny på skärmar ≤768px, stängs automatiskt vid navigering. Topbar får hamburger-knapp.' },
+      { type: 'fix', text: 'Journal: tvåkolumns-layout (Log Trade + tabell) blir en kolumn på mobil/platta. Formuläret slutar vara sticky så det inte låser scroll.' },
+      { type: 'fix', text: 'PiP-knappen döljs på mobil/platta – Document Picture-in-Picture stöds inte i mobila webbläsare. Checklist och Logga trade nås istället direkt via huvudnavigeringen.' },
+      { type: 'infra', text: 'Nya CSS-brytpunkt vid 768px i globals.css: kort, tabeller och modaler får mindre padding/font-storlek för bättre läsbarhet på små skärmar.' },
+    ]
+  },
+  {
     version: 'v2.0.48-dev',
     date: '2026-07-01',
     entries: [
