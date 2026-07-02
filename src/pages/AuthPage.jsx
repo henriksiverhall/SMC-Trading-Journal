@@ -25,7 +25,7 @@ function ForgotPasswordModal({ onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', padding: 16 }} onClick={onClose}>
       <div style={{ background: '#11131a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '32px 36px', width: 380, maxWidth: '92vw', fontFamily: 'var(--font)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>Glömt lösenord</div>
@@ -116,12 +116,7 @@ export default function AuthPage() {
   const formBg = `rgba(10,12,18,${formOpacity})`
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      display: 'grid',
-      gridTemplateColumns: 'clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px)',
-      fontFamily: 'var(--font)',
-    }}>
+    <div className="auth-page-wrap">
       {heroUrl && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
@@ -131,17 +126,13 @@ export default function AuthPage() {
       )}
 
       {/* Hero panel */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        padding: 48, overflow: 'hidden', backgroundColor: heroBg,
-      }}>
+      <div className="auth-hero-panel" style={{ backgroundColor: heroBg }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 38, height: 38, background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 'var(--r2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>TL</div>
           <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>TradeLog</div>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h1 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.05, color: 'var(--text)', margin: '0 0 18px' }}>
+        <div className="auth-hero-panel-mid">
+          <h1 className="auth-hero-panel-headline">
             Track your trades.<br />
             <span style={{ color: 'var(--accent)' }}>Master your edge.</span>
           </h1>
@@ -149,7 +140,7 @@ export default function AuthPage() {
             Professional trading journal built for futures and FX traders.
             R-based analytics, pre-trade checklists, and AI-powered insights — all in one place.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 40 }}>
+          <div className="auth-hero-panel-stats">
             {[['R','Risk-based tracking'],['AI','Pattern analysis'],['∞','Trades logged']].map(([val, lbl]) => (
               <div key={val} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 'var(--r2)', padding: '14px 16px' }}>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.5px' }}>{val}</div>
@@ -162,11 +153,7 @@ export default function AuthPage() {
       </div>
 
       {/* Form panel */}
-      <div style={{
-        position: 'relative', zIndex: 1,
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '48px 40px', overflowY: 'auto', backgroundColor: formBg,
-      }}>
+      <div className="auth-form-panel" style={{ backgroundColor: formBg }}>
         {mode === 'confirm' ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
