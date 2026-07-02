@@ -5,49 +5,72 @@ import Topbar from '../components/Topbar'
 
 // ── Parsers ───────────────────────────────────────────────────────────────────────────────
 
-function parseTVBacktest(text) {
-  const lines = text.trim().split('\n')
+function stripBOM(text) { return text.replace(/^\uFEFF/, '') }
+
+function guessSymbolFromFilename(filename) {
+  if (!filename) return ''
+  const parts = filename.replace(/\.csv$/i, '').split(/[-_]/)
+  const cand = parts.find(p => /^[A-Z0-9]{3,10}$/.test(p) && !/^\d+$/.test(p) && p !== 'FX' && p !== 'CSV')
+  return cand || ''
+}
+
+function parseTVBacktest(text, filename = '') {
+  const lines = stripBOM(text).trim().split('\n')
   if (!lines.length) return { error: 'Tom fil' }
-  const headerIdx = lines.findIndex(l => /trade\s*#|trade type|signal/i.test(l))
-  if (headerIdx === -1) return { error: 'Okänt TradingView-format – ingen header-rad hittades.' }
-  const headers = lines[headerIdx].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+  const hasHeaders = headers.some(h => /trade number|trade #|signal/i.test(h))
+  if (!hasHeaders) return { error: 'Okänt TradingView-format – ingen header-rad hittades. Exportera "List of Trades" som CSV från Strategy Tester.' }
   const rows = []
-  for (let i = headerIdx + 1; i < lines.length; i++) {
+  for (let i = 1; i < lines.length; i++) {
     const cols = splitCSVLine(lines[i])
     if (cols.length < 3) continue
     const row = {}
     headers.forEach((h, j) => { row[h] = (cols[j] || '').replace(/^"|"$/g, '').trim() })
     rows.push(row)
   }
-  const trades = []
+  const symbol = guessSymbolFromFilename(filename)
+
+  // TradingViews export har EN rad per exekvering (Entry + Exit separat), grupperade
+  // på samma "Trade number" – inte en rad per trade som tidigare antogs.
+  const byTrade = {}
   for (const row of rows) {
-    const type = row['type'] || row['trade type'] || row['signal'] || ''
-    const symbol   = row['symbol'] || row['ticker'] || ''
-    const dateStr  = row['date/time'] || row['entry date'] || row['date'] || row['entry time'] || ''
-    const exitDate = row['exit date'] || row['exit date/time'] || ''
-    const entry    = parseFloat(row['entry'] || row['entry price'] || row['price'] || '')
-    const exitP    = parseFloat(row['exit'] || row['exit price'] || row['close price'] || '')
-    const contracts= parseFloat(row['qty'] || row['quantity'] || row['size'] || row['contracts'] || '1') || 1
-    const profitRaw= row['profit'] || row['net profit'] || row['p&l'] || row['pnl'] || ''
-    const profit   = parseFloat(profitRaw.replace(/[$,%]/g, '')) || null
-    const direction= /short/i.test(type) ? 'Short' : /long|buy/i.test(type) ? 'Long' : ''
-    const runup    = parseFloat(row['max runup'] || '') || null
-    const drawdown = parseFloat(row['max drawdown'] || '') || null
-    if (!entry && !exitP) continue
+    const num = row['trade number'] || row['trade #'] || ''
+    if (!num) continue
+    if (!byTrade[num]) byTrade[num] = {}
+    const type = (row['type'] || '').toLowerCase()
+    if (type.startsWith('entry')) byTrade[num].entry = row
+    else if (type.startsWith('exit')) byTrade[num].exit = row
+  }
+
+  const trades = []
+  for (const num of Object.keys(byTrade)) {
+    const { entry, exit } = byTrade[num]
+    if (!entry) continue
+    const typeStr = entry['type'] || ''
+    const direction = /long/i.test(typeStr) ? 'Long' : /short/i.test(typeStr) ? 'Short' : ''
+    const entryPrice = parseFloat(entry['price usd'] || entry['price'] || '')
+    const exitPrice = exit ? parseFloat(exit['price usd'] || exit['price'] || '') : NaN
+    const qty = parseFloat(entry['size (qty)'] || entry['qty'] || entry['size'] || '1') || 1
+    const pnlRaw = exit ? (exit['net pnl usd'] || exit['net pnl'] || exit['profit'] || '') : ''
+    const pnl = pnlRaw !== '' ? parseFloat(pnlRaw) : null
+    if (isNaN(entryPrice)) continue
     trades.push({
-      date: formatDateStr(dateStr), exit_date: exitDate ? formatDateStr(exitDate) : null,
+      date: formatDateStr(entry['date and time'] || entry['date/time'] || entry['date'] || ''),
+      exit_date: exit ? formatDateStr(exit['date and time'] || exit['date/time'] || exit['date'] || '') : null,
       symbol, direction,
-      entry: isNaN(entry) ? null : entry, actual_exit: isNaN(exitP) ? null : exitP,
-      contracts, outcome: profit != null ? (profit > 0 ? 'W' : profit < 0 ? 'L' : 'BE') : '',
-      pnl: profit, _runup: runup, _drawdown: drawdown, _source: 'tv_backtest',
+      entry: entryPrice, actual_exit: isNaN(exitPrice) ? null : exitPrice,
+      contracts: qty,
+      outcome: pnl != null ? (pnl > 0 ? 'W' : pnl < 0 ? 'L' : 'BE') : '',
+      pnl, _source: 'tv_backtest',
     })
   }
-  if (!trades.length) return { error: 'Inga trades parsades – kontrollera att filen är en TradingView Strategy Tester-export.' }
+  trades.sort((a, b) => a.date < b.date ? -1 : 1)
+  if (!trades.length) return { error: 'Inga trades parsades – kontrollera att filen är en TradingView Strategy Tester-export (List of Trades).' }
   return { trades }
 }
 
 function parseMetaTrader(text) {
-  const lines = text.trim().split('\n')
+  const lines = stripBOM(text).trim().split('\n')
   const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase()) || []
   const hasMTHeaders = headers.some(h => /ticket|order|open time|close time|type|lots|s\/l|t\/p/i.test(h))
   if (!hasMTHeaders) return { error: 'Okänt MetaTrader-format. Exportera som "Report" CSV från MT4/MT5.' }
@@ -83,9 +106,9 @@ function parseMetaTrader(text) {
 }
 
 function parseTradovate(text) {
-  const lines = text.trim().split('\n')
+  const lines = stripBOM(text).trim().split('\n')
   const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase()) || []
-  const hasTVHeaders = headers.some(h => /fill id|account|contract|side|filled/i.test(h))
+  const hasTVHeaders = headers.some(h => /fill id|account|contract|side|filled|b\/s/i.test(h))
   if (!hasTVHeaders) return { error: 'Okänt Tradovate-format. Exportera Orders.csv från Tradovate.' }
   const fills = []
   for (let i = 1; i < lines.length; i++) {
@@ -93,16 +116,21 @@ function parseTradovate(text) {
     if (cols.length < 4) continue
     const row = {}
     headers.forEach((h, j) => { row[h] = (cols[j] || '').replace(/^"|"$/g, '').trim() })
+    const status = (row['status'] || '').toLowerCase()
+    if (status && status !== 'filled') continue // hoppa Canceled/Working/Rejected
     const side = (row['side'] || row['b/s'] || row['buy/sell'] || '').toLowerCase()
-    if (!/buy|sell|b|s/.test(side)) continue
+    if (!/buy|sell/.test(side)) continue
+    const price = parseFloat(row['fill price'] || row['avgprice'] || row['avg fill price'] || row['price'] || '')
+    if (isNaN(price)) continue
     fills.push({
       date: row['fill time'] || row['time'] || row['timestamp'] || '',
       symbol: row['contract'] || row['symbol'] || '',
-      side: /buy|b/.test(side) ? 'Buy' : 'Sell',
-      price: parseFloat(row['fill price'] || row['price'] || ''),
-      qty: parseFloat(row['filled'] || row['qty'] || row['quantity'] || '1') || 1,
+      side: /buy/.test(side) ? 'Buy' : 'Sell',
+      price,
+      qty: parseFloat(row['filled qty'] || row['filledqty'] || row['filled'] || row['qty'] || row['quantity'] || '1') || 1,
     })
   }
+  fills.sort((a, b) => new Date(a.date) - new Date(b.date))
   const bySymbol = {}
   for (const f of fills) {
     if (!bySymbol[f.symbol]) bySymbol[f.symbol] = { buys: [], sells: [] }
@@ -126,12 +154,67 @@ function parseTradovate(text) {
       })
     }
   }
+  trades.sort((a, b) => a.date < b.date ? -1 : 1)
   if (!trades.length) return { error: 'Inga trades parsades från Tradovate-filen.' }
   return { trades }
 }
 
+// TopstepX / ProjectX (samma exekveringsplattform används av flera prop firms:
+// TopStep, Bulenox, Alpha Futures m.fl.). Exportformat: order-nivå (inte fills),
+// med Status/Side/PositionDisposition/CreationDisposition som styr tolkningen.
+// Empiriskt bekräftat mot verklig export: Side "Bid" = köp (Long vid Opening),
+// Side "Ask" = sälj (Short vid Opening). CreationDisposition anger skälet
+// (Trader/StopLoss/TakeProfit/ClosePosition).
+function parseTopStepX(text) {
+  const lines = stripBOM(text).trim().split('\n')
+  const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase()) || []
+  const hasHeaders = headers.some(h => /contractname|positiondisposition|creationdisposition/i.test(h))
+  if (!hasHeaders) return { error: 'Okänt TopstepX/ProjectX-format. Exportera Orders som CSV från plattformen.' }
+  const rows = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i])
+    if (cols.length < 10) continue
+    const row = {}
+    headers.forEach((h, j) => { row[h] = (cols[j] || '').replace(/^"|"$/g, '').trim() })
+    rows.push(row)
+  }
+  const filled = rows.filter(r => (r['status'] || '').toLowerCase() === 'filled')
+  filled.sort((a, b) => new Date(a['filledat']) - new Date(b['filledat']))
+
+  const openBySymbol = {}
+  const trades = []
+  for (const r of filled) {
+    const symbol = r['contractname']
+    const disp = (r['positiondisposition'] || '').toLowerCase()
+    const side = (r['side'] || '').toLowerCase()
+    const price = parseFloat(r['executeprice'])
+    const time = r['filledat']
+    const reason = r['creationdisposition'] || ''
+    if (isNaN(price) || !symbol) continue
+    if (disp === 'opening') {
+      openBySymbol[symbol] = { entryPrice: price, entryTime: time, direction: side === 'bid' ? 'Long' : 'Short', size: parseFloat(r['size']) || 1 }
+    } else if (disp === 'closing' && openBySymbol[symbol]) {
+      const open = openBySymbol[symbol]
+      const isLong = open.direction === 'Long'
+      const profitPts = isLong ? (price - open.entryPrice) : (open.entryPrice - price)
+      trades.push({
+        date: formatDateStr(open.entryTime), exit_date: formatDateStr(time),
+        symbol, direction: open.direction,
+        entry: open.entryPrice, actual_exit: price,
+        contracts: open.size,
+        outcome: profitPts > 0 ? 'W' : profitPts < 0 ? 'L' : 'BE',
+        pnl: null, _exitReason: reason, _source: 'topstepx',
+      })
+      delete openBySymbol[symbol]
+    }
+  }
+  trades.sort((a, b) => a.date < b.date ? -1 : 1)
+  if (!trades.length) return { error: 'Inga fyllda trades kunde parsas ur TopstepX/ProjectX-filen.' }
+  return { trades }
+}
+
 function parseNinjaTrader(text) {
-  const lines = text.trim().split('\n')
+  const lines = stripBOM(text).trim().split('\n')
   const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase()) || []
   const hasNT = headers.some(h => /instrument|market pos|entry time|exit time|entry price|exit price|profit/i.test(h))
   if (!hasNT) return { error: 'Okänt NinjaTrader-format. Exportera "Performance" → "Trades" som CSV.' }
@@ -185,10 +268,11 @@ function formatDateStr(raw) {
 }
 
 const PLATFORMS = [
-  { id: 'tv_backtest', label: 'TradingView Backtesting', desc: 'Strategy Tester → List of Trades → Export to CSV', accept: '.csv', parse: parseTVBacktest },
-  { id: 'tradovate',   label: 'Tradovate',               desc: 'Orders → Export CSV (Orders.csv). Används av TopStep, Apex, Tradeify m.fl.', accept: '.csv', parse: parseTradovate },
-  { id: 'metatrader', label: 'MetaTrader 4 / 5',        desc: 'Account History → Report (exportera som CSV från MT4/MT5)', accept: '.csv', parse: parseMetaTrader },
-  { id: 'ninjatrader',label: 'NinjaTrader 7 / 8',       desc: 'Control Center → Account Performance → Trades → Export to CSV', accept: '.csv', parse: parseNinjaTrader },
+  { id: 'topstepx',   label: 'TopstepX / ProjectX',      desc: 'TopStep, Bulenox, Alpha Futures m.fl. Orders → Export CSV.', accept: '.csv', parse: (text) => parseTopStepX(text) },
+  { id: 'tv_backtest', label: 'TradingView Backtesting', desc: 'Strategy Tester → List of Trades → Export to CSV', accept: '.csv', parse: (text, filename) => parseTVBacktest(text, filename) },
+  { id: 'tradovate',   label: 'Tradovate',               desc: 'Orders → Export CSV (Orders.csv). Används av FundedNext, Apex, Tradeify m.fl.', accept: '.csv', parse: (text) => parseTradovate(text) },
+  { id: 'metatrader', label: 'MetaTrader 4 / 5',        desc: 'Account History → Report (exportera som CSV från MT4/MT5)', accept: '.csv', parse: (text) => parseMetaTrader(text) },
+  { id: 'ninjatrader',label: 'NinjaTrader 7 / 8',       desc: 'Control Center → Account Performance → Trades → Export to CSV', accept: '.csv', parse: (text) => parseNinjaTrader(text) },
 ]
 
 export default function Import() {
@@ -207,7 +291,7 @@ export default function Import() {
     if (!file || !platform) return
     const reader = new FileReader()
     reader.onload = e => {
-      const result = platform.parse(e.target.result)
+      const result = platform.parse(e.target.result, file.name)
       if (result.error) { setParseError(result.error); setParsed(null); setSelected([]) }
       else { setParsed(result.trades); setSelected(result.trades.map((_,i)=>i)); setParseError(''); setImportResult(null) }
     }
@@ -237,6 +321,7 @@ export default function Import() {
           ...(t.pnl!=null   ? {_imported_pnl:t.pnl}       : {}),
           ...(t._runup      ? {_runup:t._runup}            : {}),
           ...(t._drawdown   ? {_drawdown:t._drawdown}      : {}),
+          ...(t._exitReason ? {_exitReason:t._exitReason}  : {}),
         },
       }
       const { error } = await sb.from('trades').insert(trade)
