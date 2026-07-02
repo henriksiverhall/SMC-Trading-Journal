@@ -381,6 +381,27 @@ select.form-control option { background: var(--bg2); color: var(--text); }
 .auth-policy { font-size: 11px; color: var(--text4); text-align: center; margin-top: 14px; line-height: 1.6; }
 .auth-policy a { color: var(--text3); text-decoration: underline; cursor: pointer; }
 
+/* ── AuthPage (login/signup) layout ── */
+.auth-page-wrap {
+  position: fixed; inset: 0; z-index: 200;
+  display: grid;
+  grid-template-columns: clamp(220px, 22vw, 380px) clamp(320px, 26vw, 440px);
+  font-family: var(--font);
+}
+.auth-hero-panel {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 48px; overflow: hidden;
+}
+.auth-hero-panel-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.auth-hero-panel-headline { font-size: 44px; font-weight: 800; letter-spacing: -2px; line-height: 1.05; color: var(--text); margin: 0 0 18px; }
+.auth-hero-panel-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 40px; }
+.auth-form-panel {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 48px 40px; overflow-y: auto;
+}
+
 /* ── Dashboard ── */
 .stats-grid {
   display: grid; grid-template-columns: repeat(5, 1fr);
@@ -518,4 +539,8 @@ select.form-control option { background: var(--bg2); color: var(--text); }
 
   .modal { width: 94%; max-height: 92vh; }
   .modal-body { padding: 16px; }
+
+  .auth-page-wrap { grid-template-columns: 1fr; }
+  .auth-hero-panel { display: none; }
+  .auth-form-panel { padding: 28px 20px; }
 }
