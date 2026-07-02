@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.56-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Journal: verkliga roten till att Datum/Tid/Exit-fälten "försvann till höger" hittad. .journal-form-card saknade min-width:0 – som CSS Grid-item fick den default min-width:auto (sitt innehålls min-content-bredd), så om något fält i formuläret hade brett innehåll vägrade HELA kortet krympa under det och klipptes av skärmkanten. v2.0.55 fixade bara symptomet på de enskilda fälten, inte orsaken på kortnivå.' },
+    ]
+  },
+  {
     version: 'v2.0.55-dev',
     date: '2026-07-02',
     entries: [
