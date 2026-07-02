@@ -270,9 +270,7 @@ html, body { max-width: 100vw; }
 select.form-control option { background: var(--bg2); color: var(--text); }
 
 /* Native date/time-fält (input[type=date/time]) kan strunta i width:100% på
-   iOS Safari och behålla sin egen intrinsiska bredd oavsett container –
-   detta gjorde att Datum/Tid/Exit datum/Exit tid stack ut till höger om
-   skärmen på mobil trots att alla andra fält var korrekta. */
+   iOS Safari och behålla sin egen intrinsiska bredd oavsett container. */
 input[type="date"],
 input[type="time"] {
   min-width: 0;
@@ -507,7 +505,15 @@ input[type="time"] {
 }
 
 .journal-layout { display: grid; grid-template-columns: clamp(420px, 27vw, 520px) 1fr; gap: 20px; align-items: start; }
-.journal-form-card { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; }
+.journal-layout > * { min-width: 0; }
+/* .journal-form-card SAKNADE min-width:0 – som grid-item i .journal-layout fick
+   den default min-width:auto (= sitt innehålls min-content-bredd). Om NÅGOT
+   innehåll i formuläret (t.ex. en lång placeholder-text eller ett långt
+   dropdown-alternativ) hade ett brett min-content, vägrade hela kortet
+   krympa under det, busta ut ur sin 1fr-kolumn och klipptes av body:s
+   overflow-x:hidden – vilket exakt matchade symptomet "Datum/Tid/Exit-fälten
+   försvinner ut till höger" även efter att fälten själva fixats. */
+.journal-form-card { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; min-width: 0; }
 
 @media (max-width: 768px) {
   .journal-layout { grid-template-columns: 1fr; gap: 14px; }
@@ -589,4 +595,5 @@ input[type="time"] {
 
 @media (max-width: 480px) {
   .field-row-2col { grid-template-columns: 1fr !important; }
+  .field-row-2col > * { min-width: 0; }
 }
