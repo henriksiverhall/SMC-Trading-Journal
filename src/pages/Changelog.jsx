@@ -2,6 +2,23 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.53-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Dashboard: klockorna (session-ur + RTH-panel) döljs helt på mobil – de kunde aldrig få plats på en telefon och var mest brus där. Snabbknapparna (Logga trade/Checklist/Analytics/Journal) räcker.' },
+      { type: 'fix', text: 'Checklist: Redigera/Ny strategi/Återställ-knapparna staplas nu i tydliga rader istället för att wrappa huller om buller.' },
+      { type: 'fix', text: 'Skyddsnät mot "läckande" horisontell scroll: om en sida tillfälligt blir bredare än skärmen och gör dokumentet scrollbart i sidled, nollställs det automatiskt vid sidbyte så nästa sida inte visas skiftad.' },
+    ]
+  },
+  {
+    version: 'v2.0.52-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Roten till "nyp ihop"-problemet på mobil hittad: DragGrid fick columns={2} som inline-style från Dashboard, vilket inte kan ha egna CSS-brytpunkter. Widgetgriden tvingas nu till 1 kolumn på mobil oavsett vad sidan begär.' },
+      { type: 'infra', text: 'overflow-x:hidden på body/root och min-width:0 genomgående på kort/formulär så innehåll kan krympa istället för att tvinga ut sidbredden.' },
+    ]
+  },
+  {
     version: 'v2.0.51-dev',
     date: '2026-07-02',
     entries: [
