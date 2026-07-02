@@ -175,7 +175,6 @@ function Editor({ checklist, onSave, onClose, onDelete }) {
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r2)', background: 'var(--bg2)', marginTop: 16 }}>
-      {/* Editor header – bara namn + stäng, Spara finns längst ned */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>✏️ Redigerar</span>
         <input value={draft.name} onChange={e => setName(e.target.value)}
@@ -186,7 +185,6 @@ function Editor({ checklist, onSave, onClose, onDelete }) {
       <div style={{ padding: '16px' }}>
         {draft.phases.map((phase, pi) => (
           <div key={phase.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r)', marginBottom: 12, overflow: 'hidden' }}>
-            {/* Phase header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
               <input type="color" value={phase.color} onChange={e => setPhaseField(pi, 'color', e.target.value)}
                 style={{ width: 22, height: 22, border: 'none', background: 'none', cursor: 'pointer', padding: 0, borderRadius: 4 }} />
@@ -197,7 +195,6 @@ function Editor({ checklist, onSave, onClose, onDelete }) {
               <button onClick={() => removePhase(pi)} style={{ ...btnSm, color: 'var(--red)', borderColor: 'var(--red)' }} title="Ta bort fas">✕</button>
             </div>
 
-            {/* Items */}
             <div style={{ padding: '8px 12px' }}>
               {phase.items.map((item, ii) => (
                 <div key={item.id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '10px 12px', marginBottom: 8 }}>
@@ -308,7 +305,7 @@ export default function Checklist() {
   const [checked, setChecked] = useState({})
   const [openPhases, setOpenPhases] = useState({})
   const [loading, setLoading] = useState(true)
-  const [editingKey, setEditingKey] = useState(null) // null = no editor open
+  const [editingKey, setEditingKey] = useState(null)
 
   useEffect(() => { if (user) load() }, [user])
 
@@ -401,7 +398,6 @@ export default function Checklist() {
     </div>
   )
 
-  // Split phases into two columns
   const mid = Math.ceil(phases.length / 2)
   const col1 = phases.slice(0, mid)
   const col2 = phases.slice(mid)
@@ -411,14 +407,14 @@ export default function Checklist() {
       <Topbar title="Checklist" />
       <div className="page-content">
         <div className="card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+          <div className="card-header checklist-header">
+            <div className="checklist-header-left" style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
               <select className="form-control" style={{ maxWidth: 280 }} value={activeKey || ''} onChange={e => selectStrategy(e.target.value)}>
                 {checklists.map(c => <option key={c.strategy_key} value={c.strategy_key}>{c.name}</option>)}
               </select>
               <button type="button" className="btn btn-ghost btn-sm" onClick={resetChecklist}>↺ Återställ</button>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="checklist-header-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {activeKey && (
                 <button type="button" className="btn btn-ghost btn-sm"
                   onClick={() => setEditingKey(editingKey === activeKey ? null : activeKey)}
@@ -431,7 +427,6 @@ export default function Checklist() {
           </div>
 
           <div className="card-body">
-            {/* Progress */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>
                 <span>{doneCount} / {totalCount} steg klara</span>
@@ -442,7 +437,6 @@ export default function Checklist() {
               </div>
             </div>
 
-            {/* Status banner */}
             {pct === 100 && (
               <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--green)', borderRadius: 'var(--r)', padding: '10px 14px', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
                 ✅ Alla steg klara – A+ setup!
@@ -454,7 +448,6 @@ export default function Checklist() {
               </div>
             )}
 
-            {/* 2-column phase grid - collapses to 1 col when narrow */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {col1.map(phase => (
@@ -472,7 +465,6 @@ export default function Checklist() {
               )}
             </div>
 
-            {/* Inline editor */}
             {editingKey && active && (
               <Editor
                 checklist={active}
