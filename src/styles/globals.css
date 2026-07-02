@@ -569,10 +569,18 @@ select.form-control option { background: var(--bg2); color: var(--text); }
      krympa så webbläsaren zoomade ut hela sidan istället för att bryta rad. */
   .drag-grid { grid-template-columns: 1fr !important; }
 
-  /* Dashboard "Välkommen"-widget: klockrad + instrumentpanel måste kunna
-     wrappa till flera rader på mobil istället för att tvinga fram bredd. */
-  .welcome-widget-row { flex-wrap: wrap !important; }
-  .welcome-widget-row > * { flex-shrink: 1 !important; }
+  /* Dashboard "Välkommen"-widget: klockorna (session-ur + RTH-panel) är för
+     breda för att någonsin få plats på en telefon och är mest brus där –
+     döljs helt. Snabbknapparna (Logga trade/Checklist/Analytics/Journal)
+     räcker för mobilanvändning. */
+  .welcome-clocks-wrap { display: none !important; }
+
+  /* Checklist: Redigera/Ny strategi/Återställ-knapparna låg huller om buller
+     eftersom vänster- och högergrupp wrappade var för sig. Stapla dem istället
+     i två tydliga rader. */
+  .checklist-header { flex-direction: column; align-items: stretch !important; gap: 8px; }
+  .checklist-header-left, .checklist-header-right { width: 100%; }
+  .checklist-header-right { justify-content: flex-start !important; }
 }
 
 /* ── Mycket smala skärmar (telefon i porträtt, ≤480px) ──
