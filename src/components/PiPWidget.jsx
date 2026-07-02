@@ -274,7 +274,7 @@ export default function PiPWidget(){
   ):null
   return(
     <>
-      <button onClick={pipWindow&&!pipWindow.closed?closePiP:openPiP} title={pipWindow?'Stäng PiP':'Öppna flytande logg/checklist'} style={{background:pipWindow?'var(--accent-dim)':'none',border:`1px solid ${pipWindow?'rgba(0,212,170,0.4)':'var(--border)'}`,borderRadius:'var(--r)',color:pipWindow?'var(--accent)':'var(--text3)',cursor:'pointer',fontSize:16,padding:'4px 8px',lineHeight:1}}>⧉</button>
+      <button className="pip-toggle-btn" onClick={pipWindow&&!pipWindow.closed?closePiP:openPiP} title={pipWindow?'Stäng PiP':'Öppna flytande logg/checklist'} style={{background:pipWindow?'var(--accent-dim)':'none',border:`1px solid ${pipWindow?'rgba(0,212,170,0.4)':'var(--border)'}`,borderRadius:'var(--r)',color:pipWindow?'var(--accent)':'var(--text3)',cursor:'pointer',fontSize:16,padding:'4px 8px',lineHeight:1}}>⧉</button>
       {pipContent}
     </>
   )
