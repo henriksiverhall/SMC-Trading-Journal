@@ -162,9 +162,6 @@ function InstrumentCountdowns() {
 }
 
 // ── Kalender-widget ────────────────────────────────────────────────────────────
-// Visar high/medium-impact events från Supabase-cache.
-// "Idag" = dagens events. "Kommande" = resten av denna + nästa vecka (FF uppdaterar
-// sin thisweek-fil fredagskvällen/söndagen med nästa veckas data automatiskt).
 function CalendarWidget({ onNavigate }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -180,7 +177,6 @@ function CalendarWidget({ onNavigate }) {
 
   const highMedium = events.filter(e => e.impact === 'High' || e.impact === 'Medium')
   const todayEvents   = highMedium.filter(e => e.date?.split('T')[0] === today)
-  // Kommande = allt från och med imorgon, max 10 rader
   const upcomingEvents = highMedium.filter(e => e.date?.split('T')[0] > today).slice(0, 10)
   const displayed = showToday ? todayEvents : upcomingEvents
 
@@ -300,23 +296,26 @@ export default function Dashboard({ onNavigate }) {
   const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
   const sep = <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0 }} />
 
-  // span saknas (= halvbredd) på alla widgets utom welcome.
-  // Användaren kan via "Anpassa widgets" och DragGrid välja ordning.
-  // span: 2 = helbredd (2 av 2 kolumner). Ingen span = halvbredd (1 av 2).
   const widgets = [
     {
       id: 'welcome', title: 'Välkommen', span: 2,
       content: (
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>Hej, {effectiveDisplayName}! 👋</div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
               </div>
-              <div style={{ marginLeft: 'auto', flexShrink: 0 }}><SessionClocks /></div>
-              {sep}
-              <div style={{ flexShrink: 0 }}><InstrumentCountdowns /></div>
+              {/* Klockor/RTH-panel – döljs helt på mobil (≤768px) via .welcome-clocks-wrap i CSS.
+                  På liten skärm är dessa mest brus; snabbknapparna räcker. */}
+              <div className="welcome-clocks-wrap" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                  <SessionClocks />
+                  {sep}
+                  <InstrumentCountdowns />
+                </div>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
@@ -366,7 +365,6 @@ export default function Dashboard({ onNavigate }) {
     },
     {
       id: 'stats', title: 'Statistik',
-      // Halvbredd default – användaren kan dra/ändra via Anpassa widgets
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Statistik</div></div>
@@ -395,7 +393,6 @@ export default function Dashboard({ onNavigate }) {
     },
     {
       id: 'equity', title: 'Equity Curve',
-      // Halvbredd default
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Equity Curve (R)</div></div>
