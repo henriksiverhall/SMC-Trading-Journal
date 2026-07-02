@@ -24,6 +24,7 @@ export default function App() {
     return VALID_PAGES.includes(saved) ? saved : 'dashboard'
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [bgStyle, setBgStyle] = useState({})
   const brandingRef = useRef(null)
 
@@ -51,6 +52,11 @@ export default function App() {
   useEffect(() => { applyBg(page) }, [page])
   useEffect(() => { window.__tlNavigate = setPage; return () => { delete window.__tlNavigate } }, [setPage])
   useEffect(() => { sessionStorage.setItem('tl_page', page) }, [page])
+  useEffect(() => {
+    window.__tlOpenMobileMenu = () => setMobileMenuOpen(true)
+    return () => { delete window.__tlOpenMobileMenu }
+  }, [])
+  useEffect(() => { setMobileMenuOpen(false) }, [page])
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', flexDirection:'column', gap:12 }}>
@@ -77,7 +83,13 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={page} onNavigate={setPage} onOpenChange={setSidebarOpen} />
+      <Sidebar
+        activePage={page}
+        onNavigate={setPage}
+        onOpenChange={setSidebarOpen}
+        mobileOpen={mobileMenuOpen}
+        onMobileOpenChange={setMobileMenuOpen}
+      />
       <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`} style={{ position:'relative' }}>
         {Object.keys(bgStyle).length > 0 && (
           <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none', backgroundImage:bgStyle.backgroundImage, backgroundSize:bgStyle.backgroundSize, backgroundPosition:bgStyle.backgroundPosition, backgroundRepeat:bgStyle.backgroundRepeat, opacity:bgStyle['--page-bg-opacity']||0.15 }} />
