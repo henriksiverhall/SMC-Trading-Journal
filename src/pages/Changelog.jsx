@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.50-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'AuthPage (login/signup) mobilanpassad – missades i förra sessionens mobilarbete. Hade en helt egen fast grid utan brytpunkt. Nu döljs bild-panelen på ≤768px och formuläret fyller skärmen, samma mönster som resten av appen.' },
+    ]
+  },
+  {
     version: 'v2.0.49-dev',
     date: '2026-07-02',
     entries: [
