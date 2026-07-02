@@ -232,7 +232,7 @@ function SLOptimizer({ mfeResults, trades }) {
       <div className="card-header"><div className="card-title">🎯 SL-optimering – bredda SL = fler vinster?</div></div>
       <div className="card-body">
         <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>Simulerar vad som händer om du breddar SL med X% av din nuvarande risk. {base.length} trades med MAE-data analyseras.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
+        <div className="row-3col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
           <div style={{ background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '12px 16px', border: '1px solid var(--border)' }}>
             <div className="stat-label">Nuvarande WR</div>
             <div className="stat-value" style={{ color: currentWR >= 50 ? 'var(--green)' : 'var(--red)' }}>{currentWR.toFixed(1)}%</div>
@@ -770,7 +770,7 @@ export default function Analytics() {
     {
       id: 'grade_emotion', title: 'Grade & Emotion',
       content: (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="card">
             <div className="card-header"><div className="card-title">Win Rate per Grade</div></div>
             <div className="card-body">
@@ -841,7 +841,7 @@ export default function Analytics() {
             <div className="card-body">
               {!hasData ? <div style={{ color: 'var(--text4)', fontSize: 13 }}>Inga trades med datum att analysera ännu.</div> : (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                  <div className="row-5col" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
                     {dayData.map(d => { const isBest = d.wr === maxWR && d.wr !== null && maxWR > 0; const isWorst = d.wr === minWR && d.wr !== null && dayData.filter(x => x.wr !== null).length > 1; const color = d.wr >= 50 ? 'var(--green)' : d.wr !== null ? 'var(--red)' : 'var(--text4)'; return (<div key={d.day} style={{ textAlign: 'center', padding: '14px 8px', background: isBest ? 'rgba(16,185,129,0.1)' : isWorst ? 'rgba(239,68,68,0.08)' : 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${isBest ? 'rgba(16,185,129,0.25)' : isWorst ? 'rgba(239,68,68,0.2)' : 'var(--border)'}` }}><div style={{ fontSize: 11, color: 'var(--text4)', marginBottom: 6, fontWeight: 600 }}>{d.fullDay}</div><div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color }}>{d.wr !== null ? d.wr + '%' : '—'}</div><div style={{ fontSize: 10, color: 'var(--text4)', marginTop: 4 }}>{d.wins}V / {d.trades - d.wins}F · {d.trades}st</div>{isBest && <div style={{ fontSize: 10, color: 'var(--green)', marginTop: 4 }}>✓ Bäst</div>}{isWorst && <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 4 }}>↓ Sämst</div>}</div>) })}
                   </div>
                   {(() => { const best = dayData.filter(d => d.wr !== null).sort((a,b) => b.wr - a.wr)[0]; const worst = dayData.filter(d => d.wr !== null).sort((a,b) => a.wr - b.wr)[0]; if (!best || best === worst) return null; return <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>💡 Bäst på <strong style={{ color: 'var(--green)' }}>{best.fullDay}</strong> ({best.wr}% WR), sämst på <strong style={{ color: 'var(--red)' }}>{worst.fullDay}</strong> ({worst.wr}% WR).{worst.wr < 40 ? ` Överväg att undvika ${worst.fullDay}.` : ''}</div> })()}
