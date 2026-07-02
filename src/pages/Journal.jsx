@@ -677,9 +677,9 @@ export default function Journal() {
     <div style={{ flex: 1 }}>
       <Topbar title={editingId ? 'Journal – Redigerar' : 'Journal'} subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
-        <div style={{ display: 'grid', gridTemplateColumns: 'clamp(420px, 27vw, 520px) 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="journal-layout">
 
-          <div className="card" style={{ position: 'sticky', top: 'calc(var(--topbar-h) + 24px)', maxHeight: 'calc(100vh - var(--topbar-h) - 48px)', overflowY: 'auto' }} ref={formRef}>
+          <div className="card journal-form-card" ref={formRef}>
             <div className="card-header">
               <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Log Trade'}</div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowFieldMgr(m => !m)} style={showFieldMgr ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>⚙ Anpassa</button>
