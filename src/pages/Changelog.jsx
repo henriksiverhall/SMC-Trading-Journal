@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.51-dev',
+    date: '2026-07-02',
+    entries: [
+      { type: 'fix', text: 'Analytics: statistik-widgeten (5 kolumner) blir 2 kolumner på telefon (≤480px). SL-optimering (3 kolumner), Grade/Emotion (2 kolumner) och Win Rate per veckodag (5 kolumner) blir 1 kolumn på mobil/platta (≤768px) istället för att klämmas ihop.' },
+      { type: 'fix', text: 'Journal + PiP Log Trade: fältrader med två fält bredvid varandra (t.ex. Datum/Tid, SL/TP) blir 1 fält per rad på telefon (≤480px), men behåller 2 kolumner på iPad/platta (768px+) där det finns plats.' },
+      { type: 'infra', text: 'Ny CSS-brytpunkt vid 480px separat från 768px-brytpunkten – skiljer på "platta i liggande" (gott om plats) och "telefon i stående" (måste bli en kolumn).' },
+    ]
+  },
+  {
     version: 'v2.0.50-dev',
     date: '2026-07-02',
     entries: [
