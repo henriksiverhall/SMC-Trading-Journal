@@ -269,6 +269,21 @@ html, body { max-width: 100vw; }
 .form-control::placeholder { color: var(--text4); }
 select.form-control option { background: var(--bg2); color: var(--text); }
 
+/* Native date/time-fält (input[type=date/time]) kan strunta i width:100% på
+   iOS Safari och behålla sin egen intrinsiska bredd oavsett container –
+   detta gjorde att Datum/Tid/Exit datum/Exit tid stack ut till höger om
+   skärmen på mobil trots att alla andra fält var korrekta. */
+input[type="date"],
+input[type="time"] {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+}
+
 /* ── Badges ── */
 .badge {
   display: inline-flex; align-items: center; padding: 2px 7px;
@@ -415,11 +430,7 @@ select.form-control option { background: var(--bg2); color: var(--text); }
 }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
 
-/* ── DragGrid widget grid ──
-   columns skickas per sida (Dashboard=2, Analytics/Journal=1) men det är ett
-   INLINE style (repeat(N,1fr)) satt av React – inline styles kan inte ha egna
-   media queries, så utan denna override förblir Dashboard 2 kolumner även på
-   en telefon i porträtt. !important krävs för att vinna över inline-stilen. */
+/* ── DragGrid widget grid ── */
 .drag-grid { min-width: 0; }
 .drag-grid > div { min-width: 0; }
 
@@ -558,38 +569,17 @@ select.form-control option { background: var(--bg2); color: var(--text); }
   .auth-hero-panel { display: none; }
   .auth-form-panel { padding: 28px 20px; }
 
-  /* Alla 2-3-kolumns inline-grids (Analytics: grade/emotion, veckodag, m.fl.)
-     som inte har egen breakpoint faller tillbaka till en kolumn redan vid 768px
-     eftersom plattans bredd (768px) är gränsen — telefoner är alltid smalare. */
   .row-2col, .row-3col, .row-5col { grid-template-columns: 1fr !important; gap: 10px !important; }
 
-  /* DragGrid: tvinga EN kolumn oavsett vad sidan bad om (Dashboard skickar
-     columns={2} som inline-style). Detta var huvudorsaken till att Dashboard/
-     Analytics såg "utzoomade" ut jämfört med Journal – widgets kunde inte
-     krympa så webbläsaren zoomade ut hela sidan istället för att bryta rad. */
   .drag-grid { grid-template-columns: 1fr !important; }
 
-  /* Dashboard "Välkommen"-widget: klockorna (session-ur + RTH-panel) är för
-     breda för att någonsin få plats på en telefon och är mest brus där –
-     döljs helt. Snabbknapparna (Logga trade/Checklist/Analytics/Journal)
-     räcker för mobilanvändning. */
   .welcome-clocks-wrap { display: none !important; }
 
-  /* Checklist: Redigera/Ny strategi/Återställ-knapparna låg huller om buller
-     eftersom vänster- och högergrupp wrappade var för sig. Stapla dem istället
-     i två tydliga rader. */
   .checklist-header { flex-direction: column; align-items: stretch !important; gap: 8px; }
   .checklist-header-left, .checklist-header-right { width: 100%; }
   .checklist-header-right { justify-content: flex-start !important; }
 }
 
-/* ── Mycket smala skärmar (telefon i porträtt, ≤480px) ──
-   iPad/platta (768px) har gott om plats för 2-5 kolumner,
-   men en telefon i porträtt (375-430px) klämmer ihop allt om vi
-   redan tvingat till 1 kolumn på 768px-nivå ovan. Denna nivå finjusterar
-   stats-grid (som ligger utanför 768px-blocket ovan, den använder egen
-   media-block på 900px) samt formulärfält som ska vara 1/rad på telefon
-   men 2/rad på iPad. */
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
   .stat-card { padding: 10px 12px; }
@@ -597,8 +587,6 @@ select.form-control option { background: var(--bg2); color: var(--text); }
   .auth-hero-panel-stats { grid-template-columns: 1fr !important; }
 }
 
-/* Fält-rader (Journal Log Trade + PiP) ska vara 1 kolumn på telefon (≤480px)
-   men behålla 2 kolumner på iPad/platta (768px+) där det finns plats. */
 @media (max-width: 480px) {
   .field-row-2col { grid-template-columns: 1fr !important; }
 }
