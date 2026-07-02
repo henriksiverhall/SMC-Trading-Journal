@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import PiPWidget from './PiPWidget'
 
-export default function Topbar({ title, subtitle, actions, onNavigate }) {
+export default function Topbar({ title, subtitle, actions, onNavigate, onMenuClick }) {
   const { user, userSettings, signOut } = useAuth()
   const initial = (userSettings?.displayName || user?.email || 'U')[0].toUpperCase()
   const [dark, setDark] = useState(() => {
@@ -31,6 +31,9 @@ export default function Topbar({ title, subtitle, actions, onNavigate }) {
   return (
     <header className="topbar">
       <div className="topbar-left">
+        <button className="hamburger-btn" onClick={() => (onMenuClick || window.__tlOpenMobileMenu)?.()} title="Meny" aria-label="Öppna meny">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <h1 className="page-title">{title}</h1>
         {subtitle && <span style={{ fontSize: 12, color: 'var(--text4)', fontWeight: 500 }}>{subtitle}</span>}
         {actions && <div style={{ display: 'flex', gap: 8 }}>{actions}</div>}
