@@ -57,6 +57,12 @@ export default function App() {
     return () => { delete window.__tlOpenMobileMenu }
   }, [])
   useEffect(() => { setMobileMenuOpen(false) }, [page])
+  // Skyddsnät: om en sida råkar bli bredare än viewport (t.ex. en widget som
+  // inte krympt korrekt) kan hela dokumentet bli horisontellt scrollbart.
+  // SPA:n byter bara innehåll utan full sidladdning, så en kvarvarande
+  // horisontell scroll-position "läcker" till nästa sida och ser ut som att
+  // dess fält "försvinner åt höger". Nollställ scroll-x vid varje sidbyte.
+  useEffect(() => { window.scrollTo(0, window.scrollY); document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0 }, [page])
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', flexDirection:'column', gap:12 }}>
