@@ -543,4 +543,29 @@ select.form-control option { background: var(--bg2); color: var(--text); }
   .auth-page-wrap { grid-template-columns: 1fr; }
   .auth-hero-panel { display: none; }
   .auth-form-panel { padding: 28px 20px; }
+
+  /* Alla 2-3-kolumns inline-grids (Analytics: grade/emotion, veckodag, m.fl.)
+     som inte har egen breakpoint faller tillbaka till en kolumn redan vid 768px
+     eftersom plattans bredd (768px) är gränsen — telefoner är alltid smalare. */
+  .row-2col, .row-3col, .row-5col { grid-template-columns: 1fr !important; gap: 10px !important; }
+}
+
+/* ── Mycket smala skärmar (telefon i porträtt, ≤480px) ──
+   iPad/platta (768px) har gott om plats för 2-5 kolumner,
+   men en telefon i porträtt (375-430px) klämmer ihop allt om vi
+   redan tvingat till 1 kolumn på 768px-nivå ovan. Denna nivå finjusterar
+   stats-grid (som ligger utanför 768px-blocket ovan, den använder egen
+   media-block på 900px) samt formulärfält som ska vara 1/rad på telefon
+   men 2/rad på iPad. */
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+  .stat-card { padding: 10px 12px; }
+  .stat-value { font-size: 20px; }
+  .auth-hero-panel-stats { grid-template-columns: 1fr !important; }
+}
+
+/* Fält-rader (Journal Log Trade + PiP) ska vara 1 kolumn på telefon (≤480px)
+   men behålla 2 kolumner på iPad/platta (768px+) där det finns plats. */
+@media (max-width: 480px) {
+  .field-row-2col { grid-template-columns: 1fr !important; }
 }
