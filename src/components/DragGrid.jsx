@@ -149,7 +149,7 @@ export default function DragGrid({ pageKey, widgets, columns = 1 }) {
       )}
 
       {/* Widget grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 16 }}>
+      <div className="drag-grid" data-columns={columns} style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 16 }}>
         {visible.map(id => {
           const w = widgets.find(w => w.id === id)
           if (!w) return null
@@ -172,6 +172,7 @@ export default function DragGrid({ pageKey, widgets, columns = 1 }) {
                 outline: isDropTarget ? '2px dashed var(--accent)' : '2px solid transparent',
                 outlineOffset: 4,
                 borderRadius: 'var(--r2)',
+                minWidth: 0,
               }}
             >
               {/* Drop indicator */}
