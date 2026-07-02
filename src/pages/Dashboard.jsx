@@ -483,7 +483,7 @@ export default function Dashboard({ onNavigate }) {
         <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Log Trade</button>
       } />
       <div className="page-content">
-        <DragGrid pageKey="dashboard" widgets={widgets} columns={2} />
+        <DragGrid pageKey="dashboard" widgets={widgets} columns={1} />
       </div>
     </div>
   )
