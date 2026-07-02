@@ -459,3 +459,63 @@ select.form-control option { background: var(--bg2); color: var(--text); }
   .dashboard-grid { grid-template-columns: 1fr; }
   .page-content { padding: 16px; }
 }
+
+.journal-layout { display: grid; grid-template-columns: clamp(420px, 27vw, 520px) 1fr; gap: 20px; align-items: start; }
+.journal-form-card { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; }
+
+@media (max-width: 768px) {
+  .journal-layout { grid-template-columns: 1fr; gap: 14px; }
+  .journal-form-card { position: static; max-height: none; overflow-y: visible; }
+}
+
+.hamburger-btn { display: none; }
+.pip-toggle-btn { }
+
+@media (max-width: 768px) {
+  .pip-toggle-btn { display: none; }
+
+  html { font-size: 15px; }
+
+  .sidebar {
+    width: var(--sidebar-w-open);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open {
+    width: var(--sidebar-w-open);
+    transform: translateX(0);
+  }
+  .sidebar .sidebar-section-label,
+  .sidebar .nav-label { opacity: 1; }
+  .sidebar-toggle { display: none; }
+
+  .sidebar-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 99; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .main-content,
+  .main-content.sidebar-open { margin-left: 0; }
+
+  .hamburger-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: var(--r);
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text2); cursor: pointer; flex-shrink: 0;
+  }
+
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar-left { gap: 10px; min-width: 0; overflow: hidden; }
+  .page-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { gap: 6px; }
+
+  .page-content { padding: 12px; }
+
+  .card-body { padding: 14px; }
+  .journal-table th, .journal-table td { padding: 8px 10px; font-size: 11px; }
+
+  .modal { width: 94%; max-height: 92vh; }
+  .modal-body { padding: 16px; }
+}
