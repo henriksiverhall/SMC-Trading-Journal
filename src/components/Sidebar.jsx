@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { APP_VERSION } from '../lib/constants'
 
@@ -18,11 +18,28 @@ const icons = {
   chevronRight: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>),
 }
 
-export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
+  useEffect(() => {
+    function onResize() { setIsMobile(window.innerWidth <= 768) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return isMobile
+}
+
+export default function Sidebar({ activePage, onNavigate, onOpenChange, mobileOpen, onMobileOpenChange }) {
   const [open, setOpen] = useState(true)
   const { isAdmin, signOut, unreadCount } = useAuth()
+  const isMobile = useIsMobile()
+  const effectiveOpen = isMobile ? !!mobileOpen : open
 
   function toggle() { const next = !open; setOpen(next); onOpenChange?.(next) }
+
+  function navigateAndClose(id) {
+    onNavigate(id)
+    if (isMobile) onMobileOpenChange?.(false)
+  }
 
   const navItems = [
     { id:'dashboard', label:'Dashboard', icon:icons.dashboard },
@@ -34,50 +51,55 @@ export default function Sidebar({ activePage, onNavigate, onOpenChange }) {
   ]
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`}>
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">TL</div>
-        {open && (<div><div className="sidebar-logo-text">TradeLog</div><div className="sidebar-logo-version">{APP_VERSION}</div></div>)}
-      </div>
+    <>
+      {isMobile && (
+        <div className={`sidebar-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => onMobileOpenChange?.(false)} />
+      )}
+      <aside className={`sidebar ${effectiveOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icon">TL</div>
+          {effectiveOpen && (<div><div className="sidebar-logo-text">TradeLog</div><div className="sidebar-logo-version">{APP_VERSION}</div></div>)}
+        </div>
 
-      <nav className="sidebar-nav">
-        <div className="sidebar-section-label">Navigation</div>
-        {navItems.map(item => (
-          <button key={item.id} className={`nav-item ${activePage===item.id?'active':''}`} onClick={()=>onNavigate(item.id)} title={!open?item.label:undefined}>
-            {item.icon}
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
-
-        {isAdmin && (
-          <>
-            <div className="sidebar-section-label" style={{ marginTop:8 }}>Admin</div>
-            <button className={`nav-item ${activePage==='admin'?'active':''}`} onClick={()=>onNavigate('admin')} title={!open?'Administration':undefined}>
-              <span style={{ position:'relative', flexShrink:0 }}>
-                {icons.admin}
-                {unreadCount>0 && !open && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'var(--red)', border:'1px solid var(--bg2)' }} />}
-              </span>
-              <span className="nav-label">Administration</span>
-              {unreadCount>0 && open && <span style={{ marginLeft:'auto', background:'var(--red)', color:'#fff', fontSize:10, fontWeight:700, borderRadius:20, padding:'1px 6px', minWidth:18, textAlign:'center', lineHeight:'16px' }}>{unreadCount>99?'99+':unreadCount}</span>}
+        <nav className="sidebar-nav">
+          <div className="sidebar-section-label">Navigation</div>
+          {navItems.map(item => (
+            <button key={item.id} className={`nav-item ${activePage===item.id?'active':''}`} onClick={()=>navigateAndClose(item.id)} title={!effectiveOpen?item.label:undefined}>
+              {item.icon}
+              <span className="nav-label">{item.label}</span>
             </button>
-            <button className={`nav-item ${activePage==='roadmap'?'active':''}`} onClick={()=>onNavigate('roadmap')} title={!open?'Roadmap':undefined}>{icons.roadmap}<span className="nav-label">Roadmap</span></button>
-            <button className={`nav-item ${activePage==='changelog'?'active':''}`} onClick={()=>onNavigate('changelog')} title={!open?'Changelog':undefined}>{icons.changelog}<span className="nav-label">Changelog</span></button>
-          </>
-        )}
-      </nav>
+          ))}
 
-      <div className="sidebar-footer">
-        <button className={`nav-item ${activePage==='profile'?'active':''}`} onClick={()=>onNavigate('profile')} title={!open?'Profil':undefined}>
-          <span style={{ position:'relative', flexShrink:0 }}>
-            {icons.profile}
-            {unreadCount>0 && !open && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'var(--accent)', border:'1px solid var(--bg2)' }} />}
-          </span>
-          <span className="nav-label">Profil</span>
-          {unreadCount>0 && open && <span style={{ marginLeft:'auto', background:'var(--accent)', color:'#000', fontSize:10, fontWeight:800, borderRadius:20, padding:'1px 6px', minWidth:18, textAlign:'center', lineHeight:'16px' }}>{unreadCount>99?'99+':unreadCount}</span>}
-        </button>
-        <button className="nav-item" onClick={signOut} title={!open?'Logga ut':undefined}>{icons.logout}<span className="nav-label">Logga ut</span></button>
-        <button className="sidebar-toggle" onClick={toggle}>{open?icons.chevronLeft:icons.chevronRight}</button>
-      </div>
-    </aside>
+          {isAdmin && (
+            <>
+              <div className="sidebar-section-label" style={{ marginTop:8 }}>Admin</div>
+              <button className={`nav-item ${activePage==='admin'?'active':''}`} onClick={()=>navigateAndClose('admin')} title={!effectiveOpen?'Administration':undefined}>
+                <span style={{ position:'relative', flexShrink:0 }}>
+                  {icons.admin}
+                  {unreadCount>0 && !effectiveOpen && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'var(--red)', border:'1px solid var(--bg2)' }} />}
+                </span>
+                <span className="nav-label">Administration</span>
+                {unreadCount>0 && effectiveOpen && <span style={{ marginLeft:'auto', background:'var(--red)', color:'#fff', fontSize:10, fontWeight:700, borderRadius:20, padding:'1px 6px', minWidth:18, textAlign:'center', lineHeight:'16px' }}>{unreadCount>99?'99+':unreadCount}</span>}
+              </button>
+              <button className={`nav-item ${activePage==='roadmap'?'active':''}`} onClick={()=>navigateAndClose('roadmap')} title={!effectiveOpen?'Roadmap':undefined}>{icons.roadmap}<span className="nav-label">Roadmap</span></button>
+              <button className={`nav-item ${activePage==='changelog'?'active':''}`} onClick={()=>navigateAndClose('changelog')} title={!effectiveOpen?'Changelog':undefined}>{icons.changelog}<span className="nav-label">Changelog</span></button>
+            </>
+          )}
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className={`nav-item ${activePage==='profile'?'active':''}`} onClick={()=>navigateAndClose('profile')} title={!effectiveOpen?'Profil':undefined}>
+            <span style={{ position:'relative', flexShrink:0 }}>
+              {icons.profile}
+              {unreadCount>0 && !effectiveOpen && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'var(--accent)', border:'1px solid var(--bg2)' }} />}
+            </span>
+            <span className="nav-label">Profil</span>
+            {unreadCount>0 && effectiveOpen && <span style={{ marginLeft:'auto', background:'var(--accent)', color:'#000', fontSize:10, fontWeight:800, borderRadius:20, padding:'1px 6px', minWidth:18, textAlign:'center', lineHeight:'16px' }}>{unreadCount>99?'99+':unreadCount}</span>}
+          </button>
+          <button className="nav-item" onClick={signOut} title={!effectiveOpen?'Logga ut':undefined}>{icons.logout}<span className="nav-label">Logga ut</span></button>
+          <button className="sidebar-toggle" onClick={toggle}>{open?icons.chevronLeft:icons.chevronRight}</button>
+        </div>
+      </aside>
+    </>
   )
 }
