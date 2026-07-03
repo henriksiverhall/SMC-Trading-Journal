@@ -23,20 +23,20 @@ export default function App() {
   // signup-formuläret). Hash-routing (#/privacy) istället för path-routing
   // eftersom Cloudflare Worker inte har server-side route-hantering för SPA:n.
   //
-  // v2.0.64: window.location.hash lästes bara av vid FÖRSTA renderingen. Ett
-  // klick på en vanlig <a href="#/privacy"> i samma flik (t.ex. från
-  // AuthPage) byter bara webbläsarens URL utan att ladda om sidan – React
-  // reagerar inte automatiskt på det, så komponentträdet renderades aldrig
-  // om och Privacy-sidan visades aldrig. Fungerade bara från Profil eftersom
-  // den länken har target="_blank" (ny flik = full omladdning = ny render).
-  // Fix: lyssna på hashchange-eventet och håll hash i React-state.
+  // v2.0.65: v2.0.64 la den villkorliga returnen (if hash==='#/privacy')
+  // FÖRE useAuth() och resten av hooksen. Det bryter Reacts regel att exakt
+  // samma hooks måste köras i samma ordning vid varje rendering av samma
+  // komponent-instans – när man klickade länken i samma flik gick App från
+  // att köra ~10 hooks till att bara köra 2 (early return), vilket fick
+  // React att tappa reconciliation och rendera tomt tills en full
+  // omladdning nollställde allt. Fix: ALLA hooks körs alltid, oavsett vad
+  // som ska visas – bara returnen (JSX:en) villkoras, aldrig hooksen.
   const [hash, setHash] = useState(window.location.hash)
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash)
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
-  if (hash === '#/privacy') return <Privacy />
 
   const { user, loading, isAdmin, impersonating, stopImpersonation } = useAuth()
   const [page, setPage] = useState(() => {
@@ -83,6 +83,10 @@ export default function App() {
   // horisontell scroll-position "läcker" till nästa sida och ser ut som att
   // dess fält "försvinner åt höger". Nollställ scroll-x vid varje sidbyte.
   useEffect(() => { window.scrollTo(0, window.scrollY); document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0 }, [page])
+
+  // Alla hooks ovan är nu ALLTID körda oavsett gren – från och med här får
+  // vi villkora fritt vad som faktiskt renderas.
+  if (hash === '#/privacy') return <Privacy />
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', flexDirection:'column', gap:12 }}>
