@@ -12,12 +12,19 @@ import Changelog from './pages/Changelog'
 import Messages from './pages/Messages'
 import Calendar from './pages/Calendar'
 import Import from './pages/Import'
+import Privacy from './pages/Privacy'
 import Sidebar from './components/Sidebar'
 
 const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages','calendar','import']
 const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'changelog']
 
 export default function App() {
+  // Integritetspolicy måste vara nåbar utan inloggning (GDPR-krav, länkas från
+  // signup-formuläret). Hash-routing (#/privacy) istället för path-routing
+  // eftersom Cloudflare Worker inte har server-side route-hantering för SPA:n –
+  // hash kräver ingen serverkonfiguration alls.
+  if (window.location.hash === '#/privacy') return <Privacy />
+
   const { user, loading, isAdmin, impersonating, stopImpersonation } = useAuth()
   const [page, setPage] = useState(() => {
     const saved = sessionStorage.getItem('tl_page')
