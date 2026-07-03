@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.64-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'fix', text: 'Integritetspolicy-länken fungerade bara från Profil (öppnas i ny flik, ger full omladdning). Från AuthPage/"Skapa konto" (samma flik) bytte webbläsaren bara URL-hashen utan att React reagerade – window.location.hash lästes bara av vid appens första rendering. Fix: hashchange-listener håller hash i React-state, så #/privacy fungerar oavsett var länken klickas.' },
+    ]
+  },
+  {
     version: 'v2.0.63-dev',
     date: '2026-07-03',
     entries: [
