@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.63-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'fix', text: 'AI-analys (Analytics): "✓ Aktuell" visades felaktigt trots nyimporterade trades. Orsak: fingerprinten som avgör om ny data finns byggdes bara på trades med result!=null – importerade trades saknar R-värde helt (se Kanban dev_import_r_value1) och var därför osynliga för kollen. Fingerprint använder nu alla trades (id+result+outcome), så nya importer upptäcks korrekt.' },
+    ]
+  },
+  {
     version: 'v2.0.62-dev',
     date: '2026-07-03',
     entries: [
