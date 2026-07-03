@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.57-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'feature', text: 'Import: ny parser för TopstepX/ProjectX (används av TopStep, Bulenox, Alpha Futures m.fl.) – order-nivå-data med Status/Side/PositionDisposition/CreationDisposition tolkas till Long/Short-trades med korrekt entry/exit-parning.' },
+      { type: 'fix', text: 'Import: TradingView Backtesting-parsern skriven om – exporten har en rad per exekvering (Entry/Exit separat, grupperade på Trade number), inte en rad per trade som tidigare antogs. Symbol gissas nu från filnamnet eftersom exporten saknar ticker-kolumn.' },
+      { type: 'fix', text: 'Import: Tradovate-parsern (används av FundedNext, Apex, Tradeify m.fl.) matchade fel kolumnnamn mot verklig export (avgPrice/filledQty istället för antagna namn) och saknade filtrering på Status=Filled, vilket importerade avbrutna ordrar som skräpdata. Fixat mot verklig exportfil.' },
+    ]
+  },
+  {
     version: 'v2.0.56-dev',
     date: '2026-07-02',
     entries: [
