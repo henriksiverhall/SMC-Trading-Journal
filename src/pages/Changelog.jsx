@@ -2,191 +2,189 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.62-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'infra', text: 'Supabase PROD-schema dokumenterat som SQL-snapshot i supabase/migrations/20260703124700_schema_snapshot.sql. Innehåller public-tabeller, constraints, RLS, policies, RPC-functions och grants. Ingen användar- eller tradedata ingår.' },
+    ]
+  },
+  {
     version: 'v2.0.61-dev',
     date: '2026-07-03',
     entries: [
-      { type: 'feature', text: 'Integritetspolicy-sida porterad från prod v1.9.9 till React (go-live-krav). Egen fristående sida på #/privacy, tillgänglig utan inloggning via hash-routing. Länkad från signup-formuläret (AuthPage) och Profil → Integritet.' },
+      { type: 'feature', text: 'Integritetspolicy-sida porterad från prod v1.9.9 till React. Fristående sida på #/privacy, tillgänglig utan inloggning och länkad från signup samt Profil.' },
     ]
   },
   {
     version: 'v2.0.60-dev',
     date: '2026-07-03',
     entries: [
-      { type: 'fix', text: 'Dashboard: Operatör-kortet (hälsningen) ligger nu kvar till vänster medan resten av HUD-korten högerställs, så de inte klumpar ihop sig på breda skärmar.' },
-      { type: 'feature', text: 'Mer "glow" genomgående – inte bara toppwidgeten: alla kort fick en subtil glow-linje överst, W/L-badges och R-värden (r-pos/r-neg) fick glödande skugga, streak-rutorna (senaste 10 trades) fick färgad glow.' },
+      { type: 'fix', text: 'Dashboard: Operatör-kortet ligger kvar till vänster medan övriga HUD-kort högerställs.' },
+      { type: 'feature', text: 'Mer glow genomgående på kort, badges, R-värden och streak-rutor.' },
     ]
   },
   {
     version: 'v2.0.59-dev',
     date: '2026-07-03',
     entries: [
-      { type: 'fix', text: 'Dashboard HUD-kort: instrumentkorten (Guld/Olja/ES-NQ-YM) visade nedräkningen som huvudsiffra och en statisk "stängd"-text utan öppningstid – förvirrande jämfört med marknadskorten. Alla kort visar nu samma mönster: huvudsiffra = aktuell lokal klocktid, sub-rad = "öppnar om HH:MM:SS" / "stänger om HH:MM:SS" tydligt märkt med "om" så det inte kan tolkas som ett klockslag.' },
-      { type: 'fix', text: 'Dashboard: "Hej, Admin!"-hälsningen var en avvikande hero-textbubbla som inte matchade HUD-stilen. Nu ett HUD-kort i samma rad som resten (Operatör / namn / veckodag).' },
-      { type: 'fix', text: 'Dashboard: dubblett-knappen "+ Log Trade" i Topbar borttagen – fanns redan i hero-raden, syntes bara på Dashboard (försvann på andra sidor) och var förvirrande.' },
+      { type: 'fix', text: 'Dashboard HUD-kort visar nu lokal tid som huvudsiffra och tydlig öppnar/stänger om-rad.' },
+      { type: 'fix', text: 'Dashboard-hälsningen gjordes om till HUD-kort och dubblettknappen Log Trade togs bort.' },
     ]
   },
   {
     version: 'v2.0.58-dev',
     date: '2026-07-03',
     entries: [
-      { type: 'feature', text: 'Dashboard – ny visuell riktning ("HUD / high-tech"): analoga klockor ersatta med digitala HUD-kort med glödande progress-bar. Stat-korten fick glow-underline och glödande mono-siffror. Equity curve fick glow-effekt. Welcome-hero fick subtil violett/grön gradient-linje. Ny --violet accent-färg tillagd i designsystemet (både dark och light theme).' },
-      { type: 'infra', text: 'Ingen mobil/platta-CSS rörd eller borttagen – HUD-remsan återanvänder befintlig .welcome-clocks-wrap-klass så mobil-döljningen fortsätter fungera exakt som innan.' },
+      { type: 'feature', text: 'Dashboard fick ny HUD/high-tech visuell riktning med digitala sessionskort och glow-effekter.' },
+      { type: 'infra', text: 'Mobil/platta-CSS lämnades orörd; befintlig mobil-döljning återanvändes.' },
     ]
   },
   {
     version: 'v2.0.57-dev',
     date: '2026-07-03',
     entries: [
-      { type: 'feature', text: 'Import: ny parser för TopstepX/ProjectX (används av TopStep, Bulenox, Alpha Futures m.fl.) – order-nivå-data med Status/Side/PositionDisposition/CreationDisposition tolkas till Long/Short-trades med korrekt entry/exit-parning.' },
-      { type: 'fix', text: 'Import: TradingView Backtesting-parsern skriven om – exporten har en rad per exekvering (Entry/Exit separat, grupperade på Trade number), inte en rad per trade som tidigare antogs. Symbol gissas nu från filnamnet eftersom exporten saknar ticker-kolumn.' },
-      { type: 'fix', text: 'Import: Tradovate-parsern (används av FundedNext, Apex, Tradeify m.fl.) matchade fel kolumnnamn mot verklig export (avgPrice/filledQty istället för antagna namn) och saknade filtrering på Status=Filled, vilket importerade avbrutna ordrar som skräpdata. Fixat mot verklig exportfil.' },
+      { type: 'feature', text: 'Import: parser för TopstepX/ProjectX.' },
+      { type: 'fix', text: 'Import: TradingView Backtesting-parsern hanterar entry/exit-rader per trade number.' },
+      { type: 'fix', text: 'Import: Tradovate-parsern matchar verklig export och filtrerar Status=Filled.' },
     ]
   },
   {
     version: 'v2.0.56-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Journal: verkliga roten till att Datum/Tid/Exit-fälten "försvann till höger" hittad. .journal-form-card saknade min-width:0 – som CSS Grid-item fick den default min-width:auto (sitt innehålls min-content-bredd), så om något fält i formuläret hade brett innehåll vägrade HELA kortet krympa under det och klipptes av skärmkanten. v2.0.55 fixade bara symptomet på de enskilda fälten, inte orsaken på kortnivå.' },
+      { type: 'fix', text: 'Journal: root cause för mobilbredd hittad. .journal-form-card behövde min-width:0 som CSS Grid-item.' },
     ]
   },
   {
     version: 'v2.0.55-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Journal: Datum/Tid/Exit datum/Exit tid-fälten stack ut till höger om skärmen på mobil (iOS Safari) trots att alla andra fält hade korrekt bredd. Orsak: input[type=date] och input[type=time] kan strunta i width:100% på iOS och behålla sin egen bredd. Explicit CSS-regel tvingar nu dessa fälttyper att respektera containerns bredd.' },
+      { type: 'fix', text: 'Journal: datum- och tidfält på iOS Safari tvingas respektera containerns bredd.' },
     ]
   },
   {
     version: 'v2.0.54-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Dashboard: widgetgriden satt permanent till 1 kolumn (var 2 på desktop). Widgets kan därmed aldrig hamna sida vid sida längre, oavsett skärmbredd – löser mobilbuggen på roten istället för fler brytpunkts-hack. Gör även "Anpassa widgets" till en rak lista utan gissningar om vad som legat på samma rad.' },
+      { type: 'fix', text: 'Dashboard: widgetgrid satt permanent till 1 kolumn för att stoppa mobilbuggen på roten.' },
     ]
   },
   {
     version: 'v2.0.53-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Dashboard: klockorna (session-ur + RTH-panel) döljs helt på mobil – de kunde aldrig få plats på en telefon och var mest brus där. Snabbknapparna (Logga trade/Checklist/Analytics/Journal) räcker.' },
-      { type: 'fix', text: 'Checklist: Redigera/Ny strategi/Återställ-knapparna staplas nu i tydliga rader istället för att wrappa huller om buller.' },
-      { type: 'fix', text: 'Skyddsnät mot "läckande" horisontell scroll: om en sida tillfälligt blir bredare än skärmen och gör dokumentet scrollbart i sidled, nollställs det automatiskt vid sidbyte så nästa sida inte visas skiftad.' },
+      { type: 'fix', text: 'Dashboard: sessionsklockor döljs på mobil.' },
+      { type: 'fix', text: 'Checklist: knappar staplas tydligare.' },
+      { type: 'fix', text: 'Skydd mot läckande horisontell scroll vid sidbyte.' },
     ]
   },
   {
     version: 'v2.0.52-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Roten till "nyp ihop"-problemet på mobil hittad: DragGrid fick columns={2} som inline-style från Dashboard, vilket inte kan ha egna CSS-brytpunkter. Widgetgriden tvingas nu till 1 kolumn på mobil oavsett vad sidan begär.' },
-      { type: 'infra', text: 'overflow-x:hidden på body/root och min-width:0 genomgående på kort/formulär så innehåll kan krympa istället för att tvinga ut sidbredden.' },
+      { type: 'fix', text: 'DragGrid columns={2} var rotorsak till mobilproblem; widgetgriden tvingas till 1 kolumn.' },
+      { type: 'infra', text: 'overflow-x:hidden och min-width:0 genomgående på kort och formulär.' },
     ]
   },
   {
     version: 'v2.0.51-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'Analytics: statistik-widgeten (5 kolumner) blir 2 kolumner på telefon (≤480px). SL-optimering (3 kolumner), Grade/Emotion (2 kolumner) och Win Rate per veckodag (5 kolumner) blir 1 kolumn på mobil/platta (≤768px) istället för att klämmas ihop.' },
-      { type: 'fix', text: 'Journal + PiP Log Trade: fältrader med två fält bredvid varandra (t.ex. Datum/Tid, SL/TP) blir 1 fält per rad på telefon (≤480px), men behåller 2 kolumner på iPad/platta (768px+) där det finns plats.' },
-      { type: 'infra', text: 'Ny CSS-brytpunkt vid 480px separat från 768px-brytpunkten – skiljer på "platta i liggande" (gott om plats) och "telefon i stående" (måste bli en kolumn).' },
+      { type: 'fix', text: 'Analytics och Journal-formulär fick separata mobil/platta-brytpunkter.' },
     ]
   },
   {
     version: 'v2.0.50-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'fix', text: 'AuthPage (login/signup) mobilanpassad – missades i förra sessionens mobilarbete. Hade en helt egen fast grid utan brytpunkt. Nu döljs bild-panelen på ≤768px och formuläret fyller skärmen, samma mönster som resten av appen.' },
+      { type: 'fix', text: 'AuthPage mobilanpassad; bildpanel döljs på små skärmar.' },
     ]
   },
   {
     version: 'v2.0.49-dev',
     date: '2026-07-02',
     entries: [
-      { type: 'feature', text: 'Full mobil/platta-anpassning: sidebar blir en overlay-drawer med hamburgermeny på skärmar ≤768px, stängs automatiskt vid navigering. Topbar får hamburger-knapp.' },
-      { type: 'fix', text: 'Journal: tvåkolumns-layout (Log Trade + tabell) blir en kolumn på mobil/platta. Formuläret slutar vara sticky så det inte låser scroll.' },
-      { type: 'fix', text: 'PiP-knappen döljs på mobil/platta – Document Picture-in-Picture stöds inte i mobila webbläsare. Checklist och Logga trade nås istället direkt via huvudnavigeringen.' },
-      { type: 'infra', text: 'Nya CSS-brytpunkt vid 768px i globals.css: kort, tabeller och modaler får mindre padding/font-storlek för bättre läsbarhet på små skärmar.' },
+      { type: 'feature', text: 'Full mobil/platta-anpassning med overlay-sidebar, hamburgerknapp och bättre kort/tabeller.' },
     ]
   },
   {
     version: 'v2.0.48-dev',
     date: '2026-07-01',
     entries: [
-      { type: 'feature', text: 'Import-sida: stöd för TradingView Backtesting (Strategy Tester CSV), Tradovate (Orders.csv), MetaTrader 4/5 (History CSV) och NinjaTrader 7/8 (Trades CSV). 3-stegs flöde: välj plattform → dra/släpp CSV → granska + importera. Valfri strategi-sättning på alla importerade trades.' },
-      { type: 'fix', text: 'PiP: ↺ Rensa-knapp tillagd bredvid Spara-knappen i Logga trade-flödet.' },
-      { type: 'fix', text: 'Journal: ↺ Rensa-knapp alltid synlig bredvid Spara-knappen (ersätter tidigare Avbryt som bara syntes vid redigering).' },
+      { type: 'feature', text: 'Import-sida för TradingView, Tradovate, MetaTrader och NinjaTrader CSV.' },
     ]
   },
   {
     version: 'v2.0.46-dev',
     date: '2026-07-01',
     entries: [
-      { type: 'feature', text: 'Journal: klick på bild i detaljmodalen öppnar lightbox-overlay.' },
-      { type: 'feature', text: 'PiP: Logga trade-flödet identiskt med standard Log Trade – scale-ins, targets, R-preview, multiimage, Känsla.' },
+      { type: 'feature', text: 'Journal lightbox och PiP Log Trade-flöde.' },
     ]
   },
   {
     version: 'v2.0.45-dev',
     date: '2026-07-01',
     entries: [
-      { type: 'fix', text: 'Journal: chart-länk display:block – ellipsis-trunkering fungerar korrekt.' },
-      { type: 'feature', text: 'Worker: TV “Copy link”-URL:er konverteras auto till S3 PNG-URL.' },
+      { type: 'fix', text: 'Journal chart-länk trunkeras korrekt.' },
+      { type: 'feature', text: 'Worker konverterar TradingView Copy link-URL:er till S3 PNG-URL.' },
     ]
   },
   {
     version: 'v2.0.44-dev',
     date: '2026-07-01',
     entries: [
-      { type: 'fix', text: 'Journal: chart-rad grid-layout (36px | auto | 1fr | 24px).' },
-      { type: 'infra', text: 'TV Pine Script Journal Tool parkerad. Profil TV-flik dold.' },
+      { type: 'fix', text: 'Journal chart-rad fick stabil grid-layout.' },
+      { type: 'infra', text: 'TV Pine Script Journal Tool parkerad; Profil TV-flik dold.' },
     ]
   },
   {
     version: 'v2.0.43-dev',
     date: '2026-06-30',
     entries: [
-      { type: 'feature', text: 'Journal: multiimage-stöd – flera bilder/länkar per trade med tagg. R2-bucket tradelog-trade-images.' },
+      { type: 'feature', text: 'Journal multiimage-stöd med flera bilder/länkar per trade.' },
     ]
   },
   {
     version: 'v2.0.42-dev',
     date: '2026-06-29',
     entries: [
-      { type: 'feature', text: 'Ekonomisk kalender: inbäddad TradingView Economic Calendar-widget.' },
+      { type: 'feature', text: 'Ekonomisk kalender via TradingView-widget.' },
     ]
   },
   {
     version: 'v2.0.40-dev',
     date: '2026-06-27',
     entries: [
-      { type: 'feature', text: 'Dashboard: analoga sessionsklockor (London/NY/Tokyo + din tid), RTH-instrumentruta.' },
+      { type: 'feature', text: 'Dashboard sessionsklockor och RTH-instrumentruta.' },
     ]
   },
   {
     version: 'v2.0.36-dev',
     date: '2026-06-25',
     entries: [
-      { type: 'feature', text: 'Analytics: CustomFieldsWidget expand/kollaps per fält.' },
-      { type: 'fix', text: 'Admin + Profile: maxWidth höjt till 1100px.' },
+      { type: 'feature', text: 'Analytics CustomFieldsWidget expand/kollaps per fält.' },
+      { type: 'fix', text: 'Admin och Profile maxWidth höjt.' },
     ]
   },
   {
     version: 'v2.0.32-dev',
     date: '2026-06-24',
     entries: [
-      { type: 'feature', text: 'Admin UserProfileModal: e-postbyte, lösenordsåterställning. AuthPage: Glömt lösenord-modal.' },
+      { type: 'feature', text: 'Admin UserProfileModal, e-postbyte och lösenordsåterställning.' },
     ]
   },
   {
     version: 'v2.0.23-dev',
     date: '2026-06-23',
     entries: [
-      { type: 'feature', text: 'Dashboard: välkomstbanner, session-countdown. Analytics: Expectancy, Recovery Factor, SL-optimerare.' },
+      { type: 'feature', text: 'Dashboard välkomstbanner, session-countdown och Analytics-mått.' },
     ]
   },
   {
     version: 'v2.0.19-dev',
     date: '2026-06-22',
     entries: [
-      { type: 'feature', text: 'Journal: filter, strategi-dropdown, kolumnsortering. PiP: BroadcastChannel live-uppdatering.' },
+      { type: 'feature', text: 'Journal filter, strategi-dropdown, kolumnsortering och PiP live-uppdatering.' },
     ]
   },
   {
