@@ -2,10 +2,10 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
-    version: 'UNSAFE-BRANCH',
+    version: 'DO-NOT-MERGE',
     date: '2026-07-03',
     entries: [
-      { type: 'fix', text: 'This PR branch should not be merged. Changelog was damaged during tool testing. Use a clean branch instead.' },
+      { type: 'fix', text: 'Do not merge this branch. Use a clean branch from dev instead.' },
     ]
   },
 ]
@@ -18,19 +18,5 @@ const TYPE_CONFIG = {
 }
 
 export default function Changelog() {
-  return (
-    <div style={{ flex:1 }}>
-      <Topbar title="Changelog" subtitle="Dev v2.0 – versionshistorik" />
-      <div className="page-content" style={{ maxWidth:760 }}>
-        {CHANGELOG.map((release,ri) => (
-          <div key={release.version} style={{ marginBottom:36 }}>
-            <div style={{ display:'flex', alignItems:'baseline', gap:12, marginBottom:14 }}>
-              <span style={{ fontFamily:'var(--mono)', fontSize:18, fontWeight:700, color:ri===0?'var(--accent)':'var(--text)' }}>{release.version}</span>
-              <span style={{ fontSize:12, color:'var(--text4)', fontFamily:'var(--mono)' }}>{release.date}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  return <div style={{ flex:1 }}><Topbar title="Changelog" subtitle="Do not merge this branch" /></div>
 }
