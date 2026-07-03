@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.60-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'fix', text: 'Dashboard: Operatör-kortet (hälsningen) ligger nu kvar till vänster medan resten av HUD-korten högerställs, så de inte klumpar ihop sig på breda skärmar.' },
+      { type: 'feature', text: 'Mer "glow" genomgående – inte bara toppwidgeten: alla kort fick en subtil glow-linje överst, W/L-badges och R-värden (r-pos/r-neg) fick glödande skugga, streak-rutorna (senaste 10 trades) fick färgad glow.' },
+    ]
+  },
+  {
     version: 'v2.0.59-dev',
     date: '2026-07-03',
     entries: [
