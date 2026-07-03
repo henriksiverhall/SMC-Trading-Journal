@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.61-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'feature', text: 'Integritetspolicy-sida porterad från prod v1.9.9 till React (go-live-krav). Egen fristående sida på #/privacy, tillgänglig utan inloggning via hash-routing. Länkad från signup-formuläret (AuthPage) och Profil → Integritet.' },
+    ]
+  },
+  {
     version: 'v2.0.60-dev',
     date: '2026-07-03',
     entries: [
