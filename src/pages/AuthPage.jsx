@@ -209,7 +209,7 @@ export default function AuthPage() {
               {mode === 'signup' && (
                 <p style={{ fontSize: 11, color: 'var(--text4)', lineHeight: 1.6 }}>
                   Genom att skapa ett konto accepterar du våra{' '}
-                  <span style={{ color: 'var(--text3)', textDecoration: 'underline', cursor: 'pointer' }}>integritetsvillkor</span>.
+                  <a href="#/privacy" style={{ color: 'var(--text3)', textDecoration: 'underline' }}>integritetsvillkor</a>.
                 </p>
               )}
               <button type="submit" className="btn btn-primary w-full"
