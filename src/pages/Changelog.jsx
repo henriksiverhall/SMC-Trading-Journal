@@ -6,6 +6,7 @@ const CHANGELOG = [
     date: '2026-07-03',
     entries: [
       { type: 'infra', text: 'Supabase PROD-schema dokumenterat som SQL-snapshot i supabase/migrations/20260703124700_schema_snapshot.sql. Innehåller public-tabeller, constraints, RLS, policies, RPC-functions och grants. Ingen användar- eller tradedata ingår.' },
+      { type: 'infra', text: 'OBS: äldre changelog-texter i denna komponent är komprimerade i samband med AI-uppdatering. För detaljerad historik, se GitHub-historik och AI Handoff.' },
     ]
   },
   {
