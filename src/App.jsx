@@ -21,9 +21,22 @@ const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'changelog']
 export default function App() {
   // Integritetspolicy måste vara nåbar utan inloggning (GDPR-krav, länkas från
   // signup-formuläret). Hash-routing (#/privacy) istället för path-routing
-  // eftersom Cloudflare Worker inte har server-side route-hantering för SPA:n –
-  // hash kräver ingen serverkonfiguration alls.
-  if (window.location.hash === '#/privacy') return <Privacy />
+  // eftersom Cloudflare Worker inte har server-side route-hantering för SPA:n.
+  //
+  // v2.0.64: window.location.hash lästes bara av vid FÖRSTA renderingen. Ett
+  // klick på en vanlig <a href="#/privacy"> i samma flik (t.ex. från
+  // AuthPage) byter bara webbläsarens URL utan att ladda om sidan – React
+  // reagerar inte automatiskt på det, så komponentträdet renderades aldrig
+  // om och Privacy-sidan visades aldrig. Fungerade bara från Profil eftersom
+  // den länken har target="_blank" (ny flik = full omladdning = ny render).
+  // Fix: lyssna på hashchange-eventet och håll hash i React-state.
+  const [hash, setHash] = useState(window.location.hash)
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+  if (hash === '#/privacy') return <Privacy />
 
   const { user, loading, isAdmin, impersonating, stopImpersonation } = useAuth()
   const [page, setPage] = useState(() => {
