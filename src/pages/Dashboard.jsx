@@ -60,13 +60,10 @@ function sessionStatus(session, now) {
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-// ── HUD-remsa (ersätter analoga klockor, v2.0.58/59) ───────────────────────────
+// ── HUD-remsa (ersätter analoga klockor, v2.0.58/59/60) ────────────────────────
 // Kompakta digitala kort med linjär progress-bar istället för klockvisare.
 // Wrappas i .welcome-clocks-wrap på anropsstället – befintlig mobil-döljning
 // (≤768px) fortsätter fungera oförändrat, ingen CSS-ändring krävdes där.
-// v2.0.59: huvudsiffran är ALLTID aktuell klocktid på platsen (aldrig en
-// nedräkning) – nedräkningen till öppning/stängning står tydligt i sub-raden
-// med ordet "om" så den inte kan misstas för en klockslagsangivelse.
 function HudCard({ label, time, isOpen, sub, progress }) {
   return (
     <div className={`hud-card ${isOpen ? 'hud-open' : 'hud-closed'}`}>
@@ -89,6 +86,9 @@ function sessionProgressPct(cfg, now) {
   return Math.min(100, Math.max(0, ((curSecs - openSecs) / len) * 100))
 }
 
+// v2.0.60: Operatör-kortet ligger kvar till vänster, resten av HUD-korten
+// högerställs (justify-content: flex-end i egen flex-container) så de inte
+// klumpar ihop sig direkt intill hälsningen på breda skärmar.
 function HudStrip({ displayName }) {
   const [now, setNow] = useState(new Date())
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -99,26 +99,27 @@ function HudStrip({ displayName }) {
   const dateStr = now.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
-    <div className="hud-strip">
-      {/* Hälsning som HUD-kort istället för egen "hero"-stil – enhetligt visuellt språk. */}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, width: '100%', flexWrap: 'wrap' }}>
       <HudCard label="Operatör" time={displayName.toUpperCase()} isOpen sub={dateStr} progress={100} />
-      <HudCard label="Din tid" time={`${pad(lh)}:${pad(lm)}:${pad(ls)}`} isOpen sub={localTz.split('/').pop().replace(/_/g, ' ')} progress={dayProgress} />
-      {MARKET_SESSIONS.map(sess => {
-        const { h, m, s } = getHMS(now, sess.tz)
-        const status = sessionStatus(sess, now)
-        return (
-          <HudCard key={sess.id} label={`${sess.flag} ${sess.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
-            sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(sess, now)} />
-        )
-      })}
-      {INSTRUMENTS.map(inst => {
-        const { h, m, s } = getHMS(now, inst.tz)
-        const status = sessionStatus(inst, now)
-        return (
-          <HudCard key={inst.id} label={`${inst.icon} ${inst.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
-            sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(inst, now)} />
-        )
-      })}
+      <div className="hud-strip" style={{ justifyContent: 'flex-end', flex: 1 }}>
+        <HudCard label="Din tid" time={`${pad(lh)}:${pad(lm)}:${pad(ls)}`} isOpen sub={localTz.split('/').pop().replace(/_/g, ' ')} progress={dayProgress} />
+        {MARKET_SESSIONS.map(sess => {
+          const { h, m, s } = getHMS(now, sess.tz)
+          const status = sessionStatus(sess, now)
+          return (
+            <HudCard key={sess.id} label={`${sess.flag} ${sess.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
+              sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(sess, now)} />
+          )
+        })}
+        {INSTRUMENTS.map(inst => {
+          const { h, m, s } = getHMS(now, inst.tz)
+          const status = sessionStatus(inst, now)
+          return (
+            <HudCard key={inst.id} label={`${inst.icon} ${inst.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
+              sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(inst, now)} />
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -263,8 +264,6 @@ export default function Dashboard({ onNavigate }) {
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 60%, var(--violet-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, var(--accent-glow), var(--violet-glow), transparent)' }} />
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            {/* HUD-remsan innehåller nu även hälsningen som första kort – ingen
-                separat "hero"-textbubbla, enhetligt HUD-utseende genomgående. */}
             <div className="welcome-clocks-wrap">
               <HudStrip displayName={effectiveDisplayName} />
             </div>
@@ -419,7 +418,13 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ display: 'flex', gap: 4 }}>
               {last10.length === 0 ? <span style={{ color: 'var(--text4)', fontSize: 12 }}>Inga trades än</span>
                 : last10.map((t, i) => (
-                  <div key={i} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: t.outcome === 'W' ? 'var(--green-dim)' : t.outcome === 'L' ? 'var(--red-dim)' : 'var(--bg4)', color: t.outcome === 'W' ? 'var(--green)' : t.outcome === 'L' ? 'var(--red)' : 'var(--text3)' }}>{t.outcome}</div>
+                  <div key={i} style={{
+                    width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700,
+                    background: t.outcome === 'W' ? 'var(--green-dim)' : t.outcome === 'L' ? 'var(--red-dim)' : 'var(--bg4)',
+                    color: t.outcome === 'W' ? 'var(--green)' : t.outcome === 'L' ? 'var(--red)' : 'var(--text3)',
+                    boxShadow: t.outcome === 'W' ? '0 0 8px rgba(34,197,94,0.35)' : t.outcome === 'L' ? '0 0 8px rgba(239,68,68,0.3)' : 'none',
+                  }}>{t.outcome}</div>
                 ))}
             </div>
           </div>
