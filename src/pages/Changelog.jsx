@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.59-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'fix', text: 'Dashboard HUD-kort: instrumentkorten (Guld/Olja/ES-NQ-YM) visade nedräkningen som huvudsiffra och en statisk "stängd"-text utan öppningstid – förvirrande jämfört med marknadskorten. Alla kort visar nu samma mönster: huvudsiffra = aktuell lokal klocktid, sub-rad = "öppnar om HH:MM:SS" / "stänger om HH:MM:SS" tydligt märkt med "om" så det inte kan tolkas som ett klockslag.' },
+      { type: 'fix', text: 'Dashboard: "Hej, Admin!"-hälsningen var en avvikande hero-textbubbla som inte matchade HUD-stilen. Nu ett HUD-kort i samma rad som resten (Operatör / namn / veckodag).' },
+      { type: 'fix', text: 'Dashboard: dubblett-knappen "+ Log Trade" i Topbar borttagen – fanns redan i hero-raden, syntes bara på Dashboard (försvann på andra sidor) och var förvirrande.' },
+    ]
+  },
+  {
     version: 'v2.0.58-dev',
     date: '2026-07-03',
     entries: [
