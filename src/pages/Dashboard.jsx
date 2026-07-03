@@ -60,101 +60,56 @@ function sessionStatus(session, now) {
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-function ClockFace({ h, m, s, accentColor, session, isOpen }) {
-  const SIZE = 110, cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 5
-  function toAngle(hour, min) { return (((hour % 12) * 60 + min) / (12 * 60)) * 360 - 90 }
-  function pt(deg, rad) { const a = (deg * Math.PI) / 180; return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) } }
-  function sessionArc(rad) {
-    if (!session) return null
-    const a1 = toAngle(session.openH, session.openM), a2 = toAngle(session.closeH, session.closeM)
-    const p1 = pt(a1, rad), p2 = pt(a2, rad)
-    let span = a2 - a1; if (span < 0) span += 360; if (span > 270) return null
-    return `M ${p1.x} ${p1.y} A ${rad} ${rad} 0 ${span > 180 ? 1 : 0} 1 ${p2.x} ${p2.y}`
-  }
-  const arcD = sessionArc(r - 4), sessionColor = isOpen ? '#10b981' : '#ef4444'
-  const sDeg = s * 6, mDeg = m * 6 + s * 0.1, hDeg = (h % 12) * 30 + m * 0.5
-  function tip(deg, len) { const a = ((deg - 90) * Math.PI) / 180; return { x: cx + len * Math.cos(a), y: cy + len * Math.sin(a) } }
-  const ticks = Array.from({ length: 12 }, (_, i) => {
-    const a = (i * 30 - 90) * Math.PI / 180, inner = r * (i % 3 === 0 ? 0.74 : 0.83)
-    return { x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a), x2: cx + r * 0.93 * Math.cos(a), y2: cy + r * 0.93 * Math.sin(a), major: i % 3 === 0 }
-  })
+// ── HUD-remsa (ersätter analoga klockor, v2.0.58) ──────────────────────────────
+// Kompakta digitala kort med linjär progress-bar istället för klockvisare.
+// Wrappas i .welcome-clocks-wrap på anropsstället – befintlig mobil-döljning
+// (≤768px) fortsätter fungera oförändrat, ingen CSS-ändring krävdes där.
+function HudCard({ label, time, isOpen, sub, progress }) {
   return (
-    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ filter: isOpen === true ? `drop-shadow(0 0 5px ${sessionColor}44)` : 'none' }}>
-      <circle cx={cx} cy={cy} r={r} fill="var(--bg3)" stroke="var(--border2)" strokeWidth={1.5} />
-      {arcD && <path d={arcD} fill="none" stroke={sessionColor} strokeWidth={3} strokeLinecap="round" opacity={isOpen ? 0.85 : 0.25} />}
-      {ticks.map((t, i) => <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={t.major ? 'var(--text3)' : 'var(--text4)'} strokeWidth={t.major ? 2 : 1} />)}
-      <line x1={cx} y1={cy} x2={tip(hDeg, r * 0.48).x} y2={tip(hDeg, r * 0.48).y} stroke="var(--text)" strokeWidth={4} strokeLinecap="round" />
-      <line x1={cx} y1={cy} x2={tip(mDeg, r * 0.65).x} y2={tip(mDeg, r * 0.65).y} stroke="var(--text2)" strokeWidth={2.8} strokeLinecap="round" />
-      <line x1={cx} y1={cy} x2={tip(sDeg, r * 0.76).x} y2={tip(sDeg, r * 0.76).y} stroke={accentColor} strokeWidth={1.5} strokeLinecap="round" />
-      <circle cx={cx} cy={cy} r={3.5} fill={accentColor} />
-    </svg>
-  )
-}
-
-function LocalClock({ now, localTz }) {
-  const { h, m, s } = getHMS(now, localTz)
-  const pad = n => String(n).padStart(2, '0')
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <ClockFace h={h} m={m} s={s} accentColor="var(--accent)" />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 0.3 }}>🕐 Din tid</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>{pad(h)}:{pad(m)}:{pad(s)}</div>
-      <div style={{ fontSize: 9, color: 'var(--text3)' }}>{localTz.split('/').pop().replace(/_/g, ' ')}</div>
+    <div className={`hud-card ${isOpen ? 'hud-open' : 'hud-closed'}`}>
+      <div className="hud-label"><span className={`hud-dot ${isOpen ? 'on' : 'off'}`} />{label}</div>
+      <div className="hud-time">{time}</div>
+      <div className="hud-bar-track"><div className={`hud-bar-fill ${isOpen ? 'on' : 'off'}`} style={{ width: `${progress}%` }} /></div>
+      <div className="hud-sub">{sub}</div>
     </div>
   )
 }
 
-function MarketClock({ session, now }) {
-  const { h, m, s } = getHMS(now, session.tz)
-  const status = sessionStatus(session, now)
-  const pad = n => String(n).padStart(2, '0')
-  const statusColor = status.isOpen ? '#10b981' : '#ef4444'
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <ClockFace h={h} m={m} s={s} accentColor={statusColor} session={session} isOpen={status.isOpen} />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', letterSpacing: 0.3 }}>{session.flag} {session.label}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)', fontWeight: 700, letterSpacing: 1 }}>{pad(h)}:{pad(m)}:{pad(s)}</div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, marginBottom: 3 }}>{status.isOpen ? 'Stänger om' : 'Öppnar om'}</div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 800, color: statusColor, letterSpacing: 1, background: status.isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)', padding: '3px 10px', borderRadius: 6, border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}` }}>{status.countdown}</div>
-      </div>
-      <div style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: status.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)', color: statusColor, letterSpacing: 0.7, border: `1px solid ${status.isOpen ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.25)'}` }}>{status.isOpen ? '● ÖPPEN' : '○ STÄNGD'}</div>
-    </div>
-  )
+function sessionProgressPct(cfg, now) {
+  const { h, m, s } = getHMS(now, cfg.tz)
+  const curSecs = h * 3600 + m * 60 + s
+  const openSecs = cfg.openH * 3600 + cfg.openM * 60
+  const closeSecs = cfg.closeH * 3600 + cfg.closeM * 60
+  const status = sessionStatus(cfg, now)
+  if (!status.isOpen) return 12
+  const len = closeSecs - openSecs
+  return Math.min(100, Math.max(0, ((curSecs - openSecs) / len) * 100))
 }
 
-function SessionClocks() {
+function HudStrip() {
   const [now, setNow] = useState(new Date())
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
-  return (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-      <LocalClock now={now} localTz={localTz} />
-      <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', margin: '0 2px' }} />
-      {MARKET_SESSIONS.map(s => <MarketClock key={s.id} session={s} now={now} />)}
-    </div>
-  )
-}
+  const { h: lh, m: lm, s: ls } = getHMS(now, localTz)
+  const pad = n => String(n).padStart(2, '0')
+  const dayProgress = ((lh * 3600 + lm * 60 + ls) / 86400) * 100
 
-function InstrumentCountdowns() {
-  const [now, setNow] = useState(new Date())
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', padding: '10px 14px', minWidth: 152 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>RTH – New York ET</div>
-      {INSTRUMENTS.map((inst, idx) => {
-        const status = sessionStatus(inst, now), color = status.isOpen ? '#10b981' : '#ef4444'
+    <div className="hud-strip">
+      <HudCard label="Din tid" time={`${pad(lh)}:${pad(lm)}:${pad(ls)}`} isOpen sub={localTz.split('/').pop().replace(/_/g, ' ')} progress={dayProgress} />
+      {MARKET_SESSIONS.map(sess => {
+        const { h, m, s } = getHMS(now, sess.tz)
+        const status = sessionStatus(sess, now)
         return (
-          <div key={inst.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 0', borderTop: idx > 0 ? '1px solid var(--border)' : 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-              <span style={{ fontSize: 13 }}>{inst.icon}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{inst.label}</span>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 800, color, letterSpacing: 0.5 }}>{status.countdown}</div>
-              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', letterSpacing: 0.3 }}><span style={{ color }}>{status.isOpen ? '●' : '○'}</span>{' '}{status.isOpen ? 'öppen' : 'stängd'}</div>
-            </div>
-          </div>
+          <HudCard key={sess.id} label={`${sess.flag} ${sess.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
+            sub={status.isOpen ? `stänger ${status.countdown}` : `öppnar ${status.countdown}`} progress={sessionProgressPct(sess, now)} />
+        )
+      })}
+      {INSTRUMENTS.map(inst => {
+        const status = sessionStatus(inst, now)
+        return (
+          <HudCard key={inst.id} label={`${inst.icon} ${inst.label}`} time={status.countdown} isOpen={status.isOpen}
+            sub={status.isOpen ? 'öppen' : 'stängd'} progress={sessionProgressPct(inst, now)} />
         )
       })}
     </div>
@@ -294,27 +249,23 @@ export default function Dashboard({ onNavigate }) {
   const equityData = withR.map((t, i) => { cumR += t.result || 0; return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) } })
   const recent = [...trades].reverse().slice(0, 5)
   const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const sep = <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)', flexShrink: 0 }} />
 
   const widgets = [
     {
       id: 'welcome', title: 'Välkommen', span: 2,
       content: (
-        <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)' }}>
+        <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 60%, var(--violet-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, var(--accent-glow), var(--violet-glow), transparent)' }} />
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>Hej, {effectiveDisplayName}! 👋</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize' }}>{dateStr}</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize', fontFamily: 'var(--mono)' }}>{dateStr}</div>
               </div>
-              {/* Klockor/RTH-panel – döljs helt på mobil (≤768px) via .welcome-clocks-wrap i CSS.
+              {/* HUD-remsa – döljs helt på mobil (≤768px) via .welcome-clocks-wrap i CSS.
                   På liten skärm är dessa mest brus; snabbknapparna räcker. */}
               <div className="welcome-clocks-wrap" style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                  <SessionClocks />
-                  {sep}
-                  <InstrumentCountdowns />
-                </div>
+                <HudStrip />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
@@ -326,7 +277,7 @@ export default function Dashboard({ onNavigate }) {
                 <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}</button>
               )}
               {openThreads > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(124,92,255,0.4)', color: 'var(--violet)' }}>🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}</button>
               )}
             </div>
           </div>
@@ -380,7 +331,7 @@ export default function Dashboard({ onNavigate }) {
                 { label: 'Recovery Factor', value: recoveryFactor != null ? recoveryFactor : '—', cls: recoveryFactor >= 2 ? 'positive' : recoveryFactor < 1 ? 'negative' : '', sub: 'netto/max DD' },
                 { label: 'Längsta svit', value: longestWin > 0 ? `${longestWin}V / ${longestLoss}F` : '—', sub: 'vinst / förlust' },
               ].map(s => (
-                <div key={s.label} className="stat-card">
+                <div key={s.label} className={`stat-card ${s.cls === 'negative' ? 'neg' : ''}`}>
                   <div className="stat-label">{s.label}</div>
                   <div className={`stat-value ${s.cls || ''}`}>{s.value}</div>
                   {s.sub && <div className="stat-sub">{s.sub}</div>}
@@ -396,7 +347,7 @@ export default function Dashboard({ onNavigate }) {
       content: (
         <div className="card">
           <div className="card-header"><div className="card-title">Equity Curve (R)</div></div>
-          <div className="card-body" style={{ paddingTop: 12 }}>
+          <div className="card-body equity-glow" style={{ paddingTop: 12 }}>
             {equityData.length < 2 ? (
               <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 13 }}>Logga minst 2 trades för att se equity curve</div>
             ) : (
@@ -406,7 +357,7 @@ export default function Dashboard({ onNavigate }) {
                   <XAxis dataKey="trade" stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)' }} />
                   <YAxis stroke="var(--text4)" tick={{ fontSize: 11, fill: 'var(--text4)', fontFamily: 'var(--mono)' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="r" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'var(--accent)' }} />
+                  <Line type="monotone" dataKey="r" stroke="var(--accent)" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: 'var(--accent)' }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
