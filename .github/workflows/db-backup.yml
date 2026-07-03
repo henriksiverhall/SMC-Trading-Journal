@@ -3,7 +3,7 @@ name: Nightly Database Backup
 on:
   schedule:
     - cron: '0 3 * * *'   # 03:00 UTC varje natt
-  workflow_dispatch: {}    # gör att du även kan trigga manuellt från Actions-fliken
+  workflow_dispatch: {}
 
 jobs:
   backup:
@@ -16,9 +16,19 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          set -euo pipefail
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          echo "BACKUP_FILE=tradelog_backup_${TIMESTAMP}.sql.gz" >> $GITHUB_ENV
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "tradelog_backup_${TIMESTAMP}.sql.gz"
+          FILE="tradelog_backup_${TIMESTAMP}.sql.gz"
+          echo "BACKUP_FILE=${FILE}" >> $GITHUB_ENV
+
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$FILE"
+
+          SIZE=$(stat -c%s "$FILE")
+          echo "Backup-storlek: ${SIZE} bytes"
+          if [ "$SIZE" -lt 2000 ]; then
+            echo "::error::Backupfilen är misstänkt liten (${SIZE} bytes) – pg_dump gav troligen inget resultat. Avbryter utan att ladda upp."
+            exit 1
+          fi
 
       - name: Install AWS CLI (R2 är S3-kompatibelt)
         run: pip install awscli
