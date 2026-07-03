@@ -6,9 +6,15 @@ const CHANGELOG = [
     date: '2026-07-03',
     entries: [
       { type: 'infra', text: 'Supabase PROD-schema dokumenterat som SQL-snapshot i supabase/migrations/20260703124700_schema_snapshot.sql. Innehåller public-tabeller, constraints, RLS, policies, RPC-functions och grants. Ingen användar- eller tradedata ingår.' },
-      { type: 'infra', text: 'Äldre changelog-texter i denna komponent är komprimerade i samband med AI-uppdatering. För detaljerad historik, se GitHub-historik och AI Handoff.' },
     ]
   },
+  {
+    version: 'v2.0.61-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'feature', text: 'Integritetspolicy-sida porterad från prod v1.9.9 till React. Fristående sida på #/privacy, tillgänglig utan inloggning och länkad från signup samt Profil.' },
+    ]
+  }
 ]
 
 const TYPE_CONFIG = {
