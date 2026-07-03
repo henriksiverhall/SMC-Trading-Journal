@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.58-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'feature', text: 'Dashboard – ny visuell riktning ("HUD / high-tech"): analoga klockor ersatta med digitala HUD-kort med glödande progress-bar. Stat-korten fick glow-underline och glödande mono-siffror. Equity curve fick glow-effekt. Welcome-hero fick subtil violett/grön gradient-linje. Ny --violet accent-färg tillagd i designsystemet (både dark och light theme).' },
+      { type: 'infra', text: 'Ingen mobil/platta-CSS rörd eller borttagen – HUD-remsan återanvänder befintlig .welcome-clocks-wrap-klass så mobil-döljningen fortsätter fungera exakt som innan.' },
+    ]
+  },
+  {
     version: 'v2.0.57-dev',
     date: '2026-07-03',
     entries: [
