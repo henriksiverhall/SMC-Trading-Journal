@@ -613,7 +613,11 @@ function AIAnalysis({ trades, aiEnabled }) {
   const wr = withR.length ? (wins.length / withR.length * 100).toFixed(1) : 0
   const totalR = withR.reduce((a, t) => a + (t.result || 0), 0).toFixed(2)
   const pf = (() => { const winR = wins.reduce((a, t) => a + t.result, 0); const lossR = Math.abs(withR.filter(t => t.outcome === 'L').reduce((a, t) => a + t.result, 0)); return lossR > 0 ? (winR / lossR).toFixed(2) : '∞' })()
-  const fingerprint = withR.map(t => `${t.id}:${t.result}`).sort().join('|')
+  // v2.0.63: fingerprint byggs nu på ALLA trades (id+result+outcome), inte bara
+  // de med result!=null. Importerade trades saknar result (se Kanban
+  // dev_import_r_value1) men får ändå outcome satt – innan detta fix var de
+  // osynliga för fingerprinten så "✓ Aktuell" visades trots ny data.
+  const fingerprint = trades.map(t => `${t.id}:${t.result}:${t.outcome}`).sort().join('|')
   useEffect(() => {
     if (loadedRef.current) return
     const saved = userSettings?.aiAnalysis
