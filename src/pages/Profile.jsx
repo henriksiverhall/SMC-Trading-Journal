@@ -300,6 +300,7 @@ function KontoTab({ user, userSettings, saveSettings, signOut }) {
         <div className="card-body" style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
           <p>Dina tradingdata är privata och enbart synliga för dig. Vi säljer inte eller delar dina uppgifter med tredje part.</p>
           <p style={{ marginTop: 8 }}>Du kan när som helst begära full radering av dina uppgifter nedan.</p>
+          <p style={{ marginTop: 12 }}><a href="#/privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>🔒 Läs hela integritetspolicyn →</a></p>
         </div>
       </div>
       <div className="card" style={{ border: '1px solid rgba(239,68,68,0.2)' }}>
