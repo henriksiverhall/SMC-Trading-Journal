@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.62-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'infra', text: 'Databas-migrationsfil tillagd (supabase/migrations/20260703124700_schema_snapshot.sql) – dokumenterar hela PROD-schemat (tabeller, RLS-policies, funktioner). Ursprungligen framtagen av ChatGPT i en separat PR, verifierad kolumn-för-kolumn mot live information_schema och adopterad av Claude efter att PR:ns övriga innehåll (Changelog-ändring) visat sig trasigt och blivit stoppat.' },
+      { type: 'infra', text: 'Städat upp 10 experiment-branches och stängt PR #1 (ej mergad) efter ett ChatGPT-arbetspass mot samma repo som gick snett på Changelog-skrivning.' },
+    ]
+  },
+  {
     version: 'v2.0.61-dev',
     date: '2026-07-03',
     entries: [
