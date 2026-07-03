@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.0.57-dev'
+export const APP_VERSION = 'v2.0.58-dev'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
 export const YAHOO_SYMBOL_MAP = {
