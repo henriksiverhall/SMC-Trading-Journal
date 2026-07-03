@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.0.65-dev',
+    date: '2026-07-03',
+    entries: [
+      { type: 'fix', text: 'Integritetspolicy-sidan renderade tom vid navigering i samma flik (fixades bara med en full omladdning). Orsak: v2.0.64 la den villkorliga returnen (#/privacy) FÖRE useAuth() och resten av hooksen i App.jsx – bryter Reacts regel att exakt samma hooks måste köras i samma ordning varje rendering av samma komponent. Antalet hooks skiljde sig kraftigt mellan "vanlig sida" (~10 hooks) och Privacy-grenen (2 hooks), vilket fick React att tappa reconciliation. Alla hooks körs nu alltid – bara JSX-returnen villkoras.' },
+    ]
+  },
+  {
     version: 'v2.0.64-dev',
     date: '2026-07-03',
     entries: [
