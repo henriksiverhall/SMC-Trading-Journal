@@ -195,12 +195,21 @@ html, body { max-width: 100vw; }
 }
 .theme-toggle:hover { background: var(--bg4); color: var(--text2); }
 
-/* ── Cards ── */
+/* ── Cards ──
+   v2.0.60: subtil glow-linje överst på ALLA kort (inte bara hero-widgeten)
+   för att ge samma "levande" känsla genomgående istället för att bara
+   toppwidgeten sticker ut visuellt. */
 .card {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--r2); overflow: hidden;
   box-shadow: var(--shadow);
   min-width: 0;
+  position: relative;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+  opacity: 0.5; pointer-events: none;
 }
 .card-header {
   padding: 14px 18px; border-bottom: 1px solid var(--border);
@@ -267,6 +276,12 @@ html, body { max-width: 100vw; }
 
 /* ── Equity curve glow (v2.0.58) ── */
 .equity-glow .recharts-line-curve { filter: drop-shadow(0 0 6px var(--accent-glow)); }
+
+/* ── Badges + R-värden – glow (v2.0.60) ── */
+.badge-W, .badge-win  { box-shadow: 0 0 8px rgba(34,197,94,0.3); }
+.badge-L, .badge-loss { box-shadow: 0 0 8px rgba(239,68,68,0.25); }
+.r-pos { text-shadow: 0 0 10px rgba(34,197,94,0.3); }
+.r-neg { text-shadow: 0 0 10px rgba(239,68,68,0.25); }
 
 /* ── Buttons ── */
 .btn {
