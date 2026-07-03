@@ -60,10 +60,13 @@ function sessionStatus(session, now) {
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-// ── HUD-remsa (ersätter analoga klockor, v2.0.58) ──────────────────────────────
+// ── HUD-remsa (ersätter analoga klockor, v2.0.58/59) ───────────────────────────
 // Kompakta digitala kort med linjär progress-bar istället för klockvisare.
 // Wrappas i .welcome-clocks-wrap på anropsstället – befintlig mobil-döljning
 // (≤768px) fortsätter fungera oförändrat, ingen CSS-ändring krävdes där.
+// v2.0.59: huvudsiffran är ALLTID aktuell klocktid på platsen (aldrig en
+// nedräkning) – nedräkningen till öppning/stängning står tydligt i sub-raden
+// med ordet "om" så den inte kan misstas för en klockslagsangivelse.
 function HudCard({ label, time, isOpen, sub, progress }) {
   return (
     <div className={`hud-card ${isOpen ? 'hud-open' : 'hud-closed'}`}>
@@ -86,30 +89,34 @@ function sessionProgressPct(cfg, now) {
   return Math.min(100, Math.max(0, ((curSecs - openSecs) / len) * 100))
 }
 
-function HudStrip() {
+function HudStrip({ displayName }) {
   const [now, setNow] = useState(new Date())
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const { h: lh, m: lm, s: ls } = getHMS(now, localTz)
   const pad = n => String(n).padStart(2, '0')
   const dayProgress = ((lh * 3600 + lm * 60 + ls) / 86400) * 100
+  const dateStr = now.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
     <div className="hud-strip">
+      {/* Hälsning som HUD-kort istället för egen "hero"-stil – enhetligt visuellt språk. */}
+      <HudCard label="Operatör" time={displayName.toUpperCase()} isOpen sub={dateStr} progress={100} />
       <HudCard label="Din tid" time={`${pad(lh)}:${pad(lm)}:${pad(ls)}`} isOpen sub={localTz.split('/').pop().replace(/_/g, ' ')} progress={dayProgress} />
       {MARKET_SESSIONS.map(sess => {
         const { h, m, s } = getHMS(now, sess.tz)
         const status = sessionStatus(sess, now)
         return (
           <HudCard key={sess.id} label={`${sess.flag} ${sess.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
-            sub={status.isOpen ? `stänger ${status.countdown}` : `öppnar ${status.countdown}`} progress={sessionProgressPct(sess, now)} />
+            sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(sess, now)} />
         )
       })}
       {INSTRUMENTS.map(inst => {
+        const { h, m, s } = getHMS(now, inst.tz)
         const status = sessionStatus(inst, now)
         return (
-          <HudCard key={inst.id} label={`${inst.icon} ${inst.label}`} time={status.countdown} isOpen={status.isOpen}
-            sub={status.isOpen ? 'öppen' : 'stängd'} progress={sessionProgressPct(inst, now)} />
+          <HudCard key={inst.id} label={`${inst.icon} ${inst.label}`} time={`${pad(h)}:${pad(m)}:${pad(s)}`} isOpen={status.isOpen}
+            sub={status.isOpen ? `stänger om ${status.countdown}` : `öppnar om ${status.countdown}`} progress={sessionProgressPct(inst, now)} />
         )
       })}
     </div>
@@ -248,7 +255,6 @@ export default function Dashboard({ onNavigate }) {
   let cumR = 0
   const equityData = withR.map((t, i) => { cumR += t.result || 0; return { trade: i + 1, r: parseFloat(cumR.toFixed(2)) } })
   const recent = [...trades].reverse().slice(0, 5)
-  const dateStr = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const widgets = [
     {
@@ -257,16 +263,10 @@ export default function Dashboard({ onNavigate }) {
         <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2) 0%, var(--accent-dim) 60%, var(--violet-dim) 100%)', border: '1px solid rgba(0,212,170,0.15)', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, var(--accent-glow), var(--violet-glow), transparent)' }} />
           <div className="card-body" style={{ paddingTop: 18, paddingBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-              <div style={{ flexShrink: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', marginBottom: 2 }}>Hej, {effectiveDisplayName}! 👋</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'capitalize', fontFamily: 'var(--mono)' }}>{dateStr}</div>
-              </div>
-              {/* HUD-remsa – döljs helt på mobil (≤768px) via .welcome-clocks-wrap i CSS.
-                  På liten skärm är dessa mest brus; snabbknapparna räcker. */}
-              <div className="welcome-clocks-wrap" style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                <HudStrip />
-              </div>
+            {/* HUD-remsan innehåller nu även hälsningen som första kort – ingen
+                separat "hero"-textbubbla, enhetligt HUD-utseende genomgående. */}
+            <div className="welcome-clocks-wrap">
+              <HudStrip displayName={effectiveDisplayName} />
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Logga trade</button>
@@ -430,9 +430,7 @@ export default function Dashboard({ onNavigate }) {
 
   return (
     <div style={{ flex: 1 }}>
-      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} actions={
-        <button className="btn btn-primary btn-sm" onClick={() => onNavigate('journal')}>+ Log Trade</button>
-      } />
+      <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
         <DragGrid pageKey="dashboard" widgets={widgets} columns={1} />
       </div>
