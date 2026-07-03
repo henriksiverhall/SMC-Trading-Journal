@@ -1,13 +1,7 @@
 import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
-  {
-    version: 'DO-NOT-MERGE',
-    date: '2026-07-03',
-    entries: [
-      { type: 'fix', text: 'Do not merge this branch. Use a clean branch from dev instead.' },
-    ]
-  },
+  { version: 'DO-NOT-MERGE', date: '2026-07-03', entries: [{ type: 'fix', text: 'Do not merge this branch. Use clean branch instead.' }] },
 ]
 
 const TYPE_CONFIG = {
