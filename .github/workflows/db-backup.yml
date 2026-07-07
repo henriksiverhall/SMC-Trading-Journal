@@ -21,7 +21,7 @@ jobs:
           FILE="tradelog_backup_${TIMESTAMP}.sql.gz"
           echo "BACKUP_FILE=${FILE}" >> $GITHUB_ENV
 
-          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges | gzip > "$FILE"
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --exclude-table-data=public.market_bars | gzip > "$FILE"
 
           SIZE=$(stat -c%s "$FILE")
           echo "Backup-storlek: ${SIZE} bytes"
