@@ -537,6 +537,15 @@ input[type="time"] {
 .tab-btn.active { background: var(--bg2); color: var(--text); box-shadow: var(--shadow); }
 .tab-btn:hover:not(.active) { color: var(--text2); }
 
+/* ── Admin-flikar (och Profil-flikar) – horisontellt scrollbara på mobil ──
+   Fem flikar (Användare/Support/Meddelanden/Branding/System) fick plats på
+   desktop men gick ut till höger på mobil eftersom raden bara var display:flex
+   utan wrap eller scroll. En hård radbrytning till 2 rader ser skräpigt ut med
+   ojämnt antal flikar per rad – swipe-bar rad är renare mobilmönster. */
+.admin-tabs {
+  display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border);
+}
+
 /* ── Utility ── */
 .flex { display: flex; }
 .items-center { align-items: center; }
@@ -638,6 +647,15 @@ input[type="time"] {
   .checklist-header { flex-direction: column; align-items: stretch !important; gap: 8px; }
   .checklist-header-left, .checklist-header-right { width: 100%; }
   .checklist-header-right { justify-content: flex-start !important; }
+
+  /* Admin-flikar: swipe-bar istället för att sticka ut till höger eller
+     tvinga fram en oregelbunden extra rad. */
+  .admin-tabs {
+    overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding-bottom: 2px;
+  }
+  .admin-tabs::-webkit-scrollbar { display: none; }
+  .admin-tabs button { flex-shrink: 0; white-space: nowrap; }
 }
 
 @media (max-width: 480px) {
