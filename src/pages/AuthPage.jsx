@@ -5,6 +5,9 @@ import { APP_VERSION } from '../lib/constants'
 const ADMIN_USER_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
 const DEFAULT_DARK  = '/images/hero-dark.png'
 const DEFAULT_LIGHT = '/images/hero-light.png'
+// v2.1.0 PROD CUTOVER: pekade tidigare mot dev-Workerns egen URL. Nu mot
+// riktig produktionsdomän så lösenordsåterställningsmail leder rätt.
+const SITE_URL = 'https://journal.smctrading.se'
 
 function ForgotPasswordModal({ onClose }) {
   const [email, setEmail] = useState('')
@@ -17,7 +20,7 @@ function ForgotPasswordModal({ onClose }) {
     if (!email.trim()) return
     setLoading(true); setError('')
     const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: 'https://smc-trading-journal-dev.henrik-siverhall.workers.dev',
+      redirectTo: SITE_URL,
     })
     if (error) setError(error.message)
     else setSent(true)
@@ -105,7 +108,7 @@ export default function AuthPage() {
     if (password.length < 6) { setError('Lösenordet måste vara minst 6 tecken.'); setLoading(false); return }
     const { error } = await sb.auth.signUp({
       email, password,
-      options: { data: { display_name: displayName || email.split('@')[0] } }
+      options: { data: { display_name: displayName || email.split('@')[0] }, emailRedirectTo: SITE_URL }
     })
     if (error) setError(error.message)
     else setMode('confirm')
