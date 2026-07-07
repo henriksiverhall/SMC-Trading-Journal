@@ -2,13 +2,29 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.2',
+    date: '2026-07-07',
+    entries: [
+      { type: 'infra', text: 'Cloudflare Worker döpt om: smc-trading-journal-dev → smc-trading-journal (tar bort "-dev" från det som nu är produktion). wrangler.toml uppdaterad i samma steg så framtida auto-deploys pekar rätt. journal.smctrading.se (Custom Domain) opåverkad av namnbytet.' },
+      { type: 'infra', text: 'GitHub-branchernas roller bytta: gamla main (v1.9.9) arkiverad som legacy-v1.9.9-archive, gamla dev (v2.x, den faktiska produktionskoden) döpt om till main och satt som default branch. Cloudflares build-koppling uppdaterad till att bygga från main.' },
+      { type: 'infra', text: 'Supabase-projektens visningsnamn uppdaterade: qmmpxupsxdouvoqgvgri → "SMC Trading Journal" (PROD), zmtpgnnqtkkdsrswhrzk → "SMC Trading Journal DEV". Projekt-ID:n oförändrade.' },
+    ]
+  },
+  {
+    version: 'v2.1.1',
+    date: '2026-07-07',
+    entries: [
+      { type: 'infra', text: 'Testcommit efter branch-namnbyte – bekräftade att Cloudflare auto-deploy fungerar korrekt mot nya main-branchen.' },
+    ]
+  },
+  {
     version: 'v2.1.0',
     date: '2026-07-07',
     entries: [
       { type: 'infra', text: '🚀 PROD CUTOVER. v1.9.9 (journal.smctrading.se, main-branchen) skrotad – ingen hade riktiga användare. Nuvarande Supabase-projekt qmmpxupsxdouvoqgvgri (all verklig testdata, journal, imports) befordras till permanent produktionsdatabas. Gamla PROD-projektet zmtpgnnqtkkdsrswhrzk (identiskt schema, bara Kanban-data) blir istället den nya Dev-sandlådan framöver – ingen kostnad för Supabase Branching (kräver Pro-plan) behövdes, rollerna byttes bara.' },
       { type: 'infra', text: 'Kanban-board (roadmapTasks) migrerad från gamla PROD till nya PROD under rätt admin-konto (a55874aa…, samma som redan användes för branding-inställningar).' },
       { type: 'fix', text: 'AuthPage: redirectTo/emailRedirectTo för lösenordsåterställning och kontobekräftelse pekade på dev-Workerns egen URL – uppdaterat till journal.smctrading.se.' },
-      { type: 'infra', text: 'Kvarstår manuellt: peka journal.smctrading.se (custom domain) mot Worker smc-trading-journal-dev i Cloudflare, uppdatera Supabase Auth → URL Configuration till samma domän, och uppdatera backup-secreten (SUPABASE_DB_URL) till att peka mot qmmpxupsxdouvoqgvgri istället för gamla PROD.' },
+      { type: 'infra', text: 'DNS-hanteringen för smctrading.se flyttad från Simply.com-namnservrar till Cloudflare (Free plan) för att kunna använda Custom Domains med giltigt SSL. journal.smctrading.se kopplad som Custom Domain mot Workern. Supabase Auth URL Configuration uppdaterad. Backup-secreten (SUPABASE_DB_URL) korrigerad till att peka mot rätt projekt (qmmpxupsxdouvoqgvgri) efter att ha upptäckts peka fel under uppsättningen.' },
     ]
   },
   {
