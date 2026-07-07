@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.3',
+    date: '2026-07-07',
+    entries: [
+      { type: 'fix', text: 'Admin: fliksraden (Användare/Support/Meddelanden/Branding/System) stack ut till höger på mobil – blir nu en horisontellt swipe-bar rad istället (ny .admin-tabs-klass).' },
+      { type: 'fix', text: 'Admin: hårdkodad lösenordsåterställnings-URL (samma buggmönster som AuthPage hade före cutover) pekade fortfarande på gamla dev-Workerns egen URL – uppdaterad till journal.smctrading.se.' },
+      { type: 'infra', text: '🔴 UPPTÄCKT (ej ännu åtgärdat, kräver manuell Worker-deploy): AI-proxy-Workerns CORS-whitelist (ALLOWED_ORIGINS) innehåller bara gamla dev-adresser, inte journal.smctrading.se. Bryter sannolikt AI-analys, kalender-refresh, bilduppladdning och marknadsdata (MFE/MAE) på den riktiga produktionsdomänen. Fixad kod levererad som fil till Henrik för manuell deploy – se Kanban.' },
+    ]
+  },
+  {
     version: 'v2.1.2',
     date: '2026-07-07',
     entries: [
