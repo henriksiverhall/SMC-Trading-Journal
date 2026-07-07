@@ -2,6 +2,16 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.0',
+    date: '2026-07-07',
+    entries: [
+      { type: 'infra', text: '🚀 PROD CUTOVER. v1.9.9 (journal.smctrading.se, main-branchen) skrotad – ingen hade riktiga användare. Nuvarande Supabase-projekt qmmpxupsxdouvoqgvgri (all verklig testdata, journal, imports) befordras till permanent produktionsdatabas. Gamla PROD-projektet zmtpgnnqtkkdsrswhrzk (identiskt schema, bara Kanban-data) blir istället den nya Dev-sandlådan framöver – ingen kostnad för Supabase Branching (kräver Pro-plan) behövdes, rollerna byttes bara.' },
+      { type: 'infra', text: 'Kanban-board (roadmapTasks) migrerad från gamla PROD till nya PROD under rätt admin-konto (a55874aa…, samma som redan användes för branding-inställningar).' },
+      { type: 'fix', text: 'AuthPage: redirectTo/emailRedirectTo för lösenordsåterställning och kontobekräftelse pekade på dev-Workerns egen URL – uppdaterat till journal.smctrading.se.' },
+      { type: 'infra', text: 'Kvarstår manuellt: peka journal.smctrading.se (custom domain) mot Worker smc-trading-journal-dev i Cloudflare, uppdatera Supabase Auth → URL Configuration till samma domän, och uppdatera backup-secreten (SUPABASE_DB_URL) till att peka mot qmmpxupsxdouvoqgvgri istället för gamla PROD.' },
+    ]
+  },
+  {
     version: 'v2.0.65-dev',
     date: '2026-07-03',
     entries: [
@@ -245,7 +255,7 @@ const TYPE_CONFIG = {
 export default function Changelog() {
   return (
     <div style={{ flex:1 }}>
-      <Topbar title="Changelog" subtitle="Dev v2.0 – versionshistorik" />
+      <Topbar title="Changelog" subtitle="v2.0 – versionshistorik" />
       <div className="page-content" style={{ maxWidth:760 }}>
         {CHANGELOG.map((release,ri) => (
           <div key={release.version} style={{ marginBottom:36 }}>
