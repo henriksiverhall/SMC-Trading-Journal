@@ -69,7 +69,7 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     setActionLoading(true); clearAction()
     try {
       const { error } = await sb.auth.resetPasswordForEmail(u.email, {
-        redirectTo: 'https://smc-trading-journal-dev.henrik-siverhall.workers.dev',
+        redirectTo: 'https://journal.smctrading.se',
       })
       if (error) throw error
       setActionMsg('Återställningsmail skickat till ' + u.email)
@@ -585,7 +585,7 @@ export default function Admin() {
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
       <div className="page-content" style={{ maxWidth: 1100 }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+        <div className="admin-tabs" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? 'var(--text)' : 'var(--text3)', padding: '10px 16px', borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
               {t.label}
