@@ -2,10 +2,18 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.5',
+    date: '2026-07-08',
+    entries: [
+      { type: 'feature', text: 'Ovillkorlig STAGING-varningsbanner (rand-randigt orange, alltid överst, på alla sidor inklusive login) som visas när appen pratar mot en annan databas än PROD. Byggd efter att Henrik loggade in på den nya staging-workern och inte kunde se någon skillnad mot skarp miljö – verklig risk att blanda ihop dem. Baseras på faktisk Supabase-URL, inte Worker-namn/domän (som kan vara missvisande).' },
+      { type: 'infra', text: 'Staging-miljö klar: separat Cloudflare Worker (smc-trading-journal-staging) kopplad till staging-branchen, Build variables satta mot DEV-projektet (zmtpgnnqtkkdsrswhrzk).' },
+    ]
+  },
+  {
     version: 'v2.1.4',
     date: '2026-07-07',
     entries: [
-      { type: 'infra', text: 'Grund för riktig staging-miljö: src/lib/supabase.js läser nu Supabase-URL/nyckel från miljövariabler (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY) med säker fallback till hårdkodade PROD-värden – prod påverkas inte om inget konfigureras. Ny branch "staging" skapad från main. Nästa steg: separat Cloudflare Worker kopplad till staging med Build variables satta mot DEV-projektet (zmtpgnnqtkkdsrswhrzk), så framtida utveckling kan testas isolerat från skarp drift innan merge till main.' },
+      { type: 'infra', text: 'Grund för riktig staging-miljö: src/lib/supabase.js läser nu Supabase-URL/nyckel från miljövariabler (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY) med säker fallback till hårdkodade PROD-värden – prod påverkas inte om inget konfigureras. Ny branch "staging" skapad från main.' },
     ]
   },
   {
