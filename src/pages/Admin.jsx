@@ -246,6 +246,7 @@ function UsersTab({ currentUserId }) {
 }
 
 function BroadcastTab({ adminId }) {
+  const { refreshUnread } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -264,10 +265,17 @@ function BroadcastTab({ adminId }) {
   function startEdit(m) { setEditingId(m.id); setTitle(m.title); setBody(m.body); setShowNew(false) }
   function cancelEdit() { setEditingId(null); setTitle(''); setBody('') }
 
+  async function markReadForAdmin(messageId) {
+    if (!messageId) return
+    await sb.from('message_reads').upsert({ user_id: adminId, message_id: messageId })
+    refreshUnread?.(adminId)
+  }
+
   async function create(publish) {
     if (!title.trim() || !body.trim()) return
     setSaving(true)
-    await sb.from('messages').insert({ title: title.trim(), body: body.trim(), created_by: adminId, is_published: publish, published_at: publish ? new Date().toISOString() : null })
+    const { data } = await sb.from('messages').insert({ title: title.trim(), body: body.trim(), created_by: adminId, is_published: publish, published_at: publish ? new Date().toISOString() : null }).select().single()
+    if (publish) await markReadForAdmin(data?.id)
     setTitle(''); setBody(''); setShowNew(false); await load(); setSaving(false)
   }
 
@@ -278,7 +286,7 @@ function BroadcastTab({ adminId }) {
     cancelEdit(); await load(); setSaving(false)
   }
 
-  async function publish(id) { await sb.from('messages').update({ is_published: true, published_at: new Date().toISOString() }).eq('id', id); load() }
+  async function publish(id) { await sb.from('messages').update({ is_published: true, published_at: new Date().toISOString() }).eq('id', id); await markReadForAdmin(id); load() }
   async function unpublish(id) { await sb.from('messages').update({ is_published: false, published_at: null }).eq('id', id); load() }
   async function deleteMsg(id) { if (!window.confirm('Ta bort?')) return; await sb.from('messages').delete().eq('id', id); load() }
 
