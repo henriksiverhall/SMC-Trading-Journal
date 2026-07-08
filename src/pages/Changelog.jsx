@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.4',
+    date: '2026-07-08',
+    entries: [
+      { type: 'fix', text: 'Admin: unreadBroadcast-badgen (Administration/Profil i sidomenyn) rensades inte när admin publicerade ett eget broadcast-meddelande, eftersom ingen message_reads-rad skapades för admin själv. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering (både nytt meddelande och publicering av sparat utkast) och triggar refreshUnread().' },
+      { type: 'infra', text: 'OBS: staging låg efter main med två versioner (motsvarande main v2.1.4/v2.1.5 – staging-varningsbanner och miljövariabel-grund för Supabase-config) innan denna fix applicerades. Endast denna bugfix synkad hit denna gång; mellanskillnaden kvarstår och bör tas igen vid tillfälle.' },
+    ]
+  },
+  {
     version: 'v2.1.3',
     date: '2026-07-07',
     entries: [
