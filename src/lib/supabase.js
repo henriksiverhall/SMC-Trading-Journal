@@ -6,7 +6,9 @@ import { createClient } from '@supabase/supabase-js'
 // Staging-Workern sätter VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY som Build
 // variables i Cloudflare (Settings → Build → Variables and secrets) för att
 // peka mot DEV-projektet (zmtpgnnqtkkdsrswhrzk) istället.
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qmmpxupsxdouvoqgvgri.supabase.co'
+// v2.1.5: SUPABASE_URL exporteras nu så App.jsx kan visa en ovillkorlig
+// STAGING-varningsbanner baserat på vilken databas appen faktiskt pratar mot.
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qmmpxupsxdouvoqgvgri.supabase.co'
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tpaLJ4LBm40xKzXgdVzndQ_iWRHyPw1'
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
