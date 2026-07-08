@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.6',
+    date: '2026-07-08',
+    entries: [
+      { type: 'fix', text: 'Admin: unreadBroadcast-badgen (Administration/Profil i sidomenyn) rensades inte när admin publicerade ett eget broadcast-meddelande, eftersom ingen message_reads-rad skapades för admin själv. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering (både nytt meddelande och publicering av sparat utkast) och triggar refreshUnread().' },
+    ]
+  },
+  {
     version: 'v2.1.5',
     date: '2026-07-08',
     entries: [
