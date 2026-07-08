@@ -1,5 +1,6 @@
 name = "smc-trading-journal-staging"
 compatibility_date = "2024-01-01"
+# Trigger: ny build efter att Branch control sattes till staging (2026-07-08)
 
 [assets]
 directory = "./dist"
