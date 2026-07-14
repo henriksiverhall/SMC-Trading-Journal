@@ -1,0 +1,26 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    - cron: '0 3 */3 * *'   # var 3:e dag, 03:00 UTC
+  workflow_dispatch: {}      # tillåter manuell körning från GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install psql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Ping PROD
+        run: psql "${{ secrets.SUPABASE_DB_URL }}" -c "insert into _keepalive (pinged_at) values (now());"
+
+      - name: Ping DEV
+        run: |
+          curl -sf -X POST "${{ secrets.SUPABASE_URL_DEV }}/rest/v1/_keepalive" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY_DEV }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY_DEV }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
