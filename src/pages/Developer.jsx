@@ -13,6 +13,7 @@ const DOC_SECTIONS = {
   blueprint:    { docType: 'blueprint',    label: 'Vision Blueprint' },
   architecture: { docType: 'architecture', label: 'Architecture' },
   schemas:      { docType: 'schema',       label: 'Schemas' },
+  research:     { docType: 'research',     label: 'Research' },
 }
 
 const LIST_SECTIONS = {
@@ -83,11 +84,11 @@ const LIST_SECTIONS = {
   },
 }
 
-const NAV_ORDER = ['overview', 'blueprint', 'architecture', 'kanban', 'roadmap', 'schemas', 'decisions', 'releases', 'debt', 'ideas']
+const NAV_ORDER = ['overview', 'blueprint', 'architecture', 'kanban', 'roadmap', 'schemas', 'decisions', 'releases', 'debt', 'ideas', 'research']
 const NAV_LABELS = {
   overview: 'Overview', blueprint: 'Vision Blueprint', architecture: 'Architecture', kanban: 'Kanban',
   roadmap: 'Roadmap', schemas: 'Schemas', decisions: 'Decision Log', releases: 'Releases',
-  debt: 'Technical Debt', ideas: 'Ideas',
+  debt: 'Technical Debt', ideas: 'Ideas', research: 'Research',
 }
 
 const PRIORITY_COLOR = { low: 'var(--text4)', medium: 'var(--text2)', high: 'var(--amber, #f59e0b)', critical: 'var(--red)' }
@@ -155,7 +156,7 @@ export default function Developer() {
   )
 }
 
-// ── Dokument-sektioner: Overview / Vision Blueprint / Architecture / Schemas ──
+// ── Dokument-sektioner: Overview / Vision Blueprint / Architecture / Schemas / Research ──
 function DocSection({ projectId, config }) {
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
