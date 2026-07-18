@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EMOTIONS, GRADES, getFuturesSpec, gradeColor, formatR, WORKER_URL } from '../lib/constants'
@@ -282,6 +282,19 @@ export default function Journal() {
     setLoading(false)
   }
 
+  // Samma logik som CSV-exporten: plockar upp alla icke-interna (ej _-prefixade)
+  // nycklar i custom_data across samtliga trades, så journal-tabellen visar
+  // Exit tid, Faktisk exit och ALLA egna fält som förekommer i datan – inte
+  // bara de som råkar vara konfigurerade i det aktuella formuläret.
+  const customColumnKeys = useMemo(() => {
+    const set = new Set()
+    trades.forEach(t => {
+      const cd = t.custom_data || {}
+      Object.keys(cd).forEach(k => { if (!k.startsWith('_')) set.add(k) })
+    })
+    return [...set]
+  }, [trades])
+
   function updateForm(field, value) {
     setForm(f => {
       const next = { ...f, [field]: value }
@@ -420,7 +433,7 @@ export default function Journal() {
     setChartLinks(Array.isArray(cd._chartLinks) ? cd._chartLinks : (trade.chart_link ? [{ id: crypto.randomUUID(), url: trade.chart_link, tag: 'Övrigt', type: 'link' }] : []))
     setChartError(''); setTvMeta(cd._tv_meta || null)
     setCustomValues(Object.fromEntries(customFields.map(f => [f.id, cd[f.name] || ''])))
-    setForm({
+    const newForm = {
       date: trade.date || '', time: trade.time || '', symbol: trade.symbol || '', direction: trade.direction || '',
       entry: trade.entry ?? '', sl: trade.sl ?? '', tp: trade.tp ?? '', actual_exit: cd._actual_exit ?? '',
       exit_date: cd._exit_date ?? '', exit_time: cd._exit_time ?? '', outcome: trade.outcome || '',
@@ -428,9 +441,16 @@ export default function Journal() {
       strategy: trade.strategy || '', contracts: cd._totalContracts || '1',
       risk_pct: cd._risk_pct ? String(cd._risk_pct) : String(userSettings?.riskPct || ''),
       account_size: cd._account_size ? String(cd._account_size) : String(userSettings?.accountSize || ''),
-    })
+    }
+    setForm(newForm)
     formRef.current?.scrollIntoView({ behavior: 'smooth' })
-    const { r, usd } = computeRValues({ ...form }, cd._scaleIns || [], cd._targets || [])
+    // OBS: måste räkna R på newForm (den nyss inlästa tradens data), inte på
+    // det gamla `form`-state:t – setForm() ovan har inte hunnit appliceras
+    // än när denna rad körs (samma render-closure), så {...form} pekade
+    // tidigare på FÖREGÅENDE trades/tomma formulärets värden. Det gjorde
+    // att R kunde bli null/fel och sedan sparas över det korrekta värdet
+    // om användaren tryckte Spara utan att röra några fält.
+    const { r, usd } = computeRValues(newForm, cd._scaleIns || [], cd._targets || [])
     setCalcR(r); setCalcUSD(usd)
   }
 
@@ -812,6 +832,8 @@ export default function Journal() {
                     <thead><tr>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit datum</th>
+                      <th style={{ whiteSpace:'nowrap' }}>Exit tid</th>
+                      <th style={{ whiteSpace:'nowrap' }}>Faktisk exit</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('symbol')}>Symbol{SortArrow({col:'symbol'})}</th>
                       <th>Dir</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('entry')}>Entry{SortArrow({col:'entry'})}</th>
@@ -821,11 +843,14 @@ export default function Journal() {
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('result')}>R{SortArrow({col:'result'})}</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('grade')}>Grade{SortArrow({col:'grade'})}</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('strategy')}>Strategi{SortArrow({col:'strategy'})}</th>
+                      {customColumnKeys.map(k => <th key={k} style={{ whiteSpace:'nowrap' }}>{k}</th>)}
                     </tr></thead>
                     <tbody>{filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
                         <td className="mono">{t.date}</td>
                         <td className="mono">{t.custom_data?._exit_date || '—'}</td>
+                        <td className="mono">{t.custom_data?._exit_time || '—'}</td>
+                        <td className="mono">{t.custom_data?._actual_exit ?? '—'}</td>
                         <td><strong style={{ color: 'var(--text)' }}>{t.symbol || '—'}</strong></td>
                         <td>{t.direction ? <span className={`badge badge-${t.direction}`}>{t.direction}</span> : '—'}</td>
                         <td className="mono">{t.entry ?? '—'}</td>
@@ -835,6 +860,7 @@ export default function Journal() {
                         <td className={t.result > 0 ? 'r-pos' : t.result < 0 ? 'r-neg' : 'r-neu'}>{formatR(t.result)}</td>
                         <td style={{ fontWeight: 700, color: gradeColor(t.grade) }}>{t.grade || '—'}</td>
                         <td style={{ color: 'var(--text3)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.strategy || '—'}</td>
+                        {customColumnKeys.map(k => <td key={k} className="mono">{t.custom_data?.[k] ?? '—'}</td>)}
                       </tr>
                     ))}</tbody>
                   </table>
