@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.6',
+    date: '2026-07-18',
+    entries: [
+      { type: 'feature', text: 'Ny "Developer"-meny (admin-only, under Roadmap) – grundstruktur för projekthantering av Vision/TradeLog/FM Coach: Overview, Vision Blueprint, Architecture, Kanban, Roadmap, Schemas, Decision Log, Releases, Technical Debt och Ideas. Allt lagras i riktiga databastabeller (developer_projects, developer_components, developer_tasks, developer_milestones, developer_decisions, developer_releases, developer_technical_debt, developer_ideas, developer_documents) i DEV-Supabase – inga hårdkodade demo-kort. Admin-only RLS, timestamps, sortering, status och versionsfält på alla tabeller. Byggd som scaffold åt ChatGPT/Vision-utvecklingen att jobba vidare i. DEV-only tills vidare, rörs inte i PROD.' },
+    ]
+  },
+  {
     version: 'v2.1.5',
     date: '2026-07-18',
     entries: [
