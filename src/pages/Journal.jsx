@@ -811,6 +811,7 @@ export default function Journal() {
                   <table className="journal-table">
                     <thead><tr>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
+                      <th style={{ whiteSpace:'nowrap' }}>Exit datum</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('symbol')}>Symbol{SortArrow({col:'symbol'})}</th>
                       <th>Dir</th>
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('entry')}>Entry{SortArrow({col:'entry'})}</th>
@@ -824,6 +825,7 @@ export default function Journal() {
                     <tbody>{filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
                         <td className="mono">{t.date}</td>
+                        <td className="mono">{t.custom_data?._exit_date || '—'}</td>
                         <td><strong style={{ color: 'var(--text)' }}>{t.symbol || '—'}</strong></td>
                         <td>{t.direction ? <span className={`badge badge-${t.direction}`}>{t.direction}</span> : '—'}</td>
                         <td className="mono">{t.entry ?? '—'}</td>
@@ -921,8 +923,28 @@ export default function Journal() {
 }
 
 function exportCSV(trades) {
-  const headers = ['date','time','symbol','direction','entry','sl','tp','outcome','result','grade','emotion','strategy','notes','risk_amount']
-  const rows = trades.map(t => headers.map(h => { const v = t[h]; if (v == null) return ''; if (typeof v === 'string' && v.includes(',')) return `"${v}"`; return v }).join(','))
+  const baseHeaders = ['date','time','symbol','direction','entry','sl','tp','outcome','result','grade','emotion','strategy','notes','risk_amount']
+  const exitHeaders = ['exit_date','exit_time','actual_exit']
+  const customKeys = new Set()
+  trades.forEach(t => {
+    const cd = t.custom_data || {}
+    Object.keys(cd).forEach(k => { if (!k.startsWith('_')) customKeys.add(k) })
+  })
+  const headers = [...baseHeaders, ...exitHeaders, ...customKeys]
+  function getValue(t, h) {
+    if (baseHeaders.includes(h)) return t[h]
+    const cd = t.custom_data || {}
+    if (h === 'exit_date') return cd._exit_date
+    if (h === 'exit_time') return cd._exit_time
+    if (h === 'actual_exit') return cd._actual_exit
+    return cd[h]
+  }
+  const rows = trades.map(t => headers.map(h => {
+    const v = getValue(t, h)
+    if (v == null) return ''
+    if (typeof v === 'string' && v.includes(',')) return `"${v}"`
+    return v
+  }).join(','))
   const csv = [headers.join(','), ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
