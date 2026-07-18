@@ -9,6 +9,7 @@ import Analytics from './pages/Analytics'
 import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import Roadmap from './pages/Roadmap'
+import Developer from './pages/Developer'
 import Changelog from './pages/Changelog'
 import Messages from './pages/Messages'
 import Calendar from './pages/Calendar'
@@ -16,8 +17,8 @@ import Import from './pages/Import'
 import Privacy from './pages/Privacy'
 import Sidebar from './components/Sidebar'
 
-const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','changelog','messages','calendar','import']
-const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'changelog']
+const VALID_PAGES = ['dashboard','journal','checklist','analytics','profile','admin','roadmap','developer','changelog','messages','calendar','import']
+const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'developer', 'changelog']
 
 // v2.1.5: Ovillkorlig STAGING-varning. Henrik loggade in på
 // smc-trading-journal-staging.henrik-siverhall.workers.dev och kunde inte
@@ -133,6 +134,7 @@ export default function App() {
     profile:   <Profile />,
     admin:     <Admin />,
     roadmap:   <Roadmap />,
+    developer: isAdmin ? <Developer /> : <Dashboard onNavigate={setPage} />,
     changelog: isAdmin ? <Changelog /> : <Dashboard onNavigate={setPage} />,
     messages:  <Messages />,
     calendar:  <Calendar />,
