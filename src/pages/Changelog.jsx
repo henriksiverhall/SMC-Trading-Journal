@@ -2,11 +2,20 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
-    version: 'v2.1.4',
-    date: '2026-07-08',
+    version: 'v2.1.5',
+    date: '2026-07-18',
     entries: [
-      { type: 'fix', text: 'Admin: unreadBroadcast-badgen (Administration/Profil i sidomenyn) rensades inte när admin publicerade ett eget broadcast-meddelande, eftersom ingen message_reads-rad skapades för admin själv. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering (både nytt meddelande och publicering av sparat utkast) och triggar refreshUnread().' },
-      { type: 'infra', text: 'OBS: staging låg efter main med två versioner (motsvarande main v2.1.4/v2.1.5 – staging-varningsbanner och miljövariabel-grund för Supabase-config) innan denna fix applicerades. Endast denna bugfix synkad hit denna gång; mellanskillnaden kvarstår och bör tas igen vid tillfälle.' },
+      { type: 'fix', text: 'Journal: Exit datum, Exit tid, Faktisk exit och egna fält saknades i journal-tabellen och i CSV-exporten – de sparas i custom_data (JSON) men lästes bara ut i popup-rutan, inte i listan/exporten. Journal-tabellen visar nu en "Exit datum"-kolumn, och CSV-exporten är gjord dynamisk: den plockar automatiskt upp exit-fälten och alla egna fält som förekommer i datan. Synkad hit från main (där den heter v2.1.7).' },
+      { type: 'infra', text: 'Staging fullt synkad med main igen: unreadBroadcast-fixen (main v2.1.6) och denna Journal-fix (main v2.1.7) är nu båda med här.' },
+    ]
+  },
+  {
+    version: 'v2.1.4',
+    date: '2026-07-07',
+    entries: [
+      { type: 'infra', text: 'Grund för riktig staging-miljö: src/lib/supabase.js läser nu Supabase-URL/nyckel från miljövariabler (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY) med säker fallback till hårdkodade PROD-värden. Ny branch "staging" skapad från main.' },
+      { type: 'feature', text: 'Ovillkorlig STAGING-varningsbanner (rand-randigt orange, alltid överst) som visas när appen pratar mot en annan databas än PROD, baserat på faktisk Supabase-URL.' },
+      { type: 'fix', text: 'Admin: unreadBroadcast-badgen rensades inte när admin publicerade ett eget broadcast-meddelande. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering.' },
     ]
   },
   {
