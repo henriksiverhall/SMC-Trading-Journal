@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.7',
+    date: '2026-07-18',
+    entries: [
+      { type: 'fix', text: 'Journal: Exit datum, Exit tid, Faktisk exit och egna fält saknades i journal-tabellen och i CSV-exporten – de sparas i custom_data (JSON) men lästes bara ut i popup-rutan, inte i listan/exporten. Journal-tabellen visar nu en "Exit datum"-kolumn, och CSV-exporten är gjord dynamisk: den plockar automatiskt upp exit-fälten och alla egna fält som förekommer i datan, oavsett hur många en användare lagt till.' },
+    ]
+  },
+  {
     version: 'v2.1.6',
     date: '2026-07-08',
     entries: [
