@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.8',
+    date: '2026-07-18',
+    entries: [
+      { type: 'fix', text: 'Journal: v2.1.7 la bara till en "Exit datum"-kolumn i tabellen – Exit tid, Faktisk exit och egna fält syntes fortfarande inte där (bara i CSV/popup). Tabellen visar nu även dessa, med samma dynamiska logik som CSV-exporten (plockar upp alla egna fält som förekommer i datan).' },
+      { type: 'fix', text: 'Journal: R-värdet kunde nollställas/bli fel när en befintlig trade redigerades och sparades utan att fälten rördes. Orsak: startEdit() räknade ut R baserat på det GAMLA formulär-state:t (`{...form}`) istället för den nyss inlästa tradens data – klassisk stale-closure-bugg, eftersom React inte hunnit applicera setForm() förrän raden efter kördes. R räknas nu på den faktiska inlästa tradens värden.' },
+    ]
+  },
+  {
     version: 'v2.1.7',
     date: '2026-07-18',
     entries: [
