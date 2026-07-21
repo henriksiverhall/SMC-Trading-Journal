@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.9',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Import: Tradovate- och TopstepX/ProjectX-parsrarna sparade alltid pnl:null – de räknade ut en price-diff internt bara för att avgöra W/L/BE, men skrev aldrig ut den som dollar-P&L på traden. Det gjorde att v2.1.8:s R-kolumn-fallback inte hade något att visa för dessa två plattformar trots fixen. Båda parsrarna räknar nu ut faktiskt dollar-P&L via instrumentets point value (t.ex. $2/point för MNQ), med stöd för råa kontraktskoder som MNQU6/MYMM6 (månadsbokstav + årssiffra strippas vid uppslag mot FUTURES_SPECS).' },
+    ]
+  },
+  {
     version: 'v2.1.8',
     date: '2026-07-21',
     entries: [
