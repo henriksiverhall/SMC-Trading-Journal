@@ -122,6 +122,17 @@ function getTotalContracts(f, scales) {
   return (parseFloat(f.contracts) || 1) + scales.reduce((a, s) => a + (parseFloat(s.contracts) || 1), 0)
 }
 
+function formatRorPnL(trade) {
+  if (trade.result != null) {
+    return { text: formatR(trade.result), cls: trade.result > 0 ? 'r-pos' : trade.result < 0 ? 'r-neg' : 'r-neu' }
+  }
+  const pnl = trade.custom_data?._imported_pnl
+  if (pnl != null) {
+    return { text: `${pnl > 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}`, cls: pnl > 0 ? 'r-pos' : pnl < 0 ? 'r-neg' : 'r-neu' }
+  }
+  return { text: '—', cls: 'r-neu' }
+}
+
 export default function Journal() {
   const { user, userSettings, saveSettings, impersonating } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
@@ -857,7 +868,7 @@ export default function Journal() {
                         <td className="mono">{t.sl ?? '—'}</td>
                         <td className="mono">{t.tp ?? '—'}</td>
                         <td>{t.outcome ? <span className={`badge badge-${t.outcome}`}>{t.outcome}</span> : '—'}</td>
-                        <td className={t.result > 0 ? 'r-pos' : t.result < 0 ? 'r-neg' : 'r-neu'}>{formatR(t.result)}</td>
+                        <td className={formatRorPnL(t).cls}>{formatRorPnL(t).text}</td>
                         <td style={{ fontWeight: 700, color: gradeColor(t.grade) }}>{t.grade || '—'}</td>
                         <td style={{ color: 'var(--text3)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.strategy || '—'}</td>
                         {customColumnKeys.map(k => <td key={k} className="mono">{t.custom_data?.[k] ?? '—'}</td>)}
@@ -882,7 +893,7 @@ export default function Journal() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 {[['Strategi',selectedModal.strategy],['Riktning',selectedModal.direction],['Entry',selectedModal.entry],['Stop Loss',selectedModal.sl],['Take Profit',selectedModal.tp],
                   ['Faktisk exit',selectedModal.custom_data?._actual_exit],['Exit datum',selectedModal.custom_data?._exit_date],['Exit tid',selectedModal.custom_data?._exit_time],
-                  ['Utfall',selectedModal.outcome],['R',formatR(selectedModal.result)],['Grade',selectedModal.grade],['Emotion',selectedModal.emotion],
+                  ['Utfall',selectedModal.outcome],['R',formatRorPnL(selectedModal).text],['Grade',selectedModal.grade],['Emotion',selectedModal.emotion],
                   ['Risk $',selectedModal.risk_amount ? '$'+Number(selectedModal.risk_amount).toFixed(2) : null],
                 ].filter(([,v]) => v != null && v !== '').map(([label,val]) => (
                   <div key={label}>
