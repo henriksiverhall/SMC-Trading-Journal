@@ -9,44 +9,43 @@ const BREAKPOINT_COLS = { lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }
 const MOBILE_BREAKPOINTS = ['xs', 'xxs']
 const ROW_HEIGHT = 32
 
-// Rimliga startstorlekar per widget (i rader à ROW_HEIGHT px). Det här är
-// bara var widgeten hamnar FÖRSTA gången en användare öppnar sidan efter
-// uppdateringen – inget tak. Användaren drar/ändrar storlek fritt efteråt,
-// och den justeringen sparas permanent (se buildLayouts/persist nedan).
-const DEFAULT_SIZES = {
+// Rimliga starthöjder per widget (i rader à ROW_HEIGHT px). Det här är bara
+// var widgeten hamnar FÖRSTA gången en användare öppnar sidan efter
+// uppdateringen – inget tak. Bredden sätts alltid till full radbredd som
+// default (se generateLayoutItems) så man slipper konstiga halvbreda kort
+// med tomrum bredvid – användaren kan sen själv dra ihop två kort på samma
+// rad om den vill, men default är en lagom hög, full bredd per widget.
+const DEFAULT_HEIGHTS = {
   // Dashboard
-  welcome: { w: 2, h: 4 },
-  calendar: { w: 1, h: 7 },
-  today: { w: 1, h: 4 },
-  stats: { w: 1, h: 5 },
-  equity: { w: 1, h: 6 },
-  recent: { w: 1, h: 6 },
-  streak: { w: 1, h: 5 },
+  welcome: 4,
+  calendar: 7,
+  today: 4,
+  stats: 5,
+  equity: 6,
+  recent: 6,
+  streak: 5,
   // Analytics
-  grade_emotion: { w: 1, h: 5 },
-  strategy: { w: 2, h: 6 },
-  mfe: { w: 2, h: 7 },
-  sl_opt: { w: 2, h: 6 },
-  psych: { w: 2, h: 5 },
-  weekday: { w: 2, h: 5 },
-  rr: { w: 2, h: 7 },
-  custom_fields: { w: 2, h: 5 },
-  ai: { w: 2, h: 7 },
+  grade_emotion: 5,
+  strategy: 6,
+  mfe: 7,
+  sl_opt: 6,
+  psych: 5,
+  weekday: 5,
+  rr: 7,
+  custom_fields: 5,
+  ai: 7,
 }
 
-function sizeFor(widget) {
-  return DEFAULT_SIZES[widget.id] || { w: widget.span && widget.span > 1 ? 2 : 1, h: 5 }
+function heightFor(widget) {
+  return DEFAULT_HEIGHTS[widget.id] || 5
 }
 
 // y: Infinity är ett dokumenterat react-grid-layout-knep för "placera längst
 // ner, låt compact-algoritmen räkna ut var". Används både för förstagångs-
 // layout och när en ny widget (t.ex. tillagd i en release) saknar sparad
-// position för en given breakpoint.
+// position för en given breakpoint. w: cols = full bredd som default.
 function generateLayoutItems(widgetList, cols) {
-  return widgetList.map(w => {
-    const s = sizeFor(w)
-    return { i: w.id, x: 0, y: Infinity, w: Math.min(s.w, cols), h: s.h }
-  })
+  return widgetList.map(w => ({ i: w.id, x: 0, y: Infinity, w: cols, h: heightFor(w) }))
 }
 
 // Bygger en fullständig layout per breakpoint: återanvänder sparade
