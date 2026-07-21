@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.1',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: default-layouten placerade widgets med halva radbredden (w:1 av 4 kolumner på desktop), vilket gav konstiga tomrum bredvid varje kort. Alla widgets får nu full radbredd som default (en per rad, individuell lagom höjd) – bredd/höjd kan fortfarande dras/ändras fritt av användaren efteråt.' },
+    ]
+  },
+  {
     version: 'v2.3.0',
     date: '2026-07-21',
     entries: [
