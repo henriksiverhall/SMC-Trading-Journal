@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { getFuturesSpec } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
 // ── Parsers ───────────────────────────────────────────────────────────────────────────────
@@ -12,6 +13,19 @@ function guessSymbolFromFilename(filename) {
   const parts = filename.replace(/\.csv$/i, '').split(/[-_]/)
   const cand = parts.find(p => /^[A-Z0-9]{3,10}$/.test(p) && !/^\d+$/.test(p) && p !== 'FX' && p !== 'CSV')
   return cand || ''
+}
+
+// Futures-kontraktskoder (t.ex. "MNQU6", "MYMM6") har en månadsbokstav (F,G,H,J,K,M,N,Q,U,V,X,Z)
+// + 1-2 årssiffror på slutet, vilket FUTURES_SPECS i constants.js inte känner igen direkt
+// (den har bara basnamnet, t.ex. "MNQ"). Denna hjälpfunktion strippar kontraktskoden så att
+// point value-uppslaget fungerar även på råa broker/prop firm-exporter.
+function getFuturesSpecFlexible(symbol) {
+  if (!symbol) return null
+  const direct = getFuturesSpec(symbol)
+  if (direct) return direct
+  const m = symbol.match(/^([A-Za-z]+)[FGHJKMNQUVXZ]\d{1,2}$/)
+  if (m) return getFuturesSpec(m[1])
+  return null
 }
 
 function parseTVBacktest(text, filename = '') {
@@ -53,10 +67,12 @@ function parseTVBacktest(text, filename = '') {
     const qty = parseFloat(entry['size (qty)'] || entry['qty'] || entry['size'] || '1') || 1
     const pnlRaw = exit ? (exit['net pnl usd'] || exit['net pnl'] || exit['profit'] || '') : ''
     const pnl = pnlRaw !== '' ? parseFloat(pnlRaw) : null
+    const entryRaw = entry['date and time'] || entry['date/time'] || entry['date'] || ''
+    const exitRaw = exit ? (exit['date and time'] || exit['date/time'] || exit['date'] || '') : ''
     if (isNaN(entryPrice)) continue
     trades.push({
-      date: formatDateStr(entry['date and time'] || entry['date/time'] || entry['date'] || ''),
-      exit_date: exit ? formatDateStr(exit['date and time'] || exit['date/time'] || exit['date'] || '') : null,
+      date: formatDateStr(entryRaw), time: formatTimeStr(entryRaw),
+      exit_date: exit ? formatDateStr(exitRaw) : null, exit_time: exit ? formatTimeStr(exitRaw) : null,
       symbol, direction,
       entry: entryPrice, actual_exit: isNaN(exitPrice) ? null : exitPrice,
       contracts: qty,
@@ -93,7 +109,8 @@ function parseMetaTrader(text) {
     const profit = parseFloat(row['profit'] || row['p&l'] || '') || null
     const direction = /buy/.test(type) ? 'Long' : 'Short'
     trades.push({
-      date: formatDateStr(openTime), exit_date: closeTime ? formatDateStr(closeTime) : null,
+      date: formatDateStr(openTime), time: formatTimeStr(openTime),
+      exit_date: closeTime ? formatDateStr(closeTime) : null, exit_time: closeTime ? formatTimeStr(closeTime) : null,
       symbol, direction,
       entry: isNaN(openPrice) ? null : openPrice, actual_exit: isNaN(closePrice) ? null : closePrice,
       sl, tp, contracts: lots,
@@ -144,13 +161,21 @@ function parseTradovate(text) {
       const isLong = new Date(buy.date) < new Date(sell.date)
       const entry = isLong ? buy.price : sell.price
       const exitP = isLong ? sell.price : buy.price
-      const profit = isLong ? (exitP - entry) : (entry - exitP)
+      const profitPts = isLong ? (exitP - entry) : (entry - exitP)
+      // profitPts är prisdifferensen i punkter, inte dollar – måste multipliceras med
+      // instrumentets point value (t.ex. $2/point för MNQ) och antal kontrakt för att
+      // bli ett faktiskt dollar-P&L. Utan detta sparades pnl:null och R-kolumnen
+      // kunde aldrig visa något för Tradovate-importer, oavsett displayfix i Journal.jsx.
+      const spec = getFuturesSpecFlexible(symbol)
+      const pnl = spec ? parseFloat((profitPts * spec.pointValue * buy.qty).toFixed(2)) : null
+      const entryRaw = isLong ? buy.date : sell.date
+      const exitRaw = isLong ? sell.date : buy.date
       trades.push({
-        date: formatDateStr(isLong ? buy.date : sell.date),
-        exit_date: formatDateStr(isLong ? sell.date : buy.date),
+        date: formatDateStr(entryRaw), time: formatTimeStr(entryRaw),
+        exit_date: formatDateStr(exitRaw), exit_time: formatTimeStr(exitRaw),
         symbol, direction: isLong ? 'Long' : 'Short', entry, actual_exit: exitP,
-        contracts: buy.qty, outcome: profit > 0 ? 'W' : profit < 0 ? 'L' : 'BE',
-        pnl: null, _source: 'tradovate',
+        contracts: buy.qty, outcome: profitPts > 0 ? 'W' : profitPts < 0 ? 'L' : 'BE',
+        pnl, _source: 'tradovate',
       })
     }
   }
@@ -197,13 +222,18 @@ function parseTopStepX(text) {
       const open = openBySymbol[symbol]
       const isLong = open.direction === 'Long'
       const profitPts = isLong ? (price - open.entryPrice) : (open.entryPrice - price)
+      // Samma som Tradovate-parsern: profitPts är punkter, inte dollar. Konvertera
+      // via instrumentets point value så pnl faktiskt kan visas i R-kolumnen.
+      const spec = getFuturesSpecFlexible(symbol)
+      const pnl = spec ? parseFloat((profitPts * spec.pointValue * open.size).toFixed(2)) : null
       trades.push({
-        date: formatDateStr(open.entryTime), exit_date: formatDateStr(time),
+        date: formatDateStr(open.entryTime), time: formatTimeStr(open.entryTime),
+        exit_date: formatDateStr(time), exit_time: formatTimeStr(time),
         symbol, direction: open.direction,
         entry: open.entryPrice, actual_exit: price,
         contracts: open.size,
         outcome: profitPts > 0 ? 'W' : profitPts < 0 ? 'L' : 'BE',
-        pnl: null, _exitReason: reason, _source: 'topstepx',
+        pnl, _exitReason: reason, _source: 'topstepx',
       })
       delete openBySymbol[symbol]
     }
@@ -236,7 +266,8 @@ function parseNinjaTrader(text) {
     const profit = parseFloat(profitRaw.replace(/[$,]/g, '')) || null
     if (!symbol || isNaN(entry)) continue
     trades.push({
-      date: formatDateStr(entryDate), exit_date: exitDate ? formatDateStr(exitDate) : null,
+      date: formatDateStr(entryDate), time: formatTimeStr(entryDate),
+      exit_date: exitDate ? formatDateStr(exitDate) : null, exit_time: exitDate ? formatTimeStr(exitDate) : null,
       symbol, direction, entry: isNaN(entry) ? null : entry, actual_exit: isNaN(exitP) ? null : exitP,
       contracts: qty, outcome: profit != null ? (profit > 0 ? 'W' : profit < 0 ? 'L' : 'BE') : '',
       pnl: profit, _source: 'ninjatrader',
@@ -265,6 +296,19 @@ function formatDateStr(raw) {
   const m1 = raw.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})/)
   if (m1) { const y = m1[3].length===2?'20'+m1[3]:m1[3]; return `${y}-${m1[1].padStart(2,'0')}-${m1[2].padStart(2,'0')}` }
   return new Date().toISOString().split('T')[0]
+}
+
+// De flesta broker/prop firm-exporter (Tradovate, TopstepX, NinjaTrader, MT4/5, TV Backtest)
+// har fullständiga timestamps (datum + klockslag) i sina råa tidsfält, men fram tills nu
+// plockade ingen parser ut klockslaget – bara datumet (via formatDateStr). Det gjorde att
+// varken entry-tid eller Exit tid någonsin sparades för IMPORTERADE trades, oavsett plattform.
+function formatTimeStr(raw) {
+  if (!raw) return null
+  const d = new Date(raw)
+  if (!isNaN(d.getTime())) return d.toTimeString().slice(0, 5)
+  const m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?/)
+  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`
+  return null
 }
 
 const PLATFORMS = [
@@ -309,6 +353,7 @@ export default function Import() {
       const trade = {
         user_id: user.id,
         date: t.date || new Date().toISOString().split('T')[0],
+        time: t.time || null,
         symbol: t.symbol||null, direction: t.direction||null,
         entry: t.entry||null, sl: t.sl||null, tp: t.tp||null,
         outcome: t.outcome||null, result: null, strategy: strategy||null,
@@ -317,6 +362,7 @@ export default function Import() {
           _imported: true, _source: t._source,
           ...(t.actual_exit ? {_actual_exit:t.actual_exit} : {}),
           ...(t.exit_date   ? {_exit_date:t.exit_date}     : {}),
+          ...(t.exit_time   ? {_exit_time:t.exit_time}     : {}),
           ...(t.contracts   ? {_totalContracts:t.contracts}: {}),
           ...(t.pnl!=null   ? {_imported_pnl:t.pnl}       : {}),
           ...(t._runup      ? {_runup:t._runup}            : {}),
