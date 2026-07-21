@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.2.0',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Import: ingen av de fem parsrarna (TopstepX/ProjectX, TradingView Backtesting, Tradovate, MetaTrader, NinjaTrader) plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time. handleImport() sparade dessutom inte t.exit_time till custom_data ens i fall parsern hade satt det – fixat i samma veva.' },
+    ]
+  },
+  {
     version: 'v2.1.9',
     date: '2026-07-21',
     entries: [
