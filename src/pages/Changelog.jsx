@@ -2,6 +2,16 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.0',
+    date: '2026-07-21',
+    entries: [
+      { type: 'feature', text: 'Dashboard och Analytics – helt ny widget-grid byggd på react-grid-layout istället för den gamla CSS-grid-baserade DragGrid (som bara kunde ändra ORDNING i en fast 1-kolumnslayout). Widgets kan nu dras fritt till valfri position och ändras i storlek (bredd/höjd) genom att dra i hörnet, precis som i t.ex. TradingView eller Notion-dashboards. Storlek och position sparas per widget och per skärmstorlek (lg/md/sm/xs/xxs) i userSettings – varje användares layout är sin egen.' },
+      { type: 'infra', text: 'Mobil (≤480px) forcerar fortfarande låst 1-kolumnsläge med drag/resize helt avstängt – samma säkerhetsnivå som tidigare, men hanteras nu av react-grid-layouts breakpoint-system istället för en CSS !important-regel.' },
+      { type: 'infra', text: 'Gammalt widget-sparformat ({order, hidden, seenNew}) migreras automatiskt till det nya ({layouts: {lg,md,sm,xs,xxs}, hidden, seenNew}) första gången en användare öppnar Dashboard/Analytics efter uppdateringen – ingen manuell datamigrering krävs, och befintlig visa/dölj-inställning och ordning återanvänds som utgångspunkt för de nya positionerna.' },
+      { type: 'infra', text: 'Widget-innehållet (card-body) scrollar nu internt (overflow-y:auto) om användaren gör ett kort mindre än sitt innehåll, istället för att klippa eller se trasigt ut – en förutsättning för att fri resize ska kännas säkert att använda.' },
+    ]
+  },
+  {
     version: 'v2.2.0',
     date: '2026-07-21',
     entries: [
