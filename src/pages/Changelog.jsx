@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.9',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Journal: importerade trades (Import.jsx, result: null) visade "—" i R-kolumnen eftersom futures-trades saknar en pålitlig fast dollarrisk att räkna R ifrån (kontraktsbaserad risk är "trubbig" jämfört med FX). R-kolumnen faller nu tillbaka på det importerade dollar-P&L:et (custom_data._imported_pnl) när result saknas, istället för att visa en halvbra/felaktig R-approximation eller bara "—". Riktig R-beräkning väntar på beslut om SL-komplettering eller en broker/prop firm-koppling (MCP) som kan ge exakt riskdata per trade.' },
+      { type: 'fix', text: 'Import: Tradovate- och TopstepX/ProjectX-parsrarna sparade alltid pnl:null – de räknade ut en price-diff internt bara för att avgöra W/L/BE, men skrev aldrig ut den som dollar-P&L på traden. Båda parsrarna räknar nu ut faktiskt dollar-P&L via instrumentets point value (t.ex. $2/point för MNQ), med stöd för råa kontraktskoder som MNQU6/MYMM6 (månadsbokstav + årssiffra strippas vid uppslag mot FUTURES_SPECS).' },
+      { type: 'fix', text: 'Import: ingen av de fem parsrarna plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time. handleImport() sparade dessutom inte t.exit_time till custom_data ens i fall parsern hade satt det – fixat i samma veva.' },
+    ]
+  },
+  {
     version: 'v2.1.8',
     date: '2026-07-18',
     entries: [
