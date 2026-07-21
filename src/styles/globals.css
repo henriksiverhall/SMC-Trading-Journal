@@ -482,9 +482,45 @@ input[type="time"] {
 }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
 
-/* ── DragGrid widget grid ── */
+/* ── DragGrid widget grid (react-grid-layout) ── */
 .drag-grid { min-width: 0; }
-.drag-grid > div { min-width: 0; }
+.react-grid-item { min-width: 0; }
+.react-grid-item.react-grid-placeholder {
+  background: var(--accent-dim) !important;
+  border: 1px dashed var(--accent);
+  border-radius: var(--r2);
+  opacity: 0.6;
+}
+.widget-grid-item {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+}
+.widget-grid-item-inner {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.widget-drag-handle {
+  position: absolute; top: 8px; right: 10px; z-index: 20;
+  color: var(--text4); font-size: 13px; cursor: grab; opacity: 0.4;
+  user-select: none; transition: opacity 0.15s;
+}
+.widget-drag-handle:hover { opacity: 1; }
+.react-grid-item > .react-resizable-handle {
+  width: 18px; height: 18px;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-right: 2px solid var(--accent) !important;
+  border-bottom: 2px solid var(--accent) !important;
+  width: 8px !important; height: 8px !important;
+  opacity: 0.55;
+}
+.react-grid-item.react-draggable-dragging { z-index: 30; }
+.react-grid-item.resizing { z-index: 30; }
+
 
 /* ── Journal table ── */
 .journal-table { width: 100%; border-collapse: collapse; }
@@ -640,7 +676,8 @@ input[type="time"] {
 
   .row-2col, .row-3col, .row-5col { grid-template-columns: 1fr !important; gap: 10px !important; }
 
-  .drag-grid { grid-template-columns: 1fr !important; }
+  /* .drag-grid kolumn-låsning på mobil hanteras nu av react-grid-layout självt
+     (xs/xxs-breakpoints = 1 kolumn, isDraggable/isResizable=false i DragGrid.jsx) */
 
   .welcome-clocks-wrap { display: none !important; }
 
