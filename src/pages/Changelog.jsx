@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.8',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Journal: importerade trades (Import.jsx, result: null) visade "—" i R-kolumnen både i tabellen och detaljvyn eftersom futures-trades saknar en pålitlig fast dollarrisk att räkna R ifrån (kontraktsbaserad risk är "trubbig" jämfört med FX). Tillfällig lösning: R-kolumnen faller nu tillbaka på det importerade dollar-P&L:et (custom_data._imported_pnl) när result saknas, istället för att visa en halvbra/felaktig R-approximation. Riktig R-beräkning väntar på beslut om SL-komplettering eller en broker/prop firm-koppling (MCP) som kan ge exakt riskdata per trade.' },
+    ]
+  },
+  {
     version: 'v2.1.7',
     date: '2026-07-21',
     entries: [
