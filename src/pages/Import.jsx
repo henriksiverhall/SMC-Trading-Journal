@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { getFuturesSpec } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
 // ── Parsers ───────────────────────────────────────────────────────────────────────────────
@@ -12,6 +13,19 @@ function guessSymbolFromFilename(filename) {
   const parts = filename.replace(/\.csv$/i, '').split(/[-_]/)
   const cand = parts.find(p => /^[A-Z0-9]{3,10}$/.test(p) && !/^\d+$/.test(p) && p !== 'FX' && p !== 'CSV')
   return cand || ''
+}
+
+// Futures-kontraktskoder (t.ex. "MNQU6", "MYMM6") har en månadsbokstav (F,G,H,J,K,M,N,Q,U,V,X,Z)
+// + 1-2 årssiffror på slutet, vilket FUTURES_SPECS i constants.js inte känner igen direkt
+// (den har bara basnamnet, t.ex. "MNQ"). Denna hjälpfunktion strippar kontraktskoden så att
+// point value-uppslaget fungerar även på råa broker/prop firm-exporter.
+function getFuturesSpecFlexible(symbol) {
+  if (!symbol) return null
+  const direct = getFuturesSpec(symbol)
+  if (direct) return direct
+  const m = symbol.match(/^([A-Za-z]+)[FGHJKMNQUVXZ]\d{1,2}$/)
+  if (m) return getFuturesSpec(m[1])
+  return null
 }
 
 function parseTVBacktest(text, filename = '') {
@@ -144,13 +158,19 @@ function parseTradovate(text) {
       const isLong = new Date(buy.date) < new Date(sell.date)
       const entry = isLong ? buy.price : sell.price
       const exitP = isLong ? sell.price : buy.price
-      const profit = isLong ? (exitP - entry) : (entry - exitP)
+      const profitPts = isLong ? (exitP - entry) : (entry - exitP)
+      // profitPts är prisdifferensen i punkter, inte dollar – måste multipliceras med
+      // instrumentets point value (t.ex. $2/point för MNQ) och antal kontrakt för att
+      // bli ett faktiskt dollar-P&L. Utan detta sparades pnl:null och R-kolumnen
+      // kunde aldrig visa något för Tradovate-importer, oavsett displayfix i Journal.jsx.
+      const spec = getFuturesSpecFlexible(symbol)
+      const pnl = spec ? parseFloat((profitPts * spec.pointValue * buy.qty).toFixed(2)) : null
       trades.push({
         date: formatDateStr(isLong ? buy.date : sell.date),
         exit_date: formatDateStr(isLong ? sell.date : buy.date),
         symbol, direction: isLong ? 'Long' : 'Short', entry, actual_exit: exitP,
-        contracts: buy.qty, outcome: profit > 0 ? 'W' : profit < 0 ? 'L' : 'BE',
-        pnl: null, _source: 'tradovate',
+        contracts: buy.qty, outcome: profitPts > 0 ? 'W' : profitPts < 0 ? 'L' : 'BE',
+        pnl, _source: 'tradovate',
       })
     }
   }
@@ -197,13 +217,17 @@ function parseTopStepX(text) {
       const open = openBySymbol[symbol]
       const isLong = open.direction === 'Long'
       const profitPts = isLong ? (price - open.entryPrice) : (open.entryPrice - price)
+      // Samma som Tradovate-parsern: profitPts är punkter, inte dollar. Konvertera
+      // via instrumentets point value så pnl faktiskt kan visas i R-kolumnen.
+      const spec = getFuturesSpecFlexible(symbol)
+      const pnl = spec ? parseFloat((profitPts * spec.pointValue * open.size).toFixed(2)) : null
       trades.push({
         date: formatDateStr(open.entryTime), exit_date: formatDateStr(time),
         symbol, direction: open.direction,
         entry: open.entryPrice, actual_exit: price,
         contracts: open.size,
         outcome: profitPts > 0 ? 'W' : profitPts < 0 ? 'L' : 'BE',
-        pnl: null, _exitReason: reason, _source: 'topstepx',
+        pnl, _exitReason: reason, _source: 'topstepx',
       })
       delete openBySymbol[symbol]
     }
