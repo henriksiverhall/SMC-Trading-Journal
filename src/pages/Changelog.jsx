@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.1.7',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Journal: portat main v2.1.8 hit – tabellen visar nu även Exit tid och Faktisk exit (utöver Exit datum), och alla egna fält som förekommer i datan, med samma dynamiska logik som CSV-exporten.' },
+      { type: 'fix', text: 'Journal: R-värdet kunde nollställas/bli fel när en befintlig trade redigerades och sparades utan att fälten rördes (stale-closure-bugg i startEdit(), portat från main v2.1.8).' },
+      { type: 'infra', text: 'Staging synkad med main igen på Journal.jsx. Developer-menyn (ChatGPTs område) rörd inte alls.' },
+    ]
+  },
+  {
     version: 'v2.1.6',
     date: '2026-07-18',
     entries: [
