@@ -29,6 +29,8 @@ const ADMIN_ONLY_PAGES = ['admin', 'roadmap', 'developer', 'changelog']
 // tradelog-claude-api-dev som trots namnet är den skarpa AI-proxyn).
 const PROD_SUPABASE_HOST = 'qmmpxupsxdouvoqgvgri'
 const IS_STAGING = !SUPABASE_URL.includes(PROD_SUPABASE_HOST)
+const STAGING_BANNER_H = 26
+const IMPERSONATE_BANNER_H = 42
 
 function StagingBanner() {
   if (!IS_STAGING) return null
@@ -144,20 +146,33 @@ export default function App() {
   return (
     <>
       <StagingBanner />
-      <div className="app-layout" style={IS_STAGING ? { marginTop: 26 } : undefined}>
+      {(() => {
+        // Sidebar och impersonate-bannern var tidigare fixed-positionerade
+        // helt separat från varandra och löste överlapp bara via z-index,
+        // vilket inte räckte: Sidebar är position:fixed så app-layouts
+        // marginTop (som bara kompenserade för STAGING-bannern) påverkade
+        // aldrig Sidebarns egen top:0, och impersonate-bannern reserverade
+        // ingen plats alls i flödet – båda gick över/under varandra beroende
+        // på vilka banners som råkade vara synliga samtidigt. Nu räknas den
+        // FAKTISKA totala bannerhöjden ut en gång och används konsekvent för
+        // både Sidebar och app-layout, oavsett kombination av banners.
+        const topOffset = (IS_STAGING ? STAGING_BANNER_H : 0) + (impersonating ? IMPERSONATE_BANNER_H : 0)
+        return (
+      <div className="app-layout" style={topOffset ? { marginTop: topOffset } : undefined}>
         <Sidebar
           activePage={page}
           onNavigate={setPage}
           onOpenChange={setSidebarOpen}
           mobileOpen={mobileMenuOpen}
           onMobileOpenChange={setMobileMenuOpen}
+          topOffset={topOffset}
         />
         <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`} style={{ position:'relative' }}>
           {Object.keys(bgStyle).length > 0 && (
             <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none', backgroundImage:bgStyle.backgroundImage, backgroundSize:bgStyle.backgroundSize, backgroundPosition:bgStyle.backgroundPosition, backgroundRepeat:bgStyle.backgroundRepeat, opacity:bgStyle['--page-bg-opacity']||0.15 }} />
           )}
           {impersonating && (
-            <div style={{ position:'fixed', top: IS_STAGING ? 26 : 0, left:0, right:0, zIndex:1000, background:'rgba(245,158,11,0.95)', backdropFilter:'blur(4px)', padding:'8px 20px', display:'flex', alignItems:'center', gap:12, fontSize:13, fontWeight:600, color:'#000', boxShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
+            <div style={{ position:'fixed', top: IS_STAGING ? STAGING_BANNER_H : 0, left:0, right:0, zIndex:1000, background:'rgba(245,158,11,0.95)', backdropFilter:'blur(4px)', padding:'8px 20px', display:'flex', alignItems:'center', gap:12, fontSize:13, fontWeight:600, color:'#000', boxShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
               <span>👁 Visar som: <strong>{impersonating.email}</strong></span>
               <span style={{ color:'rgba(0,0,0,0.5)', fontSize:12 }}>Du är fortfarande inloggad som admin.</span>
               <button onClick={()=>{stopImpersonation();setPage('admin')}} style={{ marginLeft:'auto', background:'rgba(0,0,0,0.15)', border:'1px solid rgba(0,0,0,0.25)', borderRadius:6, padding:'4px 14px', fontSize:12, fontWeight:700, cursor:'pointer', color:'#000', fontFamily:'inherit' }}>✕ Avsluta</button>
@@ -168,6 +183,8 @@ export default function App() {
           </div>
         </main>
       </div>
+        )
+      })()}
     </>
   )
 }
