@@ -2,6 +2,27 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.6',
+    date: '2026-08-10',
+    entries: [
+      { type: 'feature', text: 'Dashboard och Analytics – helt ny widget-grid byggd på react-grid-layout istället för den gamla CSS-grid-baserade DragGrid (som bara kunde ändra ORDNING i en fast 1-kolumnslayout). Widgets kan nu dras fritt till valfri position och ändras i storlek (bredd/höjd) genom att dra i hörnet, precis som i t.ex. TradingView eller Notion-dashboards. Drag/resize kräver att man klickar "Anpassa widgets" – annars är griden låst mot oavsiktliga ändringar. Storlek och position sparas per widget och per skärmstorlek (lg/md/sm/xs/xxs) i userSettings.' },
+      { type: 'fix', text: 'Analytics: "Grade & Emotion" var tidigare en enda widget som internt renderade två separata kort (Win Rate per Grade / Win Rate per Emotion) sida vid sida – de såg ut som två oberoende widgets men gick inte att flytta, dölja eller ändra storlek på var för sig. Uppdelad i två riktiga widgets.' },
+      { type: 'fix', text: 'Widget-kanterna linjerade inte alltid korrekt mellan olika kort, av flera samverkande CSS-orsaker: widgets utan height:100% på sitt rot-element fyllde bara sin naturliga innehållshöjd; widgets med bara header+rå-tabell (ingen card-body) kunde bli TALLARE än sin cell eftersom en tabell vägrar krympa; och flera Analytics-widgets hade ett kvarlämnat inline style={{marginBottom:16}} från innan griden fanns, vilket åt upp 16px av deras tilldelade cellhöjd. Alla tre fixade – widgets fyller nu alltid exakt sin tilldelade grid-cell.' },
+      { type: 'fix', text: 'Stat-mini-korten i Statistik-widgeten (t.ex. Trades, Win Rate, Total R) fick olika radhöjd beroende på om kortet hade en tredje textrad (t.ex. "7V · 2F" under Trades) eller inte. Fast minimihöjd + grid-auto-rows:1fr så alla rader blir lika höga oavsett innehåll.' },
+      { type: 'fix', text: 'STAGING-bannern och "Visar som"-bannern (impersonation) kunde hamna delvis under eller överlappa sidomenyns logga/ikoner beroende på vilken kombination av banners som var synlig – Sidebar är position:fixed och påverkades därför inte av app-layouts marginTop, som bara var beräknat för STAGING-bannern. Räknar nu ut en gemensam total bannerhöjd som ges till både Sidebar och app-layout, oavsett vilka banners som visas.' },
+      { type: 'infra', text: 'Lade till en LAYOUT_VERSION-spärr i widget-griden så att framtida ändringar av default-storlekar/positioner självläker gamla eller felaktigt sparade layouts automatiskt vid nästa inläsning, istället för att kräva en manuell databas-reset.' },
+      { type: 'feature', text: 'Tillfällig, dismissible notis på Dashboard om den ombyggda widget-griden, synlig till 24 augusti, för att förklara för befintliga användare varför deras layout återställdes till nytt standardläge (bredd/position) vid uppdateringen. Deras visa/dölj-val och tidigare ordning bevaras – bara storlek/position byggs om en gång.' },
+      { type: 'infra', text: 'Mobil (≤480px) forcerar fortfarande låst 1-kolumnsläge med drag/resize helt avstängt – hanteras nu av react-grid-layouts breakpoint-system istället för en CSS !important-regel.' },
+    ]
+  },
+  {
+    version: 'v2.2.0',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Import: ingen av de fem parsrarna (TopstepX/ProjectX, TradingView Backtesting, Tradovate, MetaTrader, NinjaTrader) plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time.' },
+    ]
+  },
+  {
     version: 'v2.1.9',
     date: '2026-07-21',
     entries: [
