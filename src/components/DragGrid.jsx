@@ -9,6 +9,16 @@ const BREAKPOINT_COLS = { lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }
 const MOBILE_BREAKPOINTS = ['xs', 'xxs']
 const ROW_HEIGHT = 32
 
+// Höjs varje gång generateLayoutItems/defaultstorlekarna ändras på ett sätt
+// som gör gamla sparade layouts felaktiga (t.ex. v2.3.1: bytte default-bredd
+// från blandat 1-2 kolumner till alltid full bredd). Utan detta fastnar en
+// användare som råkat spara en layout under en kort period med en bugg i
+// generation-logiken PERMANENT på den felaktiga layouten, eftersom
+// buildLayouts annars bara fyller på det som "saknas" – aldrig regenererar
+// det som redan finns. Mismatchande version = hela den sparade layouten
+// (bara layouts, inte hidden/seenNew) kastas och byggs om från grunden.
+const LAYOUT_VERSION = 2
+
 // Rimliga starthöjder per widget (i rader à ROW_HEIGHT px). Det här är bara
 // var widgeten hamnar FÖRSTA gången en användare öppnar sidan efter
 // uppdateringen – inget tak. Bredden sätts alltid till full radbredd som
@@ -52,7 +62,8 @@ function generateLayoutItems(widgetList, cols) {
 // x/y/w/h där de finns (så en användares egen drag/resize aldrig nollställs),
 // och fyller på med default-storlek för widgets som saknas i den sparade
 // datan – antingen för att de är helt nya, eller för att den sparade datan
-// är i det gamla {order,hidden,seenNew}-formatet utan positioner alls.
+// är i det gamla {order,hidden,seenNew}-formatet (eller föråldrad
+// LAYOUT_VERSION) utan positioner alls.
 function buildLayouts(widgets, existingLayouts) {
   const layouts = {}
   for (const [bp, cols] of Object.entries(BREAKPOINT_COLS)) {
@@ -70,11 +81,15 @@ export default function DragGrid({ pageKey, widgets }) {
   const [breakpoint, setBreakpoint] = useState('lg')
 
   const saved = userSettings?.widgets?.[pageKey]
+  const savedLayoutsAreCurrent = saved?.layoutVersion === LAYOUT_VERSION
   const hidden = (saved?.hidden || []).filter(id => widgets.find(w => w.id === id))
   const seenNew = saved?.seenNew || []
   const newWidgets = widgets.filter(w => w.newIn && !seenNew.includes(w.id) && !hidden.includes(w.id))
 
-  const layouts = useMemo(() => buildLayouts(widgets, saved?.layouts), [widgets, saved?.layouts])
+  const layouts = useMemo(
+    () => buildLayouts(widgets, savedLayoutsAreCurrent ? saved?.layouts : null),
+    [widgets, savedLayoutsAreCurrent, saved?.layouts]
+  )
   const visible = widgets.filter(w => !hidden.includes(w.id))
   const visibleLayouts = useMemo(() => {
     const out = {}
@@ -84,7 +99,7 @@ export default function DragGrid({ pageKey, widgets }) {
 
   async function persist(nextLayouts, hiddenList, seenNewList) {
     const current = userSettings?.widgets || {}
-    await saveSettings({ widgets: { ...current, [pageKey]: { layouts: nextLayouts, hidden: hiddenList, seenNew: seenNewList } } })
+    await saveSettings({ widgets: { ...current, [pageKey]: { layoutVersion: LAYOUT_VERSION, layouts: nextLayouts, hidden: hiddenList, seenNew: seenNewList } } })
   }
 
   const handleLayoutChange = useCallback((_current, allLayouts) => {
@@ -92,8 +107,13 @@ export default function DragGrid({ pageKey, widgets }) {
     // renderat den här sessionen. Slå ihop med det vi redan hade sparat så vi
     // inte tappar t.ex. xs-layouten bara för att användaren aldrig öppnat
     // sidan på mobil i just den här sessionen.
+    // Sparar bara medan Anpassa-läget är aktivt – annars skulle react-grid-
+    // layouts interna re-layout-beräkningar (t.ex. vid fönsterresize) kunna
+    // trigga oavsiktliga sparningar även när användaren aldrig velat ändra
+    // något.
+    if (!showManager) return
     persist({ ...layouts, ...allLayouts }, hidden, seenNew)
-  }, [layouts, hidden, seenNew, pageKey])
+  }, [layouts, hidden, seenNew, pageKey, showManager])
 
   function toggleHide(id) {
     const next = hidden.includes(id) ? hidden.filter(h => h !== id) : [...hidden, id]
@@ -105,6 +125,7 @@ export default function DragGrid({ pageKey, widgets }) {
   }
 
   const isMobile = MOBILE_BREAKPOINTS.includes(breakpoint)
+  const editMode = showManager && !isMobile
 
   return (
     <div>
@@ -127,8 +148,9 @@ export default function DragGrid({ pageKey, widgets }) {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-        <button onClick={() => setShowManager(m => !m)} className="btn btn-ghost btn-sm">
-          {showManager ? '✕ Stäng' : '⊞ Anpassa widgets'}
+        <button onClick={() => setShowManager(m => !m)} className="btn btn-ghost btn-sm"
+          style={showManager ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>
+          {showManager ? '✕ Stäng redigering' : '⊞ Anpassa widgets'}
         </button>
       </div>
 
@@ -169,7 +191,7 @@ export default function DragGrid({ pageKey, widgets }) {
       )}
 
       <ResponsiveGridLayout
-        className="drag-grid"
+        className={`drag-grid${editMode ? ' drag-grid-editing' : ''}`}
         layouts={visibleLayouts}
         breakpoints={BREAKPOINTS}
         cols={BREAKPOINT_COLS}
@@ -177,8 +199,8 @@ export default function DragGrid({ pageKey, widgets }) {
         margin={[16, 16]}
         containerPadding={[0, 0]}
         compactType="vertical"
-        isDraggable={!isMobile}
-        isResizable={!isMobile}
+        isDraggable={editMode}
+        isResizable={editMode}
         draggableHandle=".widget-drag-handle"
         onBreakpointChange={setBreakpoint}
         onLayoutChange={handleLayoutChange}
@@ -187,7 +209,7 @@ export default function DragGrid({ pageKey, widgets }) {
       >
         {visible.map(w => (
           <div key={w.id} className="widget-grid-item">
-            {!isMobile && <div className="widget-drag-handle" title="Dra för att flytta">⠿⠿</div>}
+            {editMode && <div className="widget-drag-handle" title="Dra för att flytta">⠿⠿</div>}
             <div className="widget-grid-item-inner">{w.content}</div>
           </div>
         ))}
