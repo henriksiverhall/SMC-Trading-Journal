@@ -502,6 +502,20 @@ input[type="time"] {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+/* v2.3.3: widgets vars innehåll glömde height:100% på sitt .card-element
+   (t.ex. Operatör-widgeten) fyllde bara ut sin naturliga innehållshöjd
+   istället för hela den tilldelade grid-cellen. Det gjorde att två widgets
+   med EXAKT samma antal rader (samma cellhöjd, samma resize-handtag-position)
+   ändå fick olika visuell kant-höjd – bara vissa kort "sträckte sig hela
+   vägen ner". Tvingar nu ALLTID widgetens direkta rot-element att fylla
+   hela cellen, oavsett om enskilda widget-definitioner kom ihåg
+   height:100% själva eller inte. */
+.widget-grid-item-inner > * {
+  flex: 1;
+  min-height: 0;
 }
 .widget-drag-handle {
   position: absolute; top: 8px; right: 10px; z-index: 20;
