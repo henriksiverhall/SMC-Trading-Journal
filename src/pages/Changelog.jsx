@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.3',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: widgets vars innehåll saknade explicit height:100% på sitt kort (t.ex. Operatör-widgeten) sträckte sig bara till sin naturliga innehållshöjd, inte hela den tilldelade grid-cellen. Två widgets med exakt samma cellhöjd (samma resize-handtags-position) kunde därför få sina synliga kanter på olika nivåer. .widget-grid-item-inner tvingar nu alltid sitt rotelement till full höjd, oavsett om den enskilda widget-definitionen kom ihåg height:100% eller inte.' },
+    ]
+  },
+  {
     version: 'v2.3.2',
     date: '2026-08-10',
     entries: [
