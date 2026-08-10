@@ -7,6 +7,32 @@ import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
+// v2.3.4: tillfällig, tidsbegränsad notis om den ombyggda widget-griden
+// (v2.3.0–v2.3.3). Visas till och med END_DATE, eller tills användaren
+// stänger den (sparas per webbläsare via localStorage, inte i databasen –
+// medvetet enkelt eftersom detta bara behöver visas en gång per person).
+function GridUpdateNotice() {
+  const STORAGE_KEY = 'tl_dismissed_grid_notice_v1'
+  const END_DATE = '2026-08-24'
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) === '1' } catch { return false }
+  })
+  if (dismissed || new Date() > new Date(END_DATE)) return null
+  return (
+    <div style={{
+      marginBottom: 16, padding: '10px 16px',
+      background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.25)',
+      borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <span style={{ fontSize: 13, color: 'var(--text2)' }}>
+        🆕 Widgets nedan kan nu dras och ändras i storlek fritt via <strong>"Anpassa widgets"</strong>. Din ordning är bevarad, men storlekarna har återställts till ett nytt standardläge i samband med uppdateringen.
+      </span>
+      <button onClick={() => { try { localStorage.setItem(STORAGE_KEY, '1') } catch {} setDismissed(true) }}
+        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1, flexShrink: 0 }}>×</button>
+    </div>
+  )
+}
+
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   return (
@@ -437,6 +463,7 @@ export default function Dashboard({ onNavigate }) {
     <div style={{ flex: 1 }}>
       <Topbar title="Dashboard" subtitle={impersonating ? `👁 Visar: ${impersonating.email}` : undefined} />
       <div className="page-content">
+        <GridUpdateNotice />
         <DragGrid pageKey="dashboard" widgets={widgets} columns={1} />
       </div>
     </div>
