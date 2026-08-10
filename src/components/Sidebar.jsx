@@ -29,7 +29,7 @@ function useIsMobile() {
   return isMobile
 }
 
-export default function Sidebar({ activePage, onNavigate, onOpenChange, mobileOpen, onMobileOpenChange }) {
+export default function Sidebar({ activePage, onNavigate, onOpenChange, mobileOpen, onMobileOpenChange, topOffset = 0 }) {
   const [open, setOpen] = useState(true)
   const { isAdmin, signOut, unreadCount } = useAuth()
   const isMobile = useIsMobile()
@@ -54,9 +54,9 @@ export default function Sidebar({ activePage, onNavigate, onOpenChange, mobileOp
   return (
     <>
       {isMobile && (
-        <div className={`sidebar-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => onMobileOpenChange?.(false)} />
+        <div className={`sidebar-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => onMobileOpenChange?.(false)} style={topOffset ? { top: topOffset } : undefined} />
       )}
-      <aside className={`sidebar ${effectiveOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${effectiveOpen ? 'open' : ''}`} style={topOffset ? { top: topOffset } : undefined}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">TL</div>
           {effectiveOpen && (<div><div className="sidebar-logo-text">TradeLog</div><div className="sidebar-logo-version">{APP_VERSION}</div></div>)}
