@@ -35,7 +35,8 @@ const DEFAULT_HEIGHTS = {
   recent: 6,
   streak: 5,
   // Analytics
-  grade_emotion: 5,
+  grade: 5,
+  emotion: 5,
   strategy: 6,
   mfe: 7,
   sl_opt: 6,
