@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.2',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: drag och resize var alltid aktivt på desktop, oavsett om "Anpassa widgets" var öppen – man kunde råka flytta/ändra ett kort av misstag utan att ha klickat på knappen. Drag/resize (och dra-handtaget) kräver nu att Anpassa-läget faktiskt är påslaget.' },
+      { type: 'fix', text: 'Dashboard/Analytics-grid: lade till en LAYOUT_VERSION-spärr så att framtida ändringar av default-storlekar/positioner självläker gamla eller felaktigt sparade layouts automatiskt vid nästa inläsning, istället för att kräva en manuell databas-reset (det som hände med v2.3.1:s bredd-bugg – en kort race condition runt deploy hann spara fel bredder innan fixen var live, och det satt sen kvar permanent tills det åtgärdades för hand).' },
+      { type: 'fix', text: 'STAGING-bannern och "Visar som"-bannern (impersonation) kunde hamna delvis under eller överlappa sidomenyns logga/ikoner beroende på vilken kombination av banners som var synlig – Sidebar är position:fixed och påverkades därför inte av app-layouts marginTop, som bara var beräknat för STAGING-bannern. Räknar nu ut en gemensam total bannerhöjd som ges till både Sidebar och app-layout, oavsett vilka banners som visas.' },
+    ]
+  },
+  {
     version: 'v2.3.1',
     date: '2026-07-21',
     entries: [
