@@ -524,6 +524,24 @@ input[type="time"] {
   flex: 1;
   min-height: 0;
 }
+/* v2.3.5: .card i sig var inte display:flex, så dess EGNA barn (card-header +
+   card-body, eller header + en rå tabell-wrapper som i Strategi-breakdown)
+   stod kvar i vanligt block-flöde med sin naturliga innehållshöjd. <table>
+   vägrar krympa under sin innehållshöjd även när en förfader har min-height:0
+   – för widgets som saknar en flex:1-krympbar card-body (bara header+tabell)
+   kunde kortet därför bli TALLARE än sin tilldelade grid-cell och sticka ut
+   förbi resize-handtaget, medan andra widgets (med riktig card-body) krympte
+   korrekt. Gör .card till en egen flex-kolumn och låt dess sista/innehålls-
+   del (allt utom card-header) krympa och scrolla internt istället. */
+.widget-grid-item-inner > .card {
+  display: flex;
+  flex-direction: column;
+}
+.widget-grid-item-inner > .card > *:not(.card-header) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 .widget-drag-handle {
   position: absolute; top: 8px; right: 10px; z-index: 20;
   color: var(--text4); font-size: 13px; cursor: grab; opacity: 0.4;
