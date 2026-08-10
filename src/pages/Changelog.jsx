@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.4',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Analytics: "Grade & Emotion" var en enda widget som internt renderade två separata kort (Win Rate per Grade / Win Rate per Emotion) sida vid sida – de såg ut som två oberoende widgets men gick inte att flytta, dölja eller ändra storlek på var för sig. Uppdelad i två riktiga widgets: "grade" och "emotion".' },
+      { type: 'fix', text: 'Dashboard/Analytics: stat-mini-korten i Statistik-widgeten (t.ex. Trades, Win Rate, Total R) fick olika radhöjd beroende på om kortet hade en tredje textrad (t.ex. "7V · 2F" under Trades) eller inte – rad 1 blev synligt högre än rad 2 i samma .stats-grid. Fast minimihöjd + grid-auto-rows:1fr så alla rader blir lika höga oavsett innehåll.' },
+      { type: 'feature', text: 'Dashboard: tillfällig, dismissible notis om den ombyggda widget-griden (v2.3.0–v2.3.3), synlig till 24 augusti eller tills man stänger den, för att förklara för befintliga användare varför deras layout återställdes till nytt standardläge.' },
+    ]
+  },
+  {
     version: 'v2.3.3',
     date: '2026-08-10',
     entries: [
