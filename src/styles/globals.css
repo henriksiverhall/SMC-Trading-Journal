@@ -542,6 +542,20 @@ input[type="time"] {
   min-height: 0;
   overflow-y: auto;
 }
+/* v2.3.6: flera Analytics-widgets (Equity Curve, MFE/MAE, RR-optimerare,
+   AI-analys) har ett kvarlämnat "style={{ marginBottom: 16 }}" på sitt
+   rot-.card-element – ett arv från INNAN griden fanns, då de låg staplade
+   som vanliga syskon-element och behövde ett eget mellanrum. Nu när
+   react-grid-layout sköter mellanrummet självt (margin=[16,16] på griden)
+   äter den gamla inline-marginen istället upp 16px av widgetens EGEN
+   tilldelade cellhöjd, så kortets synliga kant slutar 16px FÖRE
+   resize-handtaget – exakt det som gjorde att vissa kort verkade "linjera
+   fel" jämfört med kort utan den gamla marginalen (t.ex. Strategi-
+   breakdown, som aldrig hade den). !important krävs eftersom inline style
+   annars alltid vinner över en vanlig CSS-klass. */
+.widget-grid-item-inner > .card {
+  margin-bottom: 0 !important;
+}
 .widget-drag-handle {
   position: absolute; top: 8px; right: 10px; z-index: 20;
   color: var(--text4); font-size: 13px; cursor: grab; opacity: 0.4;
