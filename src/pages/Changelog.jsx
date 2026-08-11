@@ -2,70 +2,135 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.9',
+    date: '2026-08-11',
+    entries: [
+      { type: 'feature', text: 'Import: ny källa "FundedNext (Futures/CFD)" – hämtar trades direkt via FundedNexts MCP-API istället för manuell CSV-export. Egen API-token sparas per användare under Profil → Integrationer. Dubbletter identifieras via FundedNexts unika ticket-ID och exkluderas automatiskt vid ny hämtning. R-värde saknas fortfarande i källdatan (ingen SL/TP från FundedNext) – estimeras nu istället automatiskt utifrån sparad kontostorlek/risk% och märks tydligt som uppskattat (inte verklig R) i journalen.' },
+      { type: 'infra', text: 'Ny Cloudflare Worker (tradelog-fundednext-dev) hanterar MCP-anropet och skrivningen till databasen JWT-skyddat – varje användares FundedNext-token används bara för att hämta det egna kontots trades.' },
+    ]
+  },
+  {
+    version: 'v2.3.8',
+    date: '2026-08-11',
+    entries: [
+      { type: 'feature', text: 'Admin → 🤖 AI-analys: ny flik där prompten som skickas till AI-coachen i Analytics blir redigerbar istället för hårdkodad i koden. Prompten sparas globalt (gäller alla användare, inte per-konto) och stöder platshållare ({trades}, {wins}, {losses}, {winRate}, {totalR}, {profitFactor}, {strategies}, {recentTrades}) som fylls i automatiskt med varje användares egen statistik vid analystillfället. Felstavade platshållare (t.ex. fel skiftläge) lämnas synligt orörda i prompten istället för att tyst försvinna, så fel upptäcks direkt.' },
+    ]
+  },
+  {
+    version: 'v2.3.7',
+    date: '2026-08-11',
+    entries: [
+      { type: 'fix', text: 'Journal: R/$ i formulärheadern hade ihoptryckt design – en delad box med en tunn vertikal divider, olika font-storlek på R (20px) och P&L (16px). Ersatt med två separata, tydligt separerade kort med matchande gröna/röda borders baserat på tecken (+/-), och samma font-storlek (22px) på båda värdena för konsekvent visuell hierarki.' },
+    ]
+  },
+  {
     version: 'v2.3.6',
     date: '2026-08-10',
     entries: [
-      { type: 'feature', text: 'Dashboard och Analytics – helt ny widget-grid byggd på react-grid-layout istället för den gamla CSS-grid-baserade DragGrid (som bara kunde ändra ORDNING i en fast 1-kolumnslayout). Widgets kan nu dras fritt till valfri position och ändras i storlek (bredd/höjd) genom att dra i hörnet, precis som i t.ex. TradingView eller Notion-dashboards. Drag/resize kräver att man klickar "Anpassa widgets" – annars är griden låst mot oavsiktliga ändringar. Storlek och position sparas per widget och per skärmstorlek (lg/md/sm/xs/xxs) i userSettings.' },
-      { type: 'fix', text: 'Analytics: "Grade & Emotion" var tidigare en enda widget som internt renderade två separata kort (Win Rate per Grade / Win Rate per Emotion) sida vid sida – de såg ut som två oberoende widgets men gick inte att flytta, dölja eller ändra storlek på var för sig. Uppdelad i två riktiga widgets.' },
-      { type: 'fix', text: 'Widget-kanterna linjerade inte alltid korrekt mellan olika kort, av flera samverkande CSS-orsaker: widgets utan height:100% på sitt rot-element fyllde bara sin naturliga innehållshöjd; widgets med bara header+rå-tabell (ingen card-body) kunde bli TALLARE än sin cell eftersom en tabell vägrar krympa; och flera Analytics-widgets hade ett kvarlämnat inline style={{marginBottom:16}} från innan griden fanns, vilket åt upp 16px av deras tilldelade cellhöjd. Alla tre fixade – widgets fyller nu alltid exakt sin tilldelade grid-cell.' },
-      { type: 'fix', text: 'Stat-mini-korten i Statistik-widgeten (t.ex. Trades, Win Rate, Total R) fick olika radhöjd beroende på om kortet hade en tredje textrad (t.ex. "7V · 2F" under Trades) eller inte. Fast minimihöjd + grid-auto-rows:1fr så alla rader blir lika höga oavsett innehåll.' },
+      { type: 'fix', text: 'Flera Analytics-widgets (Equity Curve, MFE/MAE, RR-optimerare, AI-analys) hade ett kvarlämnat inline style={{marginBottom:16}} på sitt rot-.card – ett arv från innan griden fanns, då de låg staplade som vanliga syskon-element. Det åt upp 16px av deras tilldelade cellhöjd, så deras synliga kant slutade 16px FÖRE resize-handtaget – motsatt fel mot det som redan fixades för Strategi-breakdown i v2.3.5. margin-bottom:0 !important på alla grid-widget-kort löser det slutgiltigt.' },
+    ]
+  },
+  {
+    version: 'v2.3.5',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Strategi-breakdown (och andra widgets med bara header+rå-tabell, ingen card-body) kunde bli TALLARE än sin tilldelade grid-cell och sticka ut förbi resize-handtaget, eftersom en rå &lt;table&gt; vägrar krympa under sin innehållshöjd trots min-height:0 på förfäder. .card görs nu till en egen flex-kolumn där allt utom card-header krymper och scrollar internt istället.' },
+    ]
+  },
+  {
+    version: 'v2.3.4',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Analytics: "Grade & Emotion" var en enda widget som internt renderade två separata kort (Win Rate per Grade / Win Rate per Emotion) sida vid sida – de såg ut som två oberoende widgets men gick inte att flytta, dölja eller ändra storlek på var för sig. Uppdelad i två riktiga widgets: "grade" och "emotion".' },
+      { type: 'fix', text: 'Dashboard/Analytics: stat-mini-korten i Statistik-widgeten (t.ex. Trades, Win Rate, Total R) fick olika radhöjd beroende på om kortet hade en tredje textrad (t.ex. "7V · 2F" under Trades) eller inte – rad 1 blev synligt högre än rad 2 i samma .stats-grid. Fast minimihöjd + grid-auto-rows:1fr så alla rader blir lika höga oavsett innehåll.' },
+      { type: 'feature', text: 'Dashboard: tillfällig, dismissible notis om den ombyggda widget-griden (v2.3.0–v2.3.3), synlig till 24 augusti eller tills man stänger den, för att förklara för befintliga användare varför deras layout återställdes till nytt standardläge.' },
+    ]
+  },
+  {
+    version: 'v2.3.3',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: widgets vars innehåll saknade explicit height:100% på sitt kort (t.ex. Operatör-widgeten) sträckte sig bara till sin naturliga innehållshöjd, inte hela den tilldelade grid-cellen. Två widgets med exakt samma cellhöjd (samma resize-handtags-position) kunde därför få sina synliga kanter på olika nivåer. .widget-grid-item-inner tvingar nu alltid sitt rotelement till full höjd, oavsett om den enskilda widget-definitionen kom ihåg height:100% eller inte.' },
+    ]
+  },
+  {
+    version: 'v2.3.2',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: drag och resize var alltid aktivt på desktop, oavsett om "Anpassa widgets" var öppen – man kunde råka flytta/ändra ett kort av misstag utan att ha klickat på knappen. Drag/resize (och dra-handtaget) kräver nu att Anpassa-läget faktiskt är påslaget.' },
+      { type: 'fix', text: 'Dashboard/Analytics-grid: lade till en LAYOUT_VERSION-spärr så att framtida ändringar av default-storlekar/positioner självläker gamla eller felaktigt sparade layouts automatiskt vid nästa inläsning, istället för att kräva en manuell databas-reset (det som hände med v2.3.1:s bredd-bugg – en kort race condition runt deploy hann spara fel bredder innan fixen var live, och det satt sen kvar permanent tills det åtgärdades för hand).' },
       { type: 'fix', text: 'STAGING-bannern och "Visar som"-bannern (impersonation) kunde hamna delvis under eller överlappa sidomenyns logga/ikoner beroende på vilken kombination av banners som var synlig – Sidebar är position:fixed och påverkades därför inte av app-layouts marginTop, som bara var beräknat för STAGING-bannern. Räknar nu ut en gemensam total bannerhöjd som ges till både Sidebar och app-layout, oavsett vilka banners som visas.' },
-      { type: 'infra', text: 'Lade till en LAYOUT_VERSION-spärr i widget-griden så att framtida ändringar av default-storlekar/positioner självläker gamla eller felaktigt sparade layouts automatiskt vid nästa inläsning, istället för att kräva en manuell databas-reset.' },
-      { type: 'feature', text: 'Tillfällig, dismissible notis på Dashboard om den ombyggda widget-griden, synlig till 24 augusti, för att förklara för befintliga användare varför deras layout återställdes till nytt standardläge (bredd/position) vid uppdateringen. Deras visa/dölj-val och tidigare ordning bevaras – bara storlek/position byggs om en gång.' },
-      { type: 'infra', text: 'Mobil (≤480px) forcerar fortfarande låst 1-kolumnsläge med drag/resize helt avstängt – hanteras nu av react-grid-layouts breakpoint-system istället för en CSS !important-regel.' },
+    ]
+  },
+  {
+    version: 'v2.3.1',
+    date: '2026-07-21',
+    entries: [
+      { type: 'fix', text: 'Dashboard/Analytics-grid: default-layouten placerade widgets med halva radbredden (w:1 av 4 kolumner på desktop), vilket gav konstiga tomrum bredvid varje kort. Alla widgets får nu full radbredd som default (en per rad, individuell lagom höjd) – bredd/höjd kan fortfarande dras/ändras fritt av användaren efteråt.' },
+    ]
+  },
+  {
+    version: 'v2.3.0',
+    date: '2026-07-21',
+    entries: [
+      { type: 'feature', text: 'Dashboard och Analytics – helt ny widget-grid byggd på react-grid-layout istället för den gamla CSS-grid-baserade DragGrid (som bara kunde ändra ORDNING i en fast 1-kolumnslayout). Widgets kan nu dras fritt till valfri position och ändras i storlek (bredd/höjd) genom att dra i hörnet, precis som i t.ex. TradingView eller Notion-dashboards. Storlek och position sparas per widget och per skärmstorlek (lg/md/sm/xs/xxs) i userSettings – varje användares layout är sin egen.' },
+      { type: 'infra', text: 'Mobil (≤480px) forcerar fortfarande låst 1-kolumnsläge med drag/resize helt avstängt – samma säkerhetsnivå som tidigare, men hanteras nu av react-grid-layouts breakpoint-system istället för en CSS !important-regel.' },
+      { type: 'infra', text: 'Gammalt widget-sparformat ({order, hidden, seenNew}) migreras automatiskt till det nya ({layouts: {lg,md,sm,xs,xxs}, hidden, seenNew}) första gången en användare öppnar Dashboard/Analytics efter uppdateringen – ingen manuell datamigrering krävs, och befintlig visa/dölj-inställning och ordning återanvänds som utgångspunkt för de nya positionerna.' },
+      { type: 'infra', text: 'Widget-innehållet (card-body) scrollar nu internt (overflow-y:auto) om användaren gör ett kort mindre än sitt innehåll, istället för att klippa eller se trasigt ut – en förutsättning för att fri resize ska kännas säkert att använda.' },
     ]
   },
   {
     version: 'v2.2.0',
     date: '2026-07-21',
     entries: [
-      { type: 'fix', text: 'Import: ingen av de fem parsrarna (TopstepX/ProjectX, TradingView Backtesting, Tradovate, MetaTrader, NinjaTrader) plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time.' },
+      { type: 'fix', text: 'Import: ingen av de fem parsrarna (TopstepX/ProjectX, TradingView Backtesting, Tradovate, MetaTrader, NinjaTrader) plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time. handleImport() sparade dessutom inte t.exit_time till custom_data även i fall parsern hade satt det – fixat i samma veva.' },
     ]
   },
   {
     version: 'v2.1.9',
     date: '2026-07-21',
     entries: [
-      { type: 'fix', text: 'Journal: importerade trades (Import.jsx, result: null) visade "—" i R-kolumnen eftersom futures-trades saknar en pålitlig fast dollarrisk att räkna R ifrån (kontraktsbaserad risk är "trubbig" jämfört med FX). R-kolumnen faller nu tillbaka på det importerade dollar-P&L:et (custom_data._imported_pnl) när result saknas, istället för att visa en halvbra/felaktig R-approximation eller bara "—". Riktig R-beräkning väntar på beslut om SL-komplettering eller en broker/prop firm-koppling (MCP) som kan ge exakt riskdata per trade.' },
-      { type: 'fix', text: 'Import: Tradovate- och TopstepX/ProjectX-parsrarna sparade alltid pnl:null – de räknade ut en price-diff internt bara för att avgöra W/L/BE, men skrev aldrig ut den som dollar-P&L på traden. Båda parsrarna räknar nu ut faktiskt dollar-P&L via instrumentets point value (t.ex. $2/point för MNQ), med stöd för råa kontraktskoder som MNQU6/MYMM6 (månadsbokstav + årssiffra strippas vid uppslag mot FUTURES_SPECS).' },
-      { type: 'fix', text: 'Import: ingen av de fem parsrarna plockade ut klockslag ur sina timestamp-fält – bara datum, via formatDateStr(). Varken entry-tid eller Exit tid sparades därför någonsin för importerade trades, oavsett plattform. Ny formatTimeStr()-hjälpfunktion extraherar nu HH:MM, och alla fem parsrar sätter time/exit_time. handleImport() sparade dessutom inte t.exit_time till custom_data ens i fall parsern hade satt det – fixat i samma veva.' },
+      { type: 'fix', text: 'Import: Tradovate- och TopstepX/ProjectX-parsrarna sparade alltid pnl:null – de räknade ut en price-diff internt bara för att avgöra W/L/BE, men skrev aldrig ut den som dollar-P&L på traden. Det gjorde att v2.1.8:s R-kolumn-fallback inte hade något att visa för dessa två plattformar trots fixen. Båda parsrarna räknar nu ut faktiskt dollar-P&L via instrumentets point value (t.ex. $2/point för MNQ), med stöd för råa kontraktskoder som MNQU6/MYMM6 (månadsbokstav + årssiffra strippas vid uppslag mot FUTURES_SPECS).' },
     ]
   },
   {
     version: 'v2.1.8',
-    date: '2026-07-18',
+    date: '2026-07-21',
     entries: [
-      { type: 'fix', text: 'Journal: v2.1.7 la bara till en "Exit datum"-kolumn i tabellen – Exit tid, Faktisk exit och egna fält syntes fortfarande inte där (bara i CSV/popup). Tabellen visar nu även dessa, med samma dynamiska logik som CSV-exporten (plockar upp alla egna fält som förekommer i datan).' },
-      { type: 'fix', text: 'Journal: R-värdet kunde nollställas/bli fel när en befintlig trade redigerades och sparades utan att fälten rördes. Orsak: startEdit() räknade ut R baserat på det GAMLA formulär-state:t (`{...form}`) istället för den nyss inlästa tradens data – klassisk stale-closure-bugg, eftersom React inte hunnit applicera setForm() förrän raden efter kördes. R räknas nu på den faktiska inlästa tradens värden.' },
+      { type: 'fix', text: 'Journal: importerade trades (Import.jsx, result: null) visade "—" i R-kolumnen både i tabellen och detaljvyn eftersom futures-trades saknar en pålitlig fast dollarrisk att räkna R ifrån (kontraktsbaserad risk är "trubbig" jämfört med FX). Tillfällig lösning: R-kolumnen faller nu tillbaka på det importerade dollar-P&L:et (custom_data._imported_pnl) när result saknas, istället för att visa en halvbra/felaktig R-approximation. Riktig R-beräkning väntar på beslut om SL-komplettering eller en broker/prop firm-koppling (MCP) som kan ge exakt riskdata per trade.' },
     ]
   },
   {
     version: 'v2.1.7',
-    date: '2026-07-18',
+    date: '2026-07-21',
     entries: [
-      { type: 'fix', text: 'Journal: Exit datum, Exit tid, Faktisk exit och egna fält saknades i journal-tabellen och i CSV-exporten – de sparas i custom_data (JSON) men lästes bara ut i popup-rutan, inte i listan/exporten. Journal-tabellen visar nu en "Exit datum"-kolumn, och CSV-exporten är gjord dynamisk: den plockar automatiskt upp exit-fälten och alla egna fält som förekommer i datan, oavsett hur många en användare lagt till.' },
+      { type: 'fix', text: 'Journal: portat main v2.1.8 hit – tabellen visar nu även Exit tid och Faktisk exit (utöver Exit datum), och alla egna fält som förekommer i datan, med samma dynamiska logik som CSV-exporten.' },
+      { type: 'fix', text: 'Journal: R-värdet kunde nollställas/bli fel när en befintlig trade redigerades och sparades utan att fälten rördes (stale-closure-bugg i startEdit(), portat från main v2.1.8).' },
+      { type: 'infra', text: 'Staging synkad med main igen på Journal.jsx. Developer-menyn (ChatGPTs område) rörd inte alls.' },
     ]
   },
   {
     version: 'v2.1.6',
-    date: '2026-07-08',
+    date: '2026-07-18',
     entries: [
-      { type: 'fix', text: 'Admin: unreadBroadcast-badgen (Administration/Profil i sidomenyn) rensades inte när admin publicerade ett eget broadcast-meddelande, eftersom ingen message_reads-rad skapades för admin själv. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering (både nytt meddelande och publicering av sparat utkast) och triggar refreshUnread().' },
+      { type: 'feature', text: 'Ny "Developer"-meny (admin-only, under Roadmap) – grundstruktur för projekthantering av Vision/TradeLog/FM Coach: Overview, Vision Blueprint, Architecture, Kanban, Roadmap, Schemas, Decision Log, Releases, Technical Debt och Ideas. Allt lagras i riktiga databastabeller (developer_projects, developer_components, developer_tasks, developer_milestones, developer_decisions, developer_releases, developer_technical_debt, developer_ideas, developer_documents) i DEV-Supabase – inga hårdkodade demo-kort. Admin-only RLS, timestamps, sortering, status och versionsfält på alla tabeller. Byggd som scaffold åt ChatGPT/Vision-utvecklingen att jobba vidare i. DEV-only tills vidare, rörs inte i PROD.' },
     ]
   },
   {
     version: 'v2.1.5',
-    date: '2026-07-08',
+    date: '2026-07-18',
     entries: [
-      { type: 'feature', text: 'Ovillkorlig STAGING-varningsbanner (rand-randigt orange, alltid överst, på alla sidor inklusive login) som visas när appen pratar mot en annan databas än PROD. Byggd efter att Henrik loggade in på den nya staging-workern och inte kunde se någon skillnad mot skarp miljö – verklig risk att blanda ihop dem. Baseras på faktisk Supabase-URL, inte Worker-namn/domän (som kan vara missvisande).' },
-      { type: 'infra', text: 'Staging-miljö klar: separat Cloudflare Worker (smc-trading-journal-staging) kopplad till staging-branchen, Build variables satta mot DEV-projektet (zmtpgnnqtkkdsrswhrzk).' },
+      { type: 'fix', text: 'Journal: Exit datum, Exit tid, Faktisk exit och egna fält saknades i journal-tabellen och i CSV-exporten – de sparas i custom_data (JSON) men lästes bara ut i popup-rutan, inte i listan/exporten. Journal-tabellen visar nu en "Exit datum"-kolumn, och CSV-exporten är gjord dynamisk: den plockar automatiskt upp exit-fälten och alla egna fält som förekommer i datan. Synkad hit från main (där den heter v2.1.7).' },
+      { type: 'infra', text: 'Staging fullt synkad med main igen: unreadBroadcast-fixen (main v2.1.6) och denna Journal-fix (main v2.1.7) är nu båda med här.' },
     ]
   },
   {
     version: 'v2.1.4',
     date: '2026-07-07',
     entries: [
-      { type: 'infra', text: 'Grund för riktig staging-miljö: src/lib/supabase.js läser nu Supabase-URL/nyckel från miljövariabler (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY) med säker fallback till hårdkodade PROD-värden – prod påverkas inte om inget konfigureras. Ny branch "staging" skapad från main.' },
+      { type: 'infra', text: 'Grund för riktig staging-miljö: src/lib/supabase.js läser nu Supabase-URL/nyckel från miljövariabler (VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY) med säker fallback till hårdkodade PROD-värden. Ny branch "staging" skapad från main.' },
+      { type: 'feature', text: 'Ovillkorlig STAGING-varningsbanner (rand-randigt orange, alltid överst) som visas när appen pratar mot en annan databas än PROD, baserat på faktisk Supabase-URL.' },
+      { type: 'fix', text: 'Admin: unreadBroadcast-badgen rensades inte när admin publicerade ett eget broadcast-meddelande. BroadcastTab markerar nu meddelandet som läst för admin direkt vid publicering.' },
     ]
   },
   {
@@ -97,7 +162,7 @@ const CHANGELOG = [
     version: 'v2.1.0',
     date: '2026-07-07',
     entries: [
-      { type: 'infra', text: '🚀 PROD CUTOVER. v1.9.9 (journal.smctrading.se, main-branchen) skrotad – ingen hade riktiga användare. Nuvarande Supabase-projekt qmmpxupsxdouvoqgvgri (all verklig testdata, journal, imports) befordras till permanent produktionsdatabas. Gamla PROD-projektet zmtpgnnqtkkdsrswhrzk (identiskt schema, bara Kanban-data) blir istället den nya Dev-sandlådan framöver – ingen kostnad för Supabase Branching (kräver Pro-plan) behövdes, rollerna byttes bara.' },
+      { type: 'infra', text: '🚀 PROD CUTOVER. v1.9.9 (journal.smctrading.se, main-branchen) skrotad – ingen hade riktiga användare. Nuvarande Supabase-projekt qmmpxupsxdouvoqgvgri (all verklig testdata, journal, imports) befordras till permanent produktionsdatabas. Gamla PROD-projektet zmtpgnnqtkkdsrswhrzk (identiskt schema, bara Kanban-data) blir istället den nya Dev-sandlådan framover – ingen kostnad för Supabase Branching (kräver Pro-plan) behövdes, rollerna bytte bara.' },
       { type: 'infra', text: 'Kanban-board (roadmapTasks) migrerad från gamla PROD till nya PROD under rätt admin-konto (a55874aa…, samma som redan användes för branding-inställningar).' },
       { type: 'fix', text: 'AuthPage: redirectTo/emailRedirectTo för lösenordsåterställning och kontobekräftelse pekade på dev-Workerns egen URL – uppdaterat till journal.smctrading.se.' },
       { type: 'infra', text: 'DNS-hanteringen för smctrading.se flyttad från Simply.com-namnservrar till Cloudflare (Free plan) för att kunna använda Custom Domains med giltigt SSL. journal.smctrading.se kopplad som Custom Domain mot Workern. Supabase Auth URL Configuration uppdaterad. Backup-secreten (SUPABASE_DB_URL) korrigerad till att peka mot rätt projekt (qmmpxupsxdouvoqgvgri) efter att ha upptäckts peka fel under uppsättningen.' },
