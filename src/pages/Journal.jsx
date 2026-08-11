@@ -293,10 +293,6 @@ export default function Journal() {
     setLoading(false)
   }
 
-  // Samma logik som CSV-exporten: plockar upp alla icke-interna (ej _-prefixade)
-  // nycklar i custom_data across samtliga trades, så journal-tabellen visar
-  // Exit tid, Faktisk exit och ALLA egna fält som förekommer i datan – inte
-  // bara de som råkar vara konfigurerade i det aktuella formuläret.
   const customColumnKeys = useMemo(() => {
     const set = new Set()
     trades.forEach(t => {
@@ -455,12 +451,6 @@ export default function Journal() {
     }
     setForm(newForm)
     formRef.current?.scrollIntoView({ behavior: 'smooth' })
-    // OBS: måste räkna R på newForm (den nyss inlästa tradens data), inte på
-    // det gamla `form`-state:t – setForm() ovan har inte hunnit appliceras
-    // än när denna rad körs (samma render-closure), så {...form} pekade
-    // tidigare på FÖREGÅENDE trades/tomma formulärets värden. Det gjorde
-    // att R kunde bli null/fel och sedan sparas över det korrekta värdet
-    // om användaren tryckte Spara utan att röra några fält.
     const { r, usd } = computeRValues(newForm, cd._scaleIns || [], cd._targets || [])
     setCalcR(r); setCalcUSD(usd)
   }
@@ -593,15 +583,17 @@ export default function Journal() {
         </div>
       )
       case 'r_display': return calcR !== null ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>R Auto</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: rColor }}>{calcR > 0 ? '+' : ''}{calcR.toFixed(2)}R</div>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcR >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>R Auto</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: rColor }}>{calcR > 0 ? '+' : ''}{calcR.toFixed(2)}R</div>
           </div>
-          {calcUSD !== null && <div style={{ borderLeft: '1px solid var(--border2)', paddingLeft: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>P&L</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: calcUSD >= 0 ? 'var(--green)' : 'var(--red)' }}>{calcUSD >= 0 ? '+' : ''}${Math.abs(calcUSD).toFixed(2)}</div>
-          </div>}
+          {calcUSD !== null && (
+            <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcUSD >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>P&L</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: calcUSD >= 0 ? 'var(--green)' : 'var(--red)' }}>{calcUSD >= 0 ? '+' : ''}${Math.abs(calcUSD).toFixed(2)}</div>
+            </div>
+          )}
         </div>
       ) : null
       case 'risk_pct': return (
@@ -741,7 +733,7 @@ export default function Journal() {
                   </select>
                   <button type="button" className="btn btn-primary btn-sm" onClick={addCustomField}>+</button>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>Dra ⠿⠿-handtagen för att flytta fält. Stäng Anpassa när du är klar.</div>
+                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>Dra ⠠⠠-handtagen för att flytta fält. Stäng Anpassa när du är klar.</div>
               </div>
             )}
 
@@ -764,7 +756,7 @@ export default function Journal() {
                           >
                             {showFieldMgr && hint === 'before' && <div style={{ position: 'absolute', top: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />}
                             {showFieldMgr && hint === 'after' && <div style={{ position: 'absolute', bottom: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />}
-                            {showFieldMgr && <div style={{ position: 'absolute', top: 0, right: 2, zIndex: 5, color: 'var(--text4)', fontSize: 12, cursor: 'grab', opacity: 0.5, userSelect: 'none', lineHeight: 1 }} title="Dra för att flytta">⠿⠿</div>}
+                            {showFieldMgr && <div style={{ position: 'absolute', top: 0, right: 2, zIndex: 5, color: 'var(--text4)', fontSize: 12, cursor: 'grab', opacity: 0.5, userSelect: 'none', lineHeight: 1 }} title="Dra för att flytta">⠠⠠</div>}
                             {content}
                           </div>
                         )
