@@ -321,7 +321,8 @@ const PLATFORMS = [
 ]
 
 export default function Import() {
-  const { user, userSettings, saveSettings } = useAuth()
+  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const effectiveUserId = impersonating?.id ?? user?.id
   const [platform, setPlatform] = useState(null)
   const [parsed, setParsed] = useState(null)
   const [parseError, setParseError] = useState('')
@@ -331,6 +332,29 @@ export default function Import() {
   const [strategy, setStrategy] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
+
+  // ── Farlig zon: radera alla trades (admin-impersonation-medveten) ───────
+  const [dangerOpen, setDangerOpen] = useState(false)
+  const [dangerCount, setDangerCount] = useState(null)
+  const [dangerConfirmText, setDangerConfirmText] = useState('')
+  const [dangerDeleting, setDangerDeleting] = useState(false)
+  const [dangerResult, setDangerResult] = useState(null)
+
+  async function openDangerZone() {
+    setDangerOpen(true); setDangerResult(null); setDangerConfirmText('')
+    const { count } = await sb.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', effectiveUserId)
+    setDangerCount(count ?? 0)
+  }
+
+  async function handleDeleteAll() {
+    if (dangerConfirmText !== 'RADERA' || !effectiveUserId) return
+    setDangerDeleting(true)
+    const { error, count } = await sb.from('trades').delete({ count: 'exact' }).eq('user_id', effectiveUserId)
+    setDangerDeleting(false)
+    if (error) { setDangerResult({ error: error.message }); return }
+    setDangerResult({ deleted: count ?? dangerCount })
+    setDangerCount(0)
+  }
 
   // ── FundedNext (API-import) ──────────────────────────────────────────────
   const [fnToken, setFnToken] = useState('')
@@ -392,13 +416,13 @@ export default function Import() {
   function toggleRow(i) { setSelected(s=>s.includes(i)?s.filter(x=>x!==i):[...s,i]) }
 
   async function handleImport() {
-    if (!parsed || !selected.length || !user) return
+    if (!parsed || !selected.length || !effectiveUserId) return
     setImporting(true); setImportResult(null)
     let ok=0,skip=0,fail=0
     for (const t of selected.map(i=>parsed[i])) {
       if (t._duplicate) { skip++; continue } // extra säkerhetsnät, borde redan vara avmarkerat
       const trade = {
-        user_id: user.id,
+        user_id: effectiveUserId,
         date: t.date || new Date().toISOString().split('T')[0],
         time: t.time || null,
         symbol: t.symbol||null, direction: t.direction||null,
@@ -438,6 +462,45 @@ export default function Import() {
     <div style={{ flex:1 }}>
       <Topbar title="Import" subtitle="Importera trades från externa plattformar" />
       <div className="page-content" style={{ maxWidth:900 }}>
+
+        <div className="card" style={{ marginBottom:20, border:'1px solid rgba(239,68,68,0.35)' }}>
+          <div className="card-header" onClick={()=>dangerOpen?setDangerOpen(false):openDangerZone()} style={{ cursor:'pointer' }}>
+            <div className="card-title" style={{ color:'var(--red)' }}>⚠ Farlig zon{impersonating ? ` – raderar för ${impersonating.email}` : ''}</div>
+            <span style={{ fontSize:12, color:'var(--text4)' }}>{dangerOpen ? 'Dölj ▲' : 'Visa ▼'}</span>
+          </div>
+          {dangerOpen && (
+            <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              {dangerResult ? (
+                dangerResult.error
+                  ? <div style={{ color:'var(--red)', fontSize:13 }}>⚠ {dangerResult.error}</div>
+                  : <div style={{ color:'var(--green)', fontSize:13, fontWeight:700 }}>✅ {dangerResult.deleted} trades raderade.</div>
+              ) : (
+                <>
+                  <div style={{ fontSize:13, color:'var(--text2)' }}>
+                    {dangerCount === null ? 'Räknar…' : (
+                      dangerCount === 0
+                        ? 'Inga trades att radera.'
+                        : <>Detta raderar <strong style={{ color:'var(--red)' }}>alla {dangerCount} trades</strong> {impersonating ? `för ${impersonating.email}` : 'på ditt konto'} permanent. <strong>Går inte att ångra.</strong></>
+                    )}
+                  </div>
+                  {dangerCount > 0 && (
+                    <>
+                      <div>
+                        <span style={lbl}>Skriv RADERA för att bekräfta</span>
+                        <input className="form-control" style={{ maxWidth:220 }} value={dangerConfirmText} onChange={e=>setDangerConfirmText(e.target.value)} placeholder="RADERA" />
+                      </div>
+                      <button className="btn" disabled={dangerConfirmText!=='RADERA'||dangerDeleting}
+                        onClick={handleDeleteAll}
+                        style={{ width:'fit-content', background:dangerConfirmText==='RADERA'?'var(--red)':'var(--bg3)', color:dangerConfirmText==='RADERA'?'#fff':'var(--text4)', border:'none' }}>
+                        {dangerDeleting?'Raderar…':`🗑 Radera alla ${dangerCount} trades`}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="card" style={{ marginBottom:20 }}>
           <div className="card-header">
