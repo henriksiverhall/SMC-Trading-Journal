@@ -512,27 +512,10 @@ input[type="time"] {
   display: flex;
   flex-direction: column;
 }
-/* v2.3.3: widgets vars innehåll glömde height:100% på sitt .card-element
-   (t.ex. Operatör-widgeten) fyllde bara ut sin naturliga innehållshöjd
-   istället för hela den tilldelade grid-cellen. Det gjorde att två widgets
-   med EXAKT samma antal rader (samma cellhöjd, samma resize-handtag-position)
-   ändå fick olika visuell kant-höjd – bara vissa kort "sträckte sig hela
-   vägen ner". Tvingar nu ALLTID widgetens direkta rot-element att fylla
-   hela cellen, oavsett om enskilda widget-definitioner kom ihåg
-   height:100% själva eller inte. */
 .widget-grid-item-inner > * {
   flex: 1;
   min-height: 0;
 }
-/* v2.3.5: .card i sig var inte display:flex, så dess EGNA barn (card-header +
-   card-body, eller header + en rå tabell-wrapper som i Strategi-breakdown)
-   stod kvar i vanligt block-flöde med sin naturliga innehållshöjd. <table>
-   vägrar krympa under sin innehållshöjd även när en förfader har min-height:0
-   – för widgets som saknar en flex:1-krympbar card-body (bara header+tabell)
-   kunde kortet därför bli TALLARE än sin tilldelade grid-cell och sticka ut
-   förbi resize-handtaget, medan andra widgets (med riktig card-body) krympte
-   korrekt. Gör .card till en egen flex-kolumn och låt dess sista/innehålls-
-   del (allt utom card-header) krympa och scrolla internt istället. */
 .widget-grid-item-inner > .card {
   display: flex;
   flex-direction: column;
@@ -542,17 +525,6 @@ input[type="time"] {
   min-height: 0;
   overflow-y: auto;
 }
-/* v2.3.6: flera Analytics-widgets (Equity Curve, MFE/MAE, RR-optimerare,
-   AI-analys) har ett kvarlämnat "style={{ marginBottom: 16 }}" på sitt
-   rot-.card-element – ett arv från INNAN griden fanns, då de låg staplade
-   som vanliga syskon-element och behövde ett eget mellanrum. Nu när
-   react-grid-layout sköter mellanrummet självt (margin=[16,16] på griden)
-   äter den gamla inline-marginen istället upp 16px av widgetens EGEN
-   tilldelade cellhöjd, så kortets synliga kant slutar 16px FÖRE
-   resize-handtaget – exakt det som gjorde att vissa kort verkade "linjera
-   fel" jämfört med kort utan den gamla marginalen (t.ex. Strategi-
-   breakdown, som aldrig hade den). !important krävs eftersom inline style
-   annars alltid vinner över en vanlig CSS-klass. */
 .widget-grid-item-inner > .card {
   margin-bottom: 0 !important;
 }
@@ -630,7 +602,7 @@ input[type="time"] {
    Fem flikar (Användare/Support/Meddelanden/Branding/System) fick plats på
    desktop men gick ut till höger på mobil eftersom raden bara var display:flex
    utan wrap eller scroll. En hård radbrytning till 2 rader ser skräpigt ut med
-   ojämnt antal flikar per rad – swipe-bar rad är renare mobilmönster. */
+   ojamt antal flikar per rad – swipe-bar rad är renare mobilmönster. */
 .admin-tabs {
   display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border);
 }
@@ -658,13 +630,6 @@ input[type="time"] {
 
 .journal-layout { display: grid; grid-template-columns: clamp(420px, 27vw, 520px) 1fr; gap: 20px; align-items: start; }
 .journal-layout > * { min-width: 0; }
-/* .journal-form-card SAKNADE min-width:0 – som grid-item i .journal-layout fick
-   den default min-width:auto (= sitt innehålls min-content-bredd). Om NÅGOT
-   innehåll i formuläret (t.ex. en lång placeholder-text eller ett långt
-   dropdown-alternativ) hade ett brett min-content, vägrade hela kortet
-   krympa under det, busta ut ur sin 1fr-kolumn och klipptes av body:s
-   overflow-x:hidden – vilket exakt matchade symptomet "Datum/Tid/Exit-fälten
-   försvinner ut till höger" även efter att fälten själva fixats. */
 .journal-form-card { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; min-width: 0; }
 
 @media (max-width: 768px) {
@@ -729,17 +694,12 @@ input[type="time"] {
 
   .row-2col, .row-3col, .row-5col { grid-template-columns: 1fr !important; gap: 10px !important; }
 
-  /* .drag-grid kolumn-låsning på mobil hanteras nu av react-grid-layout självt
-     (xs/xxs-breakpoints = 1 kolumn, isDraggable/isResizable=false i DragGrid.jsx) */
-
   .welcome-clocks-wrap { display: none !important; }
 
   .checklist-header { flex-direction: column; align-items: stretch !important; gap: 8px; }
   .checklist-header-left, .checklist-header-right { width: 100%; }
   .checklist-header-right { justify-content: flex-start !important; }
 
-  /* Admin-flikar: swipe-bar istället för att sticka ut till höger eller
-     tvinga fram en oregelbunden extra rad. */
   .admin-tabs {
     overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
     scrollbar-width: none; padding-bottom: 2px;
