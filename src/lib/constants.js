@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.3.7'
+export const APP_VERSION = 'v2.3.8'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 
 export const YAHOO_SYMBOL_MAP = {
@@ -56,4 +56,26 @@ export function formatR(r) {
 export function formatDate(d) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// ── AI-analys – admin-redigerbar prompt-mall ──────────────────────────────────
+// Standardmallen som ersätter den tidigare hårdkodade prompten i Analytics.jsx.
+// Admin kan skriva om den via Admin → AI-analys (sparas globalt på admin-kontot,
+// läses av alla användare på samma sätt som branding-inställningarna).
+export const DEFAULT_AI_PROMPT_TEMPLATE = `Du är en erfaren trading coach. Analysera dessa tradingstatistik och ge konkreta råd på svenska:
+
+Antal trades: {trades} ({wins} vinster, {losses} förluster)
+Win Rate: {winRate}%
+Total R: {totalR}R
+Profit Factor: {profitFactor}
+Strategier: {strategies}
+Senaste 5 trades: {recentTrades}
+
+Ge 3 konkreta förbättringsförslag. Var specifik och direkt.`
+
+// Ersätter {placeholder}-taggar i mallen med faktiska värden. Okända taggar
+// lämnas orörda (istället för att tas bort) så ett stavfel i admin-mallen
+// syns tydligt i själva prompten snarare än att tyst försvinna.
+export function fillAiPromptTemplate(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => (vars[key] != null ? String(vars[key]) : match))
 }
