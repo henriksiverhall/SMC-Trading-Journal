@@ -593,15 +593,17 @@ export default function Journal() {
         </div>
       )
       case 'r_display': return calcR !== null ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border2)' }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>R Auto</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700, color: rColor }}>{calcR > 0 ? '+' : ''}{calcR.toFixed(2)}R</div>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcR >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>R Auto</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: rColor }}>{calcR > 0 ? '+' : ''}{calcR.toFixed(2)}R</div>
           </div>
-          {calcUSD !== null && <div style={{ borderLeft: '1px solid var(--border2)', paddingLeft: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>P&L</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 600, color: calcUSD >= 0 ? 'var(--green)' : 'var(--red)' }}>{calcUSD >= 0 ? '+' : ''}${Math.abs(calcUSD).toFixed(2)}</div>
-          </div>}
+          {calcUSD !== null && (
+            <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcUSD >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>P&L</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: calcUSD >= 0 ? 'var(--green)' : 'var(--red)' }}>{calcUSD >= 0 ? '+' : ''}${Math.abs(calcUSD).toFixed(2)}</div>
+            </div>
+          )}
         </div>
       ) : null
       case 'risk_pct': return (
