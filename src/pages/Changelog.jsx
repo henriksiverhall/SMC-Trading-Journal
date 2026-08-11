@@ -2,6 +2,27 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.7',
+    date: '2026-08-11',
+    entries: [
+      { type: 'fix', text: 'Journal: R/$ i formulärheadern hade ihoptryckt design – en delad box med en tunn vertikal divider, olika font-storlek på R (20px) och P&L (16px). Ersatt med två separata, tydligt separerade kort med matchande gröna/röda borders baserat på tecken (+/-), och samma font-storlek (22px) på båda värdena för konsekvent visuell hierarki.' },
+    ]
+  },
+  {
+    version: 'v2.3.6',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Flera Analytics-widgets (Equity Curve, MFE/MAE, RR-optimerare, AI-analys) hade ett kvarlämnat inline style={{marginBottom:16}} på sitt rot-.card – ett arv från innan griden fanns, då de låg staplade som vanliga syskon-element. Det åt upp 16px av deras tilldelade cellhöjd, så deras synliga kant slutade 16px FÖRE resize-handtaget – motsatt fel mot det som redan fixades för Strategi-breakdown i v2.3.5. margin-bottom:0 !important på alla grid-widget-kort löser det slutgiltigt.' },
+    ]
+  },
+  {
+    version: 'v2.3.5',
+    date: '2026-08-10',
+    entries: [
+      { type: 'fix', text: 'Strategi-breakdown (och andra widgets med bara header+rå-tabell, ingen card-body) kunde bli TALLARE än sin tilldelade grid-cell och sticka ut förbi resize-handtaget, eftersom en rå &lt;table&gt; vägrar krympa under sin innehållshöjd trots min-height:0 på förfäder. .card görs nu till en egen flex-kolumn där allt utom card-header krymper och scrollar internt istället.' },
+    ]
+  },
+  {
     version: 'v2.3.4',
     date: '2026-08-10',
     entries: [
