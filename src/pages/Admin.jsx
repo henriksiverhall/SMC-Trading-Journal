@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { WORKER_URL } from '../lib/constants'
+import { WORKER_URL, DEFAULT_AI_PROMPT_TEMPLATE } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
 function formatTime(iso) {
@@ -577,6 +577,7 @@ export default function Admin() {
     { id: 'support',   label: unreadInbox > 0 ? `🎫 Support (${unreadInbox} ny)` : '🎫 Support' },
     { id: 'broadcast', label: '📢 Meddelanden' },
     { id: 'branding',  label: '🖼 Branding' },
+    { id: 'ai',        label: '🤖 AI-analys' },
     { id: 'system',    label: '⚙️ System' },
   ]
 
@@ -604,6 +605,7 @@ export default function Admin() {
         {tab === 'support'   && <SupportTab adminId={user?.id} />}
         {tab === 'broadcast' && <BroadcastTab adminId={user?.id} />}
         {tab === 'branding'  && <BrandingTab adminId={user?.id} />}
+        {tab === 'ai'        && <AiPromptTab />}
         {tab === 'system'    && <SystemTab />}
       </div>
     </div>
@@ -701,6 +703,77 @@ function BrandingTab({ adminId }) {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── AiPromptTab ─────────────────────────────────────────────────────────────
+// Gör AI-analysens prompt (tidigare hårdkodad i Analytics.jsx) redigerbar
+// av admin. Sparas globalt på admin-kontots egna userSettings (samma mönster
+// som BrandingTab ovan) – alla användares Analytics-sida läser samma mall,
+// eftersom AI-coachningen ska vara konsekvent oavsett vem som klickar
+// "Analysera", inte en per-användare-inställning.
+const AI_PROMPT_PLACEHOLDERS = [
+  ['{trades}', 'Antal trades med resultat'],
+  ['{wins}', 'Antal vinster'],
+  ['{losses}', 'Antal förluster'],
+  ['{winRate}', 'Win rate i procent (utan %-tecken)'],
+  ['{totalR}', 'Totalt R, summerat'],
+  ['{profitFactor}', 'Profit factor'],
+  ['{strategies}', 'Kommaseparerad lista av strategier'],
+  ['{recentTrades}', 'Kort sammanfattning av senaste 5 trades'],
+]
+
+function AiPromptTab() {
+  const { userSettings, saveSettings } = useAuth()
+  const [template, setTemplate] = useState(DEFAULT_AI_PROMPT_TEMPLATE)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (userSettings?.ai_prompt_template) setTemplate(userSettings.ai_prompt_template)
+  }, [userSettings])
+
+  async function handleSave() {
+    await saveSettings({ ai_prompt_template: template })
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+  function handleReset() { setTemplate(DEFAULT_AI_PROMPT_TEMPLATE) }
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">🤖 AI-analys – prompt-mall</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={handleReset}>↺ Återställ till standard</button>
+            <button className="btn btn-primary btn-sm" onClick={handleSave}>{saved ? '✓ Sparat' : 'Spara'}</button>
+          </div>
+        </div>
+        <div className="card-body">
+          <p style={{ fontSize: 12, color: 'var(--text4)', lineHeight: 1.6, marginBottom: 14 }}>
+            Prompten som skickas till Claude när en användare klickar "Analysera" i Analytics → AI-analys. Gäller globalt för alla användare, oavsett vem som är inloggad. Använd platshållarna nedan – de ersätts automatiskt med varje användares egna, faktiska statistik vid analystillfället.
+          </p>
+          <textarea
+            className="form-control"
+            rows={11}
+            value={template}
+            onChange={e => setTemplate(e.target.value)}
+            style={{ fontFamily: 'var(--mono)', fontSize: 12, resize: 'vertical', marginBottom: 16 }}
+          />
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Platshållare</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
+            {AI_PROMPT_PLACEHOLDERS.map(([ph, desc]) => (
+              <div key={ph} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12, padding: '6px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
+                <code style={{ background: 'var(--accent-dim)', color: 'var(--accent)', padding: '1px 6px', borderRadius: 4, fontFamily: 'var(--mono)', fontSize: 11, flexShrink: 0 }}>{ph}</code>
+                <span style={{ color: 'var(--text3)' }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 14 }}>
+            Skriver du en platshållare fel (t.ex. <code style={{ fontFamily: 'var(--mono)' }}>{'{winrate}'}</code> med liten bokstav) ersätts den inte – den syns kvar bokstavligt i prompten som skickas, så felstavningar upptäcks direkt vid test istället för att tyst falla bort.
           </div>
         </div>
       </div>
