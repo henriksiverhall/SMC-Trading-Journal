@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec } from '../lib/constants'
+import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec, DEFAULT_AI_PROMPT_TEMPLATE, fillAiPromptTemplate } from '../lib/constants'
 import { normalizeTrades, calcTradeSize } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
@@ -606,7 +606,19 @@ function AIAnalysis({ trades, aiEnabled }) {
   const [history, setHistory] = useState([])
   const [generatedAt, setGeneratedAt] = useState(null)
   const [expandedHistory, setExpandedHistory] = useState(new Set())
+  const [promptTemplate, setPromptTemplate] = useState(DEFAULT_AI_PROMPT_TEMPLATE)
   const loadedRef = useRef(false)
+  // Prompten är admin-redigerbar (Admin → 🤖 AI-analys) men gäller globalt för
+  // alla användare – sparas på admin-kontots egna userSettings, precis som
+  // branding-inställningarna (se App.jsx). Vanliga användare har ingen egen
+  // rätt att skriva dit, bara läsa. Faller tillbaka på standardmallen om
+  // admin aldrig sparat en egen, eller om hämtningen misslyckas.
+  useEffect(() => {
+    const ADMIN_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+    sb.from('user_settings').select('settings').eq('user_id', ADMIN_ID).single()
+      .then(({ data }) => { if (data?.settings?.ai_prompt_template) setPromptTemplate(data.settings.ai_prompt_template) })
+      .catch(() => {})
+  }, [])
   if (!aiEnabled) return null
   const withR = trades.filter(t => t.result != null)
   const wins = withR.filter(t => t.outcome === 'W')
@@ -627,7 +639,16 @@ function AIAnalysis({ trades, aiEnabled }) {
   const isCurrent = !!response && userSettings?.aiAnalysis?.fingerprint === fingerprint
   async function analyze() {
     setLoading(true)
-    const prompt = `Du är en erfaren trading coach. Analysera dessa tradingstatistik och ge konkreta råd på svenska:\n\nAntal trades: ${withR.length} (${wins.length} vinster, ${withR.filter(t => t.outcome === 'L').length} förluster)\nWin Rate: ${wr}%\nTotal R: ${totalR}R\nProfit Factor: ${pf}\nStrategier: ${[...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet'}\nSenaste 5 trades: ${withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', ')}\n\nGe 3 konkreta förbättringsförslag. Var specifik och direkt.`
+    const prompt = fillAiPromptTemplate(promptTemplate, {
+      trades: withR.length,
+      wins: wins.length,
+      losses: withR.filter(t => t.outcome === 'L').length,
+      winRate: wr,
+      totalR,
+      profitFactor: pf,
+      strategies: [...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet',
+      recentTrades: withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', '),
+    })
     try {
       const res = await fetch(`${WORKER_URL}/api/claude`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }) })
       const rawText = await res.text()
