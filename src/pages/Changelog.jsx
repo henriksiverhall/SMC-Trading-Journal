@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.9',
+    date: '2026-08-11',
+    entries: [
+      { type: 'feature', text: 'Import: ny källa "FundedNext (Futures/CFD)" – hämtar trades direkt via FundedNexts MCP-API istället för manuell CSV-export. Egen API-token sparas per användare under Profil → Integrationer. Dubbletter identifieras via FundedNexts unika ticket-ID och exkluderas automatiskt vid ny hämtning. R-värde saknas fortfarande i källdatan (ingen SL/TP från FundedNext) – estimeras nu istället automatiskt utifrån sparad kontostorlek/risk% och märks tydligt som uppskattat (inte verklig R) i journalen.' },
+      { type: 'infra', text: 'Ny Cloudflare Worker (tradelog-fundednext-dev) hanterar MCP-anropet och skrivningen till databasen JWT-skyddat – varje användares FundedNext-token används bara för att hämta det egna kontots trades.' },
+    ]
+  },
+  {
     version: 'v2.3.8',
     date: '2026-08-11',
     entries: [
