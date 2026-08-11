@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { sb } from '../lib/supabase'
+import { sb, SUPABASE_URL } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec, DEFAULT_AI_PROMPT_TEMPLATE, fillAiPromptTemplate } from '../lib/constants'
 import { normalizeTrades, calcTradeSize } from '../lib/tradeUtils'
@@ -614,7 +614,17 @@ function AIAnalysis({ trades, aiEnabled }) {
   // rätt att skriva dit, bara läsa. Faller tillbaka på standardmallen om
   // admin aldrig sparat en egen, eller om hämtningen misslyckas.
   useEffect(() => {
-    const ADMIN_ID = 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+    // Samma admin-konto (henrik.siverhall@gmail.com) har olika user_id i PROD
+    // (qmmpxupsxdouvoqgvgri) och staging/DEV (zmtpgnnqtkkdsrswhrzk) – separata
+    // Supabase-projekt, separata auth.users-tabeller. Ett hårdkodat enda ID
+    // (som branding-uppslaget i App.jsx historiskt använt) matchar bara ETT
+    // av projekten och faller tyst tillbaka på standardmallen i det andra.
+    // Väljer rätt ID utifrån vilken databas appen faktiskt är byggd mot,
+    // samma mönster som IS_STAGING-kollen i App.jsx.
+    const PROD_SUPABASE_HOST = 'qmmpxupsxdouvoqgvgri'
+    const ADMIN_ID = SUPABASE_URL.includes(PROD_SUPABASE_HOST)
+      ? 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+      : '9ed649b7-8ad8-4ba7-bc89-ec0efa566b9d'
     sb.from('user_settings').select('settings').eq('user_id', ADMIN_ID).single()
       .then(({ data }) => { if (data?.settings?.ai_prompt_template) setPromptTemplate(data.settings.ai_prompt_template) })
       .catch(() => {})
