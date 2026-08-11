@@ -1,5 +1,6 @@
-export const APP_VERSION = 'v2.3.8'
+export const APP_VERSION = 'v2.3.9'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
+export const FUNDEDNEXT_WORKER_URL = 'https://tradelog-fundednext-dev.henrik-siverhall.workers.dev'
 
 export const YAHOO_SYMBOL_MAP = {
   'NQ':'NQ=F','NQ1!':'NQ=F','MNQ':'NQ=F','ES':'ES=F','ES1!':'ES=F','MES':'ES=F',
