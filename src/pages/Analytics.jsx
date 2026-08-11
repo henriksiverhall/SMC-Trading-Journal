@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
-import { sb } from '../lib/supabase'
+import { sb, SUPABASE_URL } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec } from '../lib/constants'
+import { formatR, gradeColor, WORKER_URL, getYahooSymbol, getFuturesSpec, DEFAULT_AI_PROMPT_TEMPLATE, fillAiPromptTemplate } from '../lib/constants'
 import { normalizeTrades, calcTradeSize } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
@@ -394,8 +394,6 @@ function PsychWidget({ trades }) {
   )
 }
 
-// ── CustomFieldsWidget ─────────────────────────────────────────────────────────
-// Visar max 10 rader per fält. Fält med fler rader får en "Visa alla / Dra ihop"-knapp.
 function CustomFieldsWidget({ trades }) {
   const [expandedFields, setExpandedFields] = useState({})
 
@@ -606,17 +604,23 @@ function AIAnalysis({ trades, aiEnabled }) {
   const [history, setHistory] = useState([])
   const [generatedAt, setGeneratedAt] = useState(null)
   const [expandedHistory, setExpandedHistory] = useState(new Set())
+  const [promptTemplate, setPromptTemplate] = useState(DEFAULT_AI_PROMPT_TEMPLATE)
   const loadedRef = useRef(false)
+  useEffect(() => {
+    const PROD_SUPABASE_HOST = 'qmmpxupsxdouvoqgvgri'
+    const ADMIN_ID = SUPABASE_URL.includes(PROD_SUPABASE_HOST)
+      ? 'a55874aa-d36a-4d07-a40f-778b3a66d671'
+      : '9ed649b7-8ad8-4ba7-bc89-ec0efa566b9d'
+    sb.from('user_settings').select('settings').eq('user_id', ADMIN_ID).single()
+      .then(({ data }) => { if (data?.settings?.ai_prompt_template) setPromptTemplate(data.settings.ai_prompt_template) })
+      .catch(() => {})
+  }, [])
   if (!aiEnabled) return null
   const withR = trades.filter(t => t.result != null)
   const wins = withR.filter(t => t.outcome === 'W')
   const wr = withR.length ? (wins.length / withR.length * 100).toFixed(1) : 0
   const totalR = withR.reduce((a, t) => a + (t.result || 0), 0).toFixed(2)
   const pf = (() => { const winR = wins.reduce((a, t) => a + t.result, 0); const lossR = Math.abs(withR.filter(t => t.outcome === 'L').reduce((a, t) => a + t.result, 0)); return lossR > 0 ? (winR / lossR).toFixed(2) : '∞' })()
-  // v2.0.63: fingerprint byggs nu på ALLA trades (id+result+outcome), inte bara
-  // de med result!=null. Importerade trades saknar result (se Kanban
-  // dev_import_r_value1) men får ändå outcome satt – innan detta fix var de
-  // osynliga för fingerprinten så "✓ Aktuell" visades trots ny data.
   const fingerprint = trades.map(t => `${t.id}:${t.result}:${t.outcome}`).sort().join('|')
   useEffect(() => {
     if (loadedRef.current) return
@@ -627,7 +631,16 @@ function AIAnalysis({ trades, aiEnabled }) {
   const isCurrent = !!response && userSettings?.aiAnalysis?.fingerprint === fingerprint
   async function analyze() {
     setLoading(true)
-    const prompt = `Du är en erfaren trading coach. Analysera dessa tradingstatistik och ge konkreta råd på svenska:\n\nAntal trades: ${withR.length} (${wins.length} vinster, ${withR.filter(t => t.outcome === 'L').length} förluster)\nWin Rate: ${wr}%\nTotal R: ${totalR}R\nProfit Factor: ${pf}\nStrategier: ${[...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet'}\nSenaste 5 trades: ${withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', ')}\n\nGe 3 konkreta förbättringsförslag. Var specifik och direkt.`
+    const prompt = fillAiPromptTemplate(promptTemplate, {
+      trades: withR.length,
+      wins: wins.length,
+      losses: withR.filter(t => t.outcome === 'L').length,
+      winRate: wr,
+      totalR,
+      profitFactor: pf,
+      strategies: [...new Set(trades.map(t => t.strategy).filter(Boolean))].join(', ') || 'ej angivet',
+      recentTrades: withR.slice(0, 5).map(t => `${t.date} ${t.outcome} ${t.result?.toFixed(2)}R`).join(', '),
+    })
     try {
       const res = await fetch(`${WORKER_URL}/api/claude`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] }) })
       const rawText = await res.text()
