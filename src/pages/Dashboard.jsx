@@ -7,10 +7,6 @@ import Topbar from '../components/Topbar'
 import DragGrid from '../components/DragGrid'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
-// v2.3.4: tillfällig, tidsbegränsad notis om den ombyggda widget-griden
-// (v2.3.0–v2.3.3). Visas till och med END_DATE, eller tills användaren
-// stänger den (sparas per webbläsare via localStorage, inte i databasen –
-// medvetet enkelt eftersom detta bara behöver visas en gång per person).
 function GridUpdateNotice() {
   const STORAGE_KEY = 'tl_dismissed_grid_notice_v1'
   const END_DATE = '2026-08-24'
@@ -86,10 +82,6 @@ function sessionStatus(session, now) {
   return { isOpen, countdown: `${pad(hh)}:${pad(mm)}:${pad(ss)}` }
 }
 
-// ── HUD-remsa (ersätter analoga klockor, v2.0.58/59/60) ────────────────────────
-// Kompakta digitala kort med linjär progress-bar istället för klockvisare.
-// Wrappas i .welcome-clocks-wrap på anropsstället – befintlig mobil-döljning
-// (≤768px) fortsätter fungera oförändrat, ingen CSS-ändring krävdes där.
 function HudCard({ label, time, isOpen, sub, progress }) {
   return (
     <div className={`hud-card ${isOpen ? 'hud-open' : 'hud-closed'}`}>
@@ -112,9 +104,6 @@ function sessionProgressPct(cfg, now) {
   return Math.min(100, Math.max(0, ((curSecs - openSecs) / len) * 100))
 }
 
-// v2.0.60: Operatör-kortet ligger kvar till vänster, resten av HUD-korten
-// högerställs (justify-content: flex-end i egen flex-container) så de inte
-// klumpar ihop sig direkt intill hälsningen på breda skärmar.
 function HudStrip({ displayName }) {
   const [now, setNow] = useState(new Date())
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -150,7 +139,6 @@ function HudStrip({ displayName }) {
   )
 }
 
-// ── Kalender-widget ────────────────────────────────────────────────────────────
 function CalendarWidget({ onNavigate }) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
