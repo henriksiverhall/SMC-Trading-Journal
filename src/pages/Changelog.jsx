@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.3.8',
+    date: '2026-08-11',
+    entries: [
+      { type: 'feature', text: 'Admin → 🤖 AI-analys: ny flik där prompten som skickas till AI-coachen i Analytics blir redigerbar istället för hårdkodad i koden. Prompten sparas globalt (gäller alla användare, inte per-konto) och stöder platshållare ({trades}, {wins}, {losses}, {winRate}, {totalR}, {profitFactor}, {strategies}, {recentTrades}) som fylls i automatiskt med varje användares egen statistik vid analystillfället. Felstavade platshållare (t.ex. fel skiftläge) lämnas synligt orörda i prompten istället för att tyst försvinna, så fel upptäcks direkt.' },
+    ]
+  },
+  {
     version: 'v2.3.7',
     date: '2026-08-11',
     entries: [
