@@ -151,7 +151,7 @@ export default function DragGrid({ pageKey, widgets }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
         <button onClick={() => setShowManager(m => !m)} className="btn btn-ghost btn-sm"
           style={showManager ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>
-          {showManager ? '✕ Stäng redigering' : '⊞ Anpassa widgets'}
+          {showManager ? '✕ Stäng redigering' : '⊘ Anpassa widgets'}
         </button>
       </div>
 
@@ -210,7 +210,7 @@ export default function DragGrid({ pageKey, widgets }) {
       >
         {visible.map(w => (
           <div key={w.id} className="widget-grid-item">
-            {editMode && <div className="widget-drag-handle" title="Dra för att flytta">⠿⠿</div>}
+            {editMode && <div className="widget-drag-handle" title="Dra för att flytta">⠠⠠</div>}
             <div className="widget-grid-item-inner">{w.content}</div>
           </div>
         ))}
