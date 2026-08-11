@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { getFuturesSpec } from '../lib/constants'
+import { getFuturesSpec, FUNDEDNEXT_WORKER_URL } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
 // ── Parsers ───────────────────────────────────────────────────────────────────────────────
@@ -312,6 +312,7 @@ function formatTimeStr(raw) {
 }
 
 const PLATFORMS = [
+  { id: 'fundednext',  label: 'FundedNext (API)',        desc: 'Hämtas automatiskt via ditt sparade API-konto – ingen CSV behövs.', isApi: true },
   { id: 'topstepx',   label: 'TopstepX / ProjectX',      desc: 'TopStep, Bulenox, Alpha Futures m.fl. Orders → Export CSV.', accept: '.csv', parse: (text) => parseTopStepX(text) },
   { id: 'tv_backtest', label: 'TradingView Backtesting', desc: 'Strategy Tester → List of Trades → Export to CSV', accept: '.csv', parse: (text, filename) => parseTVBacktest(text, filename) },
   { id: 'tradovate',   label: 'Tradovate',               desc: 'Orders → Export CSV (Orders.csv). Används av FundedNext, Apex, Tradeify m.fl.', accept: '.csv', parse: (text) => parseTradovate(text) },
@@ -320,7 +321,7 @@ const PLATFORMS = [
 ]
 
 export default function Import() {
-  const { user } = useAuth()
+  const { user, userSettings, saveSettings } = useAuth()
   const [platform, setPlatform] = useState(null)
   const [parsed, setParsed] = useState(null)
   const [parseError, setParseError] = useState('')
@@ -330,6 +331,51 @@ export default function Import() {
   const [strategy, setStrategy] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
+
+  // ── FundedNext (API-import) ──────────────────────────────────────────────
+  const [fnToken, setFnToken] = useState('')
+  const [fnLoading, setFnLoading] = useState(false)
+  const [fnError, setFnError] = useState('')
+  const [fnNote, setFnNote] = useState('')
+  const fnSavedToken = userSettings?.fundednext?.token || ''
+
+  async function saveFnToken() {
+    if (!fnToken.trim()) return
+    await saveSettings({ fundednext: { ...(userSettings?.fundednext || {}), token: fnToken.trim() } })
+    setFnToken('')
+  }
+
+  async function forgetFnToken() {
+    await saveSettings({ fundednext: { ...(userSettings?.fundednext || {}), token: '' } })
+  }
+
+  async function fetchFundedNext() {
+    setFnLoading(true); setFnError(''); setFnNote(''); setParseError(''); setImportResult(null)
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      const res = await fetch(`${FUNDEDNEXT_WORKER_URL}/fetch`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) { setFnError(data.error || 'Kunde inte hämta trades från FundedNext.'); setFnLoading(false); return }
+      setFnNote(data.note || '')
+      const trades = (data.trades || []).map(t => ({
+        date: t.date, time: t.time, exit_date: t.exit_date, exit_time: t.exit_time,
+        symbol: t.symbol, direction: t.direction, entry: t.entry, actual_exit: t.actual_exit,
+        contracts: t.contracts, outcome: t.outcome, pnl: t.pnl,
+        _source: t.custom_data?._source || 'fundednext',
+        _fundednext_ticket: t._ticket,
+        _resultEstimate: t.result,
+        _rEstimated: t.custom_data?._r_estimated || false,
+        _duplicate: t._duplicate,
+      }))
+      setParsed(trades)
+      setSelected(trades.map((t, i) => i).filter(i => !trades[i]._duplicate))
+    } catch (e) {
+      setFnError('Nätverksfel mot importworkern: ' + e.message)
+    }
+    setFnLoading(false)
+  }
 
   function handleFile(file) {
     if (!file || !platform) return
@@ -350,13 +396,16 @@ export default function Import() {
     setImporting(true); setImportResult(null)
     let ok=0,skip=0,fail=0
     for (const t of selected.map(i=>parsed[i])) {
+      if (t._duplicate) { skip++; continue } // extra säkerhetsnät, borde redan vara avmarkerat
       const trade = {
         user_id: user.id,
         date: t.date || new Date().toISOString().split('T')[0],
         time: t.time || null,
         symbol: t.symbol||null, direction: t.direction||null,
         entry: t.entry||null, sl: t.sl||null, tp: t.tp||null,
-        outcome: t.outcome||null, result: null, strategy: strategy||null,
+        outcome: t.outcome||null,
+        result: t._resultEstimate != null ? t._resultEstimate : null,
+        strategy: strategy||null,
         notes: null, checklist_pct: 0,
         custom_data: {
           _imported: true, _source: t._source,
@@ -368,6 +417,8 @@ export default function Import() {
           ...(t._runup      ? {_runup:t._runup}            : {}),
           ...(t._drawdown   ? {_drawdown:t._drawdown}      : {}),
           ...(t._exitReason ? {_exitReason:t._exitReason}  : {}),
+          ...(t._fundednext_ticket ? {_fundednext_ticket:t._fundednext_ticket} : {}),
+          ...(t._rEstimated ? {_r_estimated:true, _r_source:'risk_pct_estimate'} : {}),
         },
       }
       const { error } = await sb.from('trades').insert(trade)
@@ -376,7 +427,10 @@ export default function Import() {
     setImporting(false); setImportResult({ok,skip,fail})
   }
 
-  function reset() { setPlatform(null);setParsed(null);setSelected([]);setParseError('');setImportResult(null);setStrategy('') }
+  function reset() {
+    setPlatform(null);setParsed(null);setSelected([]);setParseError('');setImportResult(null);setStrategy('')
+    setFnError('');setFnNote('');setFnToken('')
+  }
 
   const lbl = { fontSize:11, fontWeight:700, color:'var(--text4)', textTransform:'uppercase', letterSpacing:.5, marginBottom:4, display:'block' }
 
@@ -393,7 +447,7 @@ export default function Import() {
           <div className="card-body">
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
               {PLATFORMS.map(p => (
-                <button key={p.id} onClick={()=>{setPlatform(p);setParsed(null);setParseError('');setImportResult(null)}}
+                <button key={p.id} onClick={()=>{setPlatform(p);setParsed(null);setParseError('');setImportResult(null);setFnError('');setFnNote('')}}
                   style={{ background:platform?.id===p.id?'var(--accent-dim)':'var(--bg2)', border:`1px solid ${platform?.id===p.id?'rgba(0,212,170,0.5)':'var(--border)'}`, borderRadius:'var(--r2)', padding:'14px 16px', cursor:'pointer', textAlign:'left', fontFamily:'var(--font)' }}>
                   <div style={{ fontSize:13, fontWeight:700, color:platform?.id===p.id?'var(--accent)':'var(--text)', marginBottom:4 }}>{p.label}</div>
                   <div style={{ fontSize:11, color:'var(--text4)', lineHeight:1.5 }}>{p.desc}</div>
@@ -403,7 +457,34 @@ export default function Import() {
           </div>
         </div>
 
-        {platform && !parsed && (
+        {platform?.isApi && !parsed && (
+          <div className="card" style={{ marginBottom:20 }}>
+            <div className="card-header"><div className="card-title">2 · FundedNext-anslutning</div></div>
+            <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {fnSavedToken ? (
+                <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:13, color:'var(--text2)' }}>✅ API-token sparad.</span>
+                  <button className="btn btn-ghost btn-sm" onClick={forgetFnToken}>Glöm token</button>
+                  <button className="btn btn-primary" disabled={fnLoading} onClick={fetchFundedNext} style={{ marginLeft:'auto' }}>
+                    {fnLoading?'Hämtar…':'📥 Hämta trades från FundedNext'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <span style={lbl}>API-token (från FundedNext-dashboarden)</span>
+                    <input className="form-control" type="password" placeholder="Klistra in din personliga FundedNext-token" value={fnToken} onChange={e=>setFnToken(e.target.value)} style={{ maxWidth:420 }} />
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--text4)' }}>Token sparas krypterat kopplad till ditt konto och används bara för att hämta DINA egna trades.</div>
+                  <button className="btn btn-primary" disabled={!fnToken.trim()} onClick={saveFnToken} style={{ width:'fit-content' }}>Spara token</button>
+                </>
+              )}
+              {fnError && <div style={{ padding:'10px 14px', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r)', fontSize:13, color:'var(--red)' }}>⚠ {fnError}</div>}
+            </div>
+          </div>
+        )}
+
+        {platform && !platform.isApi && !parsed && (
           <div className="card" style={{ marginBottom:20 }}>
             <div className="card-header"><div className="card-title">2 · Ladda upp CSV-fil</div></div>
             <div className="card-body">
@@ -423,6 +504,11 @@ export default function Import() {
 
         {parsed && (
           <>
+            {fnNote && (
+              <div style={{ marginBottom:14, padding:'10px 14px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:'var(--r)', fontSize:12, color:'var(--text3)' }}>
+                ℹ {fnNote}
+              </div>
+            )}
             <div className="card" style={{ marginBottom:20 }}>
               <div className="card-header">
                 <div className="card-title">3 · Granska och välj trades ({selected.length} av {parsed.length} valda)</div>
@@ -436,20 +522,21 @@ export default function Import() {
                 <table className="journal-table">
                   <thead><tr>
                     <th style={{ width:36 }}><input type="checkbox" checked={selected.length===parsed.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} /></th>
-                    <th>Datum</th><th>Symbol</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Kontrakt</th><th>Utfall</th><th>P&amp;L</th>
+                    <th>Datum</th><th>Symbol</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Kontrakt</th><th>Utfall</th><th>P&amp;L</th>{platform?.isApi && <th>R (est.)</th>}
                   </tr></thead>
                   <tbody>
                     {parsed.map((t,i) => (
-                      <tr key={i} onClick={()=>toggleRow(i)} style={{ cursor:'pointer', opacity:selected.includes(i)?1:0.4 }}>
-                        <td onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selected.includes(i)} onChange={()=>toggleRow(i)} style={{ accentColor:'var(--accent)', cursor:'pointer' }} /></td>
+                      <tr key={i} onClick={()=>!t._duplicate && toggleRow(i)} style={{ cursor:t._duplicate?'default':'pointer', opacity:t._duplicate?0.35:(selected.includes(i)?1:0.4) }}>
+                        <td onClick={e=>e.stopPropagation()}><input type="checkbox" disabled={t._duplicate} checked={selected.includes(i)} onChange={()=>toggleRow(i)} style={{ accentColor:'var(--accent)', cursor:t._duplicate?'default':'pointer' }} /></td>
                         <td className="mono">{t.date}</td>
-                        <td><strong style={{ color:'var(--text)' }}>{t.symbol||'—'}</strong></td>
+                        <td><strong style={{ color:'var(--text)' }}>{t.symbol||'—'}</strong>{t._duplicate && <span style={{ fontSize:10, color:'var(--text4)', marginLeft:6 }}>(redan importerad)</span>}</td>
                         <td>{t.direction?<span className={`badge badge-${t.direction}`}>{t.direction}</span>:'—'}</td>
                         <td className="mono">{t.entry??'—'}</td>
                         <td className="mono">{t.actual_exit??'—'}</td>
                         <td className="mono">{t.contracts??'—'}</td>
                         <td>{t.outcome?<span className={`badge badge-${t.outcome}`}>{t.outcome}</span>:'—'}</td>
                         <td className={t.pnl>0?'r-pos':t.pnl<0?'r-neg':'r-neu'}>{t.pnl!=null?`${t.pnl>0?'+':''}$${Math.abs(t.pnl).toFixed(2)}`:'—'}</td>
+                        {platform?.isApi && <td className="mono" style={{ fontStyle:'italic', color:'var(--text4)' }}>{t._resultEstimate!=null?`~${t._resultEstimate>0?'+':''}${t._resultEstimate}R`:'—'}</td>}
                       </tr>
                     ))}
                   </tbody>
