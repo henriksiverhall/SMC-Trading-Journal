@@ -2,6 +2,20 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.3',
+    date: '2026-08-12',
+    entries: [
+      { type: 'feature', text: 'Journal: bulk-flytt av trades mellan konton – markera flera trades med kryssrutor (syns när fler än ett konto finns) och flytta dem till valfritt konto i ett klick. Löser sortering av gamla trades som loggades innan flera-konton-systemet fanns, t.ex. blandad Free/Paid-historik.' },
+    ]
+  },
+  {
+    version: 'v2.4.2',
+    date: '2026-08-12',
+    entries: [
+      { type: 'feature', text: 'Admin → Användare → Info-flik: ny "Per konto"-uppdelning (trades/Win Rate/Total R) när en användare har fler än ett trading-konto, utöver totalen över alla konton. Osynlig för användare med bara ett konto.' },
+    ]
+  },
+  {
     version: 'v2.4.1',
     date: '2026-08-12',
     entries: [
