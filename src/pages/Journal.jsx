@@ -171,9 +171,9 @@ export default function Journal() {
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
 
-  // Bulk-redigering av markerade trades (v2.4.5) – t.ex. för att sortera upp
-  // gamla trades som loggades innan flera-konton-systemet fanns, eller för
-  // att snabbrätta strategi/grade/känsla på flera trades i taget.
+  // Bulk-redigering av markerade trades (v2.4.6) – alla fält synliga som
+  // egna rader (ingen fält-väljare) så man slipper klicka i en dropdown för
+  // att se vad som går att sätta. Varje rad har sin egen Tillämpa-knapp.
   const BULK_FIELDS = [
     ...(accounts.length > 1 ? [{ id: 'account', label: 'Konto' }] : []),
     { id: 'strategy', label: 'Strategi' },
@@ -181,9 +181,8 @@ export default function Journal() {
     { id: 'emotion', label: 'Känsla' },
   ]
   const [selectedIds, setSelectedIds] = useState(new Set())
-  const [bulkField, setBulkField] = useState(BULK_FIELDS[0]?.id || 'strategy')
-  const [bulkValue, setBulkValue] = useState('')
-  const [bulkApplying, setBulkApplying] = useState(false)
+  const [bulkValues, setBulkValues] = useState({ account: '', strategy: '', grade: '', emotion: '' })
+  const [bulkApplyingField, setBulkApplyingField] = useState(null)
   const [bulkMsg, setBulkMsg] = useState('')
 
   function toggleSelected(id) {
@@ -192,13 +191,14 @@ export default function Journal() {
   function toggleSelectAll(ids) {
     setSelectedIds(prev => prev.size === ids.length ? new Set() : new Set(ids))
   }
-  function changeBulkField(f) { setBulkField(f); setBulkValue('') }
-  async function applyBulkEdit() {
-    if (!bulkValue || selectedIds.size === 0) return
-    setBulkApplying(true); setBulkMsg('')
-    const dbField = { account: 'account_id', strategy: 'strategy', grade: 'grade', emotion: 'emotion' }[bulkField]
-    const { error } = await sb.from('trades').update({ [dbField]: bulkValue }).in('id', [...selectedIds]).eq('user_id', effectiveUserId)
-    setBulkApplying(false)
+  function setBulkValue(fieldId, val) { setBulkValues(v => ({ ...v, [fieldId]: val })) }
+  async function applyBulkField(fieldId) {
+    const value = bulkValues[fieldId]
+    if (!value || selectedIds.size === 0) return
+    setBulkApplyingField(fieldId); setBulkMsg('')
+    const dbField = { account: 'account_id', strategy: 'strategy', grade: 'grade', emotion: 'emotion' }[fieldId]
+    const { error } = await sb.from('trades').update({ [dbField]: value }).in('id', [...selectedIds]).eq('user_id', effectiveUserId)
+    setBulkApplyingField(null)
     if (error) { setBulkMsg('Fel: ' + error.message); return }
     setBulkMsg('✓ Uppdaterat'); setTimeout(() => setBulkMsg(''), 1800)
     loadTrades()
@@ -879,38 +879,42 @@ export default function Journal() {
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
             </div>
             {selectedIds.size > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--accent-dim)', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{selectedIds.size} markerade</span>
-                <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={bulkField} onChange={e => changeBulkField(e.target.value)}>
-                  {BULK_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-                {bulkField === 'account' && (
-                  <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={bulkValue} onChange={e => setBulkValue(e.target.value)}>
-                    <option value="">Välj konto…</option>
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                )}
-                {bulkField === 'strategy' && (
-                  <>
-                    <input className="form-control" list="bulk-strategy-list" style={{ width: 200, fontSize: 12 }} placeholder="Strategi…" value={bulkValue} onChange={e => setBulkValue(e.target.value)} />
-                    <datalist id="bulk-strategy-list">
-                      {[...new Set(trades.map(t => t.strategy).filter(Boolean))].map(s => <option key={s} value={s} />)}
-                    </datalist>
-                  </>
-                )}
-                {bulkField === 'grade' && (
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {GRADES.map(g => <button key={g} type="button" className={`grade-btn ${bulkValue === g ? 'sel' : ''}`} onClick={() => setBulkValue(g)} style={{ padding: '4px 10px', fontSize: 12 }}>{g}</button>)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--accent-dim)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{selectedIds.size} markerade</span>
+                  {bulkMsg && <span style={{ fontSize: 12, color: bulkMsg.startsWith('Fel') ? 'var(--red)' : 'var(--green)' }}>{bulkMsg}</span>}
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())} style={{ marginLeft: 'auto' }}>Avmarkera</button>
+                </div>
+                {BULK_FIELDS.map(f => (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ width: 62, flexShrink: 0, fontSize: 12, color: 'var(--text3)' }}>{f.label}</span>
+                    {f.id === 'account' && (
+                      <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={bulkValues.account} onChange={e => setBulkValue('account', e.target.value)}>
+                        <option value="">Välj konto…</option>
+                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    )}
+                    {f.id === 'strategy' && (
+                      <>
+                        <input className="form-control" list="bulk-strategy-list" style={{ width: 200, fontSize: 12 }} placeholder="Strategi…" value={bulkValues.strategy} onChange={e => setBulkValue('strategy', e.target.value)} />
+                        <datalist id="bulk-strategy-list">
+                          {[...new Set(trades.map(t => t.strategy).filter(Boolean))].map(s => <option key={s} value={s} />)}
+                        </datalist>
+                      </>
+                    )}
+                    {f.id === 'grade' && (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {GRADES.map(g => <button key={g} type="button" className={`grade-btn ${bulkValues.grade === g ? 'sel' : ''}`} onClick={() => setBulkValue('grade', g)} style={{ padding: '4px 10px', fontSize: 12 }}>{g}</button>)}
+                      </div>
+                    )}
+                    {f.id === 'emotion' && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {EMOTIONS.map(em => <button key={em.id} type="button" className={`emotion-btn ${bulkValues.emotion === em.id ? 'sel' : ''}`} onClick={() => setBulkValue('emotion', em.id)} style={{ padding: '3px 9px', fontSize: 11 }}>{em.emoji} {em.label}</button>)}
+                      </div>
+                    )}
+                    <button className="btn btn-primary btn-sm" disabled={!bulkValues[f.id] || bulkApplyingField === f.id} onClick={() => applyBulkField(f.id)}>{bulkApplyingField === f.id ? 'Tillämpar…' : 'Tillämpa'}</button>
                   </div>
-                )}
-                {bulkField === 'emotion' && (
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {EMOTIONS.map(em => <button key={em.id} type="button" className={`emotion-btn ${bulkValue === em.id ? 'sel' : ''}`} onClick={() => setBulkValue(em.id)} style={{ padding: '3px 9px', fontSize: 11 }}>{em.emoji} {em.label}</button>)}
-                  </div>
-                )}
-                <button className="btn btn-primary btn-sm" disabled={!bulkValue || bulkApplying} onClick={applyBulkEdit}>{bulkApplying ? 'Tillämpar…' : 'Tillämpa'}</button>
-                {bulkMsg && <span style={{ fontSize: 12, color: bulkMsg.startsWith('Fel') ? 'var(--red)' : 'var(--green)' }}>{bulkMsg}</span>}
-                <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())} style={{ marginLeft: 'auto' }}>Avmarkera</button>
+                ))}
               </div>
             )}
             {trades.length > 0 && (() => {
