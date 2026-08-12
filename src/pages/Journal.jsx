@@ -105,6 +105,36 @@ function computeRValues(f, scales, targets) {
   return { r, usd }
 }
 
+// Planerad R:R – oberoende av Utfall. Räknas fram så fort Entry/SL/TP (eller
+// targets) är ifyllda, så man ser den tilltänkta risk/reward-kvoten direkt
+// när man sätter upp en trade, innan man vet om den blev vinst/förlust.
+// Samma prisdiff-logik som "W"-grenen i computeRValues ovan, men körs alltid
+// oavsett vad (eller om) Utfall är valt.
+function computePlannedRR(f, scales, targets) {
+  const entry = getWeightedEntry(f, scales)
+  const sl = parseFloat(f.sl)
+  if (!entry || !sl || isNaN(entry) || isNaN(sl)) return null
+  const risk = Math.abs(entry - sl)
+  if (risk === 0) return null
+  if (targets.length > 0) {
+    const valid = targets.filter(t => t.price && t.contracts)
+    if (valid.length > 0) {
+      let totalR = 0, totalQty = 0
+      for (const t of valid) {
+        const qty = parseFloat(t.contracts) || 0
+        const price = parseFloat(t.price)
+        if (!price || !qty) continue
+        totalR += (Math.abs(price - entry) / risk) * qty
+        totalQty += qty
+      }
+      return totalQty > 0 ? parseFloat((totalR / totalQty).toFixed(2)) : null
+    }
+  }
+  const tp = parseFloat(f.tp)
+  if (tp && !isNaN(tp)) return parseFloat((Math.abs(tp - entry) / risk).toFixed(2))
+  return null
+}
+
 function getWeightedEntry(f, scales) {
   const base = parseFloat(f.entry)
   if (!base || isNaN(base)) return null
@@ -618,7 +648,9 @@ export default function Journal() {
           </select>
         </div>
       )
-      case 'r_display': return calcR !== null ? (
+      case 'r_display': {
+        const plannedRR = calcR === null ? computePlannedRR(form, scaleIns, targets) : null
+        if (calcR !== null) return (
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcR >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>R Auto</div>
@@ -631,7 +663,16 @@ export default function Journal() {
             </div>
           )}
         </div>
-      ) : null
+        )
+        if (plannedRR !== null) return (
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px dashed var(--border2)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Planerat R:R</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>{plannedRR}R</div>
+            <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 2 }}>Baserat på {targets.length > 0 ? 'targets' : 'TP'} · uppdateras med faktiskt R när Utfall väljs</div>
+          </div>
+        )
+        return null
+      }
       case 'risk_pct': return (
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Risk % av konto{reqMark('risk_pct')}</label>
