@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.4',
+    date: '2026-08-12',
+    entries: [
+      { type: 'feature', text: 'Journal: ny "Planerat R:R"-ruta som visas direkt när Entry/Stop Loss/Take Profit (eller targets) är ifyllda – oavsett om Utfall är valt än. Tidigare krävde R-rutan att Utfall (W/L/BE) valdes först, vilket gjorde att den tilltänkta risk/reward-kvoten inte gick att se förrän i efterhand. Ersätts automatiskt av det faktiska R-resultatet när Utfall väljs.' },
+    ]
+  },
+  {
     version: 'v2.4.3',
     date: '2026-08-12',
     entries: [
