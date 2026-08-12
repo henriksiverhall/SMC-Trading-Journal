@@ -23,6 +23,7 @@ function formatFull(iso) {
 function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onToggleAI }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
+  const [accountBreakdown, setAccountBreakdown] = useState([])
   const [loading, setLoading] = useState(true)
   const [section, setSection] = useState('info')
   const [newEmail, setNewEmail] = useState('')
@@ -43,7 +44,10 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
     setSection('info'); setNewEmail(''); clearAction()
     async function load() {
       setLoading(true)
-      const { data: trades } = await sb.from('trades').select('outcome, result').eq('user_id', u.user_id)
+      const [{ data: trades }, { data: accounts }] = await Promise.all([
+        sb.from('trades').select('outcome, result, account_id').eq('user_id', u.user_id),
+        sb.from('accounts').select('id, name').eq('user_id', u.user_id),
+      ])
       const withR = (trades || []).filter(t => t.result != null)
       const wins = withR.filter(t => t.outcome === 'W')
       const losses = withR.filter(t => t.outcome === 'L')
@@ -53,6 +57,29 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
       const lossR = Math.abs(losses.reduce((a, t) => a + t.result, 0))
       const pf = lossR > 0 ? (winR / lossR).toFixed(2) : winR > 0 ? '∞' : '—'
       setStats({ total: (trades || []).length, withR: withR.length, wins: wins.length, losses: losses.length, totalR: totalR.toFixed(2), wr, pf })
+
+      // Per-konto-uppdelning – bara meningsfull (och bara visad i UI) om
+      // användaren faktiskt har fler än ett konto, annars är den identisk
+      // med totalen ovan och bara brus.
+      if ((accounts || []).length > 1) {
+        const byAccount = {}
+        for (const t of (trades || [])) {
+          const key = t.account_id || '_none'
+          if (!byAccount[key]) byAccount[key] = { total: 0, withR: 0, wins: 0, totalR: 0 }
+          byAccount[key].total++
+          if (t.result != null) { byAccount[key].withR++; byAccount[key].totalR += t.result; if (t.outcome === 'W') byAccount[key].wins++ }
+        }
+        const nameMap = Object.fromEntries((accounts || []).map(a => [a.id, a.name]))
+        const breakdown = Object.entries(byAccount).map(([accId, d]) => ({
+          name: accId === '_none' ? 'Inget konto' : (nameMap[accId] || 'Okänt konto'),
+          total: d.total,
+          wr: d.withR ? (d.wins / d.withR * 100).toFixed(1) : null,
+          totalR: d.totalR.toFixed(2),
+        })).sort((a, b) => b.total - a.total)
+        setAccountBreakdown(breakdown)
+      } else {
+        setAccountBreakdown([])
+      }
       setLoading(false)
     }
     load()
@@ -181,7 +208,7 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik {accountBreakdown.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text4)' }}>(totalt, alla konton)</span>}</div>
               {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
                 <>
                   {row('Antal trades', stats.total, 'var(--accent)')}
@@ -193,6 +220,21 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
                   </>}
                   {stats.total === 0 && <div style={{ fontSize: 12, color: 'var(--text4)', padding: '8px 0' }}>Inga trades loggade ännu.</div>}
                 </>
+              )}
+              {accountBreakdown.length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Per konto</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {accountBreakdown.map(a => (
+                      <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12 }}>
+                        <span style={{ flex: 1, color: 'var(--text2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                        <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{a.total} st</span>
+                        <span style={{ color: a.wr != null && parseFloat(a.wr) >= 50 ? 'var(--green)' : a.wr != null ? 'var(--red)' : 'var(--text4)', fontFamily: 'var(--mono)', minWidth: 44, textAlign: 'right' }}>{a.wr != null ? a.wr + '%' : '—'}</span>
+                        <span style={{ color: parseFloat(a.totalR) >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--mono)', minWidth: 58, textAlign: 'right' }}>{parseFloat(a.totalR) > 0 ? '+' : ''}{a.totalR}R</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
@@ -322,7 +364,7 @@ function UsersTab({ currentUserId }) {
             <input className="form-control" placeholder="Sök e-post…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 12 }} />
           </div>
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-            {loading ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
+            {loading ? <div style={{ padding: 24, textAlign: 'center', color: /*text3*/'var(--text3)', fontSize: 13 }}>Laddar…</div>
               : filtered.length === 0 ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Inga träffar.</div>
               : filtered.map(u => (
                 <div key={u.user_id} onClick={() => setSelectedUserId(u.user_id)} style={{
