@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.4.4'
+export const APP_VERSION = 'v2.4.5'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 export const FUNDEDNEXT_WORKER_URL = 'https://tradelog-fundednext-dev.henrik-siverhall.workers.dev'
 
