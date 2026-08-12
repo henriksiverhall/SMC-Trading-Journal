@@ -321,7 +321,7 @@ const PLATFORMS = [
 ]
 
 export default function Import() {
-  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const { user, userSettings, saveSettings, impersonating, activeAccountId, planInfo, accounts } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [platform, setPlatform] = useState(null)
   const [parsed, setParsed] = useState(null)
@@ -418,11 +418,13 @@ export default function Import() {
   async function handleImport() {
     if (!parsed || !selected.length || !effectiveUserId) return
     setImporting(true); setImportResult(null)
-    let ok=0,skip=0,fail=0
+    let ok=0,skip=0,fail=0,limitReached=false
     for (const t of selected.map(i=>parsed[i])) {
       if (t._duplicate) { skip++; continue } // extra säkerhetsnät, borde redan vara avmarkerat
+      if (limitReached) { skip++; continue }
       const trade = {
         user_id: effectiveUserId,
+        account_id: activeAccountId || null,
         date: t.date || new Date().toISOString().split('T')[0],
         time: t.time || null,
         symbol: t.symbol||null, direction: t.direction||null,
@@ -446,9 +448,13 @@ export default function Import() {
         },
       }
       const { error } = await sb.from('trades').insert(trade)
-      if (error) { if (error.code==='23505') skip++; else fail++ } else ok++
+      if (error) {
+        if (error.code==='23505') skip++
+        else if (error.message?.includes('trade_limit_reached')) { limitReached = true; fail++ }
+        else fail++
+      } else ok++
     }
-    setImporting(false); setImportResult({ok,skip,fail})
+    setImporting(false); setImportResult({ok,skip,fail,limitReached})
   }
 
   function reset() {
@@ -462,6 +468,12 @@ export default function Import() {
     <div style={{ flex:1 }}>
       <Topbar title="Import" subtitle="Importera trades från externa plattformar" />
       <div className="page-content" style={{ maxWidth:900 }}>
+
+        {accounts.length > 1 && (
+          <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text3)' }}>
+            Importeras till: <strong style={{ color: 'var(--accent)' }}>{accounts.find(a => a.id === activeAccountId)?.name || '—'}</strong> <span style={{ color: 'var(--text4)' }}>(byt konto uppe till höger)</span>
+          </div>
+        )}
 
         <div className="card" style={{ marginBottom:20, border:'1px solid rgba(239,68,68,0.35)' }}>
           <div className="card-header" onClick={()=>dangerOpen?setDangerOpen(false):openDangerZone()} style={{ cursor:'pointer' }}>
@@ -618,13 +630,18 @@ export default function Import() {
                       </div>
                       {importResult.skip>0 && <div style={{ padding:'10px 16px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:'var(--r)', textAlign:'center' }}>
                         <div style={{ fontSize:22, fontWeight:800, color:'var(--text3)' }}>{importResult.skip}</div>
-                        <div style={{ fontSize:11, color:'var(--text4)' }}>Dubbletter</div>
+                        <div style={{ fontSize:11, color:'var(--text4)' }}>Dubbletter{importResult.limitReached ? ' / hoppade' : ''}</div>
                       </div>}
                       {importResult.fail>0 && <div style={{ padding:'10px 16px', background:'rgba(239,68,68,0.08)', border:'1px solid var(--red)', borderRadius:'var(--r)', textAlign:'center' }}>
                         <div style={{ fontSize:22, fontWeight:800, color:'var(--red)' }}>{importResult.fail}</div>
                         <div style={{ fontSize:11, color:'var(--red)' }}>Fel</div>
                       </div>}
                     </div>
+                    {importResult.limitReached && (
+                      <div style={{ fontSize:12, color:'var(--red)', padding:'8px 12px', background:'rgba(239,68,68,0.08)', borderRadius:'var(--r)' }}>
+                        ⚠ Din trade-gräns ({planInfo?.maxTrades ?? '?'} st) nåddes under importen – resten hoppades över. Uppgradera för fler.
+                      </div>
+                    )}
                     <div style={{ display:'flex', gap:10, marginTop:4 }}>
                       <button className="btn btn-ghost" onClick={reset}>Importera fler</button>
                       <button className="btn btn-primary" onClick={()=>window.__tlNavigate?.('journal')}>Gå till Journal →</button>
