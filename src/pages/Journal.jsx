@@ -141,6 +141,26 @@ export default function Journal() {
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
 
+  // Bulk-flytt av trades mellan konton (v2.4.3) – t.ex. för att sortera upp
+  // gamla trades som loggades innan flera-konton-systemet fanns.
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkTargetAccount, setBulkTargetAccount] = useState('')
+  const [bulkMoving, setBulkMoving] = useState(false)
+
+  function toggleSelected(id) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleSelectAll(ids) {
+    setSelectedIds(prev => prev.size === ids.length ? new Set() : new Set(ids))
+  }
+  async function moveSelectedToAccount() {
+    if (!bulkTargetAccount || selectedIds.size === 0) return
+    setBulkMoving(true)
+    await sb.from('trades').update({ account_id: bulkTargetAccount }).in('id', [...selectedIds]).eq('user_id', effectiveUserId)
+    setBulkMoving(false); setSelectedIds(new Set()); setBulkTargetAccount('')
+    loadTrades()
+  }
+
   function toggleSort(col) { setSort(s => ({ col, dir: s.col === col && s.dir === 'asc' ? 'desc' : 'asc' })) }
   function SortArrow({ col }) {
     if (sort.col !== col) return null
@@ -804,6 +824,18 @@ export default function Journal() {
               <div className="card-title">Trade Journal ({trades.length})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
             </div>
+            {accounts.length > 1 && selectedIds.size > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--accent-dim)' }}>
+                <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{selectedIds.size} markerade</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>Flytta till:</span>
+                <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={bulkTargetAccount} onChange={e => setBulkTargetAccount(e.target.value)}>
+                  <option value="">Välj konto…</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <button className="btn btn-primary btn-sm" disabled={!bulkTargetAccount || bulkMoving} onClick={moveSelectedToAccount}>{bulkMoving ? 'Flyttar…' : 'Flytta'}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>Avmarkera</button>
+              </div>
+            )}
             {trades.length > 0 && (() => {
               const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort()
               return (
@@ -862,6 +894,7 @@ export default function Journal() {
                 return (
                   <table className="journal-table">
                     <thead><tr>
+                      {accounts.length > 1 && <th style={{ width: 30 }}><input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filteredTrades.length} onChange={() => toggleSelectAll(filteredTrades.map(t => t.id))} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} onClick={e => e.stopPropagation()} /></th>}
                       {accounts.length > 1 && <th style={{ whiteSpace:'nowrap' }}>Konto</th>}
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit datum</th>
@@ -880,6 +913,7 @@ export default function Journal() {
                     </tr></thead>
                     <tbody>{filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
+                        {accounts.length > 1 && <td onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelected(t.id)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} /></td>}
                         {accounts.length > 1 && <td style={{ color: 'var(--text3)', fontSize: 11 }}>{accounts.find(a => a.id === t.account_id)?.name || '—'}</td>}
                         <td className="mono">{t.date}</td>
                         <td className="mono">{t.custom_data?._exit_date || '—'}</td>
