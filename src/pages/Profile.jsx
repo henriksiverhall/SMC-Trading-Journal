@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { APP_VERSION } from '../lib/constants'
+import { APP_VERSION, BROKER_TYPES } from '../lib/constants'
 import Topbar from '../components/Topbar'
 import TvOnboarding from '../components/TvOnboarding'
 
@@ -223,6 +223,151 @@ function InboxSection({ user, refreshUnread }) {
   )
 }
 
+const ACCOUNT_STATUS_LABELS = { eval: 'Eval', funded: 'Funded', failed: 'Failed', active: 'Aktivt', archived: 'Arkiverat' }
+const ACCOUNT_STATUS_COLOR = { eval: 'var(--amber)', funded: 'var(--green)', failed: 'var(--red)', active: 'var(--accent)', archived: 'var(--text4)' }
+
+function AccountsTab() {
+  const { accounts, activeAccountId, switchAccount, refreshAccounts, planInfo } = useAuth()
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState({ name: '', broker_type: 'personal', account_size: '', status: 'active' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const limitReached = planInfo?.maxAccounts != null && accounts.length >= planInfo.maxAccounts
+
+  function startNew() {
+    setEditingId(null); setForm({ name: '', broker_type: 'personal', account_size: '', status: 'active' }); setError(''); setShowForm(true)
+  }
+  function startEdit(a) {
+    setEditingId(a.id); setForm({ name: a.name, broker_type: a.broker_type || 'personal', account_size: a.account_size || '', status: a.status || 'active' }); setError(''); setShowForm(true)
+  }
+
+  async function save() {
+    if (!form.name.trim()) return
+    setSaving(true); setError('')
+    const payload = {
+      name: form.name.trim(), broker_type: form.broker_type,
+      account_size: form.account_size ? Number(form.account_size) : null,
+      status: form.status,
+    }
+    let err
+    if (editingId) {
+      ;({ error: err } = await sb.from('accounts').update(payload).eq('id', editingId))
+    } else {
+      const { data: { user } } = await sb.auth.getUser()
+      ;({ error: err } = await sb.from('accounts').insert({ ...payload, user_id: user.id }))
+    }
+    setSaving(false)
+    if (err) {
+      setError(err.message?.includes('account_limit_reached') ? `Du har nått din gräns på ${planInfo?.maxAccounts} konto${planInfo?.maxAccounts === 1 ? '' : 'n'}. Uppgradera för fler.` : err.message)
+      return
+    }
+    setShowForm(false); refreshAccounts()
+  }
+
+  async function makeDefault(id) {
+    const { data: { user } } = await sb.auth.getUser()
+    await sb.from('accounts').update({ is_default: false }).eq('user_id', user.id)
+    await sb.from('accounts').update({ is_default: true }).eq('id', id)
+    refreshAccounts()
+  }
+
+  async function remove(id) {
+    if (!window.confirm('Ta bort kontot? Trades kopplade till det blir kvar men märks som "inget konto".')) return
+    await sb.from('accounts').delete().eq('id', id)
+    refreshAccounts()
+  }
+
+  return (
+    <>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-header"><div className="card-title">Plan & användning</div></div>
+        <div className="card-body">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Plan</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: planInfo?.planId === 'paid' ? 'var(--accent)' : 'var(--text)' }}>{planInfo?.planName || '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Trades loggade</div>
+              <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{planInfo?.tradeCount ?? '—'} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {planInfo?.maxTrades ?? '∞'}</span></div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Konton</div>
+              <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{accounts.length} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {planInfo?.maxAccounts ?? '∞'}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">Trading-konton ({accounts.length})</div>
+          <button className="btn btn-primary btn-sm" onClick={startNew} disabled={limitReached} title={limitReached ? 'Kontogräns nådd' : undefined}>+ Nytt konto</button>
+        </div>
+
+        {showForm && (
+          <div style={{ padding: 16, borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div className="form-group"><label className="form-label">Namn</label><input className="form-control" placeholder="T.ex. TopStep 50K" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div className="form-group"><label className="form-label">Typ</label>
+                <select className="form-control" value={form.broker_type} onChange={e => setForm(f => ({ ...f, broker_type: e.target.value }))}>
+                  {BROKER_TYPES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label className="form-label">Kontostorlek</label><input type="number" className="form-control" placeholder="50000" value={form.account_size} onChange={e => setForm(f => ({ ...f, account_size: e.target.value }))} /></div>
+              <div className="form-group"><label className="form-label">Status</label>
+                <select className="form-control" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                  {Object.entries(ACCOUNT_STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+              </div>
+            </div>
+            {error && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>⚠ {error}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={save} disabled={saving || !form.name.trim()}>{saving ? 'Sparar…' : '💾 Spara'}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Avbryt</button>
+            </div>
+          </div>
+        )}
+
+        {limitReached && !showForm && (
+          <div style={{ padding: '10px 16px', fontSize: 12, color: 'var(--amber)', background: 'rgba(245,158,11,0.08)', borderBottom: '1px solid var(--border)' }}>
+            ⚠ Du har nått din gräns på {planInfo.maxAccounts} konto{planInfo.maxAccounts === 1 ? '' : 'n'} för din plan.
+          </div>
+        )}
+
+        {!accounts.length ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga konton ännu.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {accounts.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCOUNT_STATUS_COLOR[a.status] || 'var(--text4)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{a.name}</span>
+                    {a.id === activeAccountId && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 20, padding: '1px 7px' }}>AKTIVT</span>}
+                    {a.is_default && <span style={{ fontSize: 10, color: 'var(--text4)' }}>Standard</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 2 }}>
+                    {BROKER_TYPES.find(b => b.id === a.broker_type)?.label || a.broker_type || '—'}
+                    {a.account_size ? ` · $${Number(a.account_size).toLocaleString()}` : ''} · {ACCOUNT_STATUS_LABELS[a.status] || a.status}
+                  </div>
+                </div>
+                {a.id !== activeAccountId && <button className="btn btn-ghost btn-sm" onClick={() => switchAccount(a.id)}>Aktivera</button>}
+                {!a.is_default && <button className="btn btn-ghost btn-sm" onClick={() => makeDefault(a.id)}>Gör till standard</button>}
+                <button className="btn btn-ghost btn-sm" onClick={() => startEdit(a)}>✏️</button>
+                <button onClick={() => remove(a.id)} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 function KontoTab({ user, userSettings, saveSettings, signOut }) {
   const [displayName, setDisplayName] = useState(userSettings?.displayName || '')
   const [saving, setSaving] = useState(false)
@@ -329,12 +474,14 @@ export default function Profile() {
       <div className="page-content" style={{ maxWidth: 1100 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
           <TabBtn active={tab === 'konto'} onClick={() => handleTabChange('konto')}>Konto</TabBtn>
+          <TabBtn active={tab === 'accounts'} onClick={() => handleTabChange('accounts')}>💼 Trading-konton</TabBtn>
           {/* [PARKERAD] TV-fliken dold – Pine Script Journal Tool pausad, se Kanban */}
           {SHOW_TV_TAB && <TabBtn active={tab === 'tradingview'} onClick={() => handleTabChange('tradingview')}>📊 TradingView</TabBtn>}
           <TabBtn active={tab === 'broadcast'} onClick={() => handleTabChange('broadcast')}>Allmänt{unreadBroadcast > 0 && <Badge count={unreadBroadcast} />}</TabBtn>
           <TabBtn active={tab === 'inbox'} onClick={() => handleTabChange('inbox')}>Mina ärenden{unreadInbox > 0 && <Badge count={unreadInbox} color="var(--red)" textColor="#fff" />}</TabBtn>
         </div>
         {tab === 'konto'        && <KontoTab user={user} userSettings={userSettings} saveSettings={saveSettings} signOut={signOut} />}
+        {tab === 'accounts'     && <AccountsTab />}
         {SHOW_TV_TAB && tab === 'tradingview' && <TvOnboarding user={user} userSettings={userSettings} saveSettings={saveSettings} />}
         {tab === 'broadcast'    && <BroadcastSection user={user} refreshUnread={refreshUnread} />}
         {tab === 'inbox'        && <InboxSection user={user} refreshUnread={refreshUnread} />}
