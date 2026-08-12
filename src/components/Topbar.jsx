@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import PiPWidget from './PiPWidget'
+import AccountSwitcher from './AccountSwitcher'
 
 export default function Topbar({ title, subtitle, actions, onNavigate, onMenuClick }) {
   const { user, userSettings, signOut } = useAuth()
@@ -39,6 +40,7 @@ export default function Topbar({ title, subtitle, actions, onNavigate, onMenuCli
         {actions && <div style={{ display: 'flex', gap: 8 }}>{actions}</div>}
       </div>
       <div className="topbar-right">
+        <AccountSwitcher onNavigate={onNavigate} />
         <PiPWidget />
         <button
           className="theme-toggle"
