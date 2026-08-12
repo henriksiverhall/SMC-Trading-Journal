@@ -134,10 +134,10 @@ function formatRorPnL(trade) {
 }
 
 export default function Journal() {
-  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const { user, userSettings, saveSettings, impersonating, accounts, activeAccountId, planInfo } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
-  const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })
+  const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '', account: '' })
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
 
@@ -150,6 +150,7 @@ export default function Journal() {
   const [form, setForm] = useState(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [calcR, setCalcR] = useState(null)
   const [calcUSD, setCalcUSD] = useState(null)
   const [selectedModal, setSelectedModal] = useState(null)
@@ -391,11 +392,12 @@ export default function Journal() {
   async function handleSave(e) {
     e.preventDefault()
     if (missingRequiredFields.length > 0) { setAttemptedSave(true); return }
-    setSaving(true)
+    setSaving(true); setSaveError('')
     const entry = weightedEntry || parseFloat(form.entry)
     const totalC = scaleIns.length > 0 ? getTotalContracts(form, scaleIns) : (parseFloat(form.contracts) || 1)
     const trade = {
       user_id: user.id,
+      ...(!editingId ? { account_id: activeAccountId || null } : {}),
       date: form.date || new Date().toISOString().split('T')[0],
       time: form.time || null, symbol: form.symbol || null, direction: form.direction || null,
       entry: entry || null, sl: parseFloat(form.sl) || null, tp: parseFloat(form.tp) || null,
@@ -426,6 +428,10 @@ export default function Journal() {
       if (riskPct || accountSize) await saveSettings({ riskPct: riskPct || userSettings?.riskPct, accountSize: accountSize || userSettings?.accountSize })
       if (form.strategy) await saveSettings({ lastJournalStrategy: form.strategy })
       resetForm(); loadTrades()
+    } else {
+      setSaveError(error.message?.includes('trade_limit_reached')
+        ? `Du har nått din trade-gräns (${planInfo?.maxTrades ?? '?'} st) för din plan. Uppgradera för fler.`
+        : `Kunde inte spara: ${error.message}`)
     }
     setSaving(false)
   }
@@ -748,6 +754,11 @@ export default function Journal() {
             )}
 
             <div className="card-body">
+              {accounts.length > 1 && (
+                <div style={{ marginBottom: 14, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text3)' }}>
+                  Loggas till: <strong style={{ color: 'var(--accent)' }}>{accounts.find(a => a.id === activeAccountId)?.name || '—'}</strong> <span style={{ color: 'var(--text4)' }}>(byt konto uppe till höger)</span>
+                </div>
+              )}
               <form onSubmit={handleSave}>
                 {fieldRows.map(row => {
                   const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
@@ -781,6 +792,9 @@ export default function Journal() {
                 {attemptedSave && missingRequiredFields.length > 0 && (
                   <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>Fyll i: {missingRequiredFields.map(id => FIELD_LABELS[id] || id).join(', ')}</div>
                 )}
+                {saveError && (
+                  <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--r)' }}>⚠ {saveError}</div>
+                )}
               </form>
             </div>
           </div>
@@ -794,6 +808,9 @@ export default function Journal() {
               const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort()
               return (
                 <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {accounts.length > 1 && <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.account} onChange={e => setFilter(f => ({ ...f, account: e.target.value }))}>
+                    <option value="">Alla konton</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>}
                   <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
                     <option value="">Alla utfall</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
                   </select>
@@ -806,9 +823,10 @@ export default function Journal() {
                   <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value }))} title="Från datum" />
                   <span style={{ fontSize: 11, color: 'var(--text4)' }}>–</span>
                   <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value }))} title="Till datum" />
-                  {(filter.outcome || filter.direction || filter.strategy || filter.dateFrom || filter.dateTo) && <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })}>✕ Rensa</button>}
+                  {(filter.outcome || filter.direction || filter.strategy || filter.dateFrom || filter.dateTo || filter.account) && <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '', account: '' })}>✕ Rensa</button>}
                   {(() => {
                     const n = trades.filter(t => {
+                      if (filter.account && t.account_id !== filter.account) return false
                       if (filter.outcome && t.outcome !== filter.outcome) return false
                       if (filter.direction && t.direction !== filter.direction) return false
                       if (filter.strategy && t.strategy !== filter.strategy) return false
@@ -828,6 +846,7 @@ export default function Journal() {
               : trades.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
               : (() => {
                 const filteredTrades = trades.filter(t => {
+                  if (filter.account && t.account_id !== filter.account) return false
                   if (filter.outcome && t.outcome !== filter.outcome) return false
                   if (filter.direction && t.direction !== filter.direction) return false
                   if (filter.strategy && t.strategy !== filter.strategy) return false
@@ -843,6 +862,7 @@ export default function Journal() {
                 return (
                   <table className="journal-table">
                     <thead><tr>
+                      {accounts.length > 1 && <th style={{ whiteSpace:'nowrap' }}>Konto</th>}
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit datum</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit tid</th>
@@ -860,6 +880,7 @@ export default function Journal() {
                     </tr></thead>
                     <tbody>{filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
+                        {accounts.length > 1 && <td style={{ color: 'var(--text3)', fontSize: 11 }}>{accounts.find(a => a.id === t.account_id)?.name || '—'}</td>}
                         <td className="mono">{t.date}</td>
                         <td className="mono">{t.custom_data?._exit_date || '—'}</td>
                         <td className="mono">{t.custom_data?._exit_time || '—'}</td>
