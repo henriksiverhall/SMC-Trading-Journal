@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.1',
+    date: '2026-08-12',
+    entries: [
+      { type: 'fix', text: 'Admin → Användare: bytte den gamla 560px-modalen (fyra flikar, inkl. nya Plan & gränser) mot en sida-vid-sida-layout – sökbar, scrollbar användarlista till vänster (300px), inline detaljpanel till höger som fyller resten av bredden. Löser trångt känslan som uppstod när Plan & gränser-fliken lades till.' },
+    ]
+  },
+  {
     version: 'v2.4.0',
     date: '2026-08-12',
     entries: [
