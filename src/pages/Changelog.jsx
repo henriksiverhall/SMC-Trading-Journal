@@ -2,6 +2,14 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.0',
+    date: '2026-08-12',
+    entries: [
+      { type: 'feature', text: 'Flera trading-konton – grunden för att kunna ta betalt för TradeLog. Nytt konto-system (Profil → 💼 Trading-konton) där varje användare kan skapa flera konton (t.ex. TopStep + FundedNext), sätta typ/kontostorlek/status (eval/funded/failed) och byta aktivt konto via en ny kontoväljare i menyraden. Nya trades och importer taggas automatiskt med aktivt konto; Journal fick ett kontofilter och en Konto-kolumn (syns bara när fler än ett konto finns).' },
+      { type: 'feature', text: 'Plan- och gränssystem – Free-plan (50 trades, 1 konto) och Paid-plan (obegränsat), med admin-redigerbara overrides per användare (Admin → användare → 💳 Plan & gränser). Gränserna skärms hårt på databasnivå (inte bara i UI), så de går inte att kringgå via API-anrop. Priser/gränser är just nu platshållarvärden, enkla att ändra.' },
+    ]
+  },
+  {
     version: 'v2.3.9',
     date: '2026-08-11',
     entries: [
