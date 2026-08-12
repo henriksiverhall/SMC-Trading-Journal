@@ -16,7 +16,11 @@ function formatFull(iso) {
   return new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
+// v2.4.1: UserDetailPanel – tidigare en modal (UserProfileModal). Vid fler
+// användare/flikar (särskilt Plan & gränser) blev en 560px-modal för trång.
+// Renderas nu inline i en sida-vid-sida-layout (lista till vänster, panel
+// till höger) i UsersTab nedan – ingen overlay/backdrop längre.
+function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onToggleAI }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -36,7 +40,9 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const [planMsg, setPlanMsg] = useState('')
 
   useEffect(() => {
+    setSection('info'); setNewEmail(''); clearAction()
     async function load() {
+      setLoading(true)
       const { data: trades } = await sb.from('trades').select('outcome, result').eq('user_id', u.user_id)
       const withR = (trades || []).filter(t => t.result != null)
       const wins = withR.filter(t => t.outcome === 'W')
@@ -137,8 +143,8 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const effectiveMaxAccounts = planForm.overrideMaxAccounts !== '' ? Number(planForm.overrideMaxAccounts) : selectedPlan?.max_accounts
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 560, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+    <div className="card" style={{ height: '100%' }}>
+      <div className="card-body" style={{ padding: '24px 28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{u.email}</div>
@@ -150,25 +156,31 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} title="Avmarkera" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
-        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => { setSection(s.id); clearAction() }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12, fontWeight: section === s.id ? 700 : 500, color: section === s.id ? 'var(--text)' : 'var(--text4)', padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12, fontWeight: section === s.id ? 700 : 500, color: section === s.id ? 'var(--text)' : 'var(--text4)', padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s', whiteSpace: 'nowrap' }}>
               {s.label}
             </button>
           ))}
         </div>
         {section === 'info' && (
-          <>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
-              {row('Registrerad', formatTime(u.created_at))}
-              {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
-              {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
+                {row('Registrerad', formatTime(u.created_at))}
+                {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
+                {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>AI-analys</div>
+                <button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onToggleAI(u.user_id, u.settings?.ai_enabled)} disabled={u.user_id === adminId}>{u.settings?.ai_enabled ? '✓ Aktiverad' : 'Avaktiverad'}</button>
+              </div>
             </div>
-            <div style={{ marginBottom: 24 }}>
+            <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
               {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
                 <>
@@ -183,14 +195,14 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
                 </>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {u.user_id !== adminId && <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>}
-              {u.user_id !== adminId && <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              {u.user_id !== adminId && <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }}>👁 Visa som</button>}
+              {u.user_id !== adminId && <button onClick={() => onDelete(u.user_id, u.email)} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
             </div>
-          </>
+          </div>
         )}
         {section === 'plan' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 480 }}>
             {planLoading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -228,24 +240,24 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
           </div>
         )}
         {section === 'email' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nuvarande: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Ny e-postadress</label>
               <input style={inp} type="email" placeholder="ny@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
             </div>
-            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()}>{actionLoading ? 'Sparar…' : 'Byt e-post'}</button>
+            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()} style={{ width: 'fit-content' }}>{actionLoading ? 'Sparar…' : 'Byt e-post'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
         )}
         {section === 'resetpw' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
               Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span>.<br />
               Användaren sätter nytt lösenord via länken i mailet.
             </div>
-            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>{actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}</button>
+            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading} style={{ width: 'fit-content' }}>{actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
@@ -259,7 +271,8 @@ function UsersTab({ currentUserId }) {
   const { startImpersonation } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUserId, setSelectedUserId] = useState(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => { loadUsers() }, [])
 
@@ -290,45 +303,55 @@ function UsersTab({ currentUserId }) {
   async function deleteUser(userId, email) {
     if (!window.confirm(`Ta bort ${email}? Går inte att ångra.`)) return
     await sb.rpc('delete_user_completely', { target_user_id: userId })
+    if (selectedUserId === userId) setSelectedUserId(null)
     loadUsers()
   }
 
+  const filtered = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
+  const selectedUser = users.find(u => u.user_id === selectedUserId) || null
+
   return (
-    <>
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title">Användare ({users.length})</div>
-          <button className="btn btn-ghost btn-sm" onClick={loadUsers}>↻ Uppdatera</button>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div> : (
-            <table className="journal-table">
-              <thead><tr><th>Email</th><th>Registrerad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th>AI</th><th></th><th></th></tr></thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.user_id} style={{ cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}>
-                    <td style={{ color: 'var(--text)' }} onClick={() => setSelectedUser(u)}>
-                      <span style={{ fontWeight: 500 }}>{u.email}</span>
-                      {u.user_id === currentUserId && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '1px 5px', borderRadius: 3 }}>du</span>}
-                    </td>
-                    <td className="mono" onClick={() => setSelectedUser(u)}>{formatTime(u.created_at)}</td>
-                    <td className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }} onClick={() => setSelectedUser(u)}>{u.trade_count}</td>
-                    <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.confirmed_at ? 'var(--green)' : 'var(--text4)' }}>{u.confirmed_at ? '✓ Ja' : 'Nej'}</span></td>
-                    <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.is_admin ? 'var(--accent)' : 'var(--text4)' }}>{u.is_admin ? '✓ Admin' : '—'}</span></td>
-                    <td><button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={e => { e.stopPropagation(); toggleAI(u.user_id, u.settings?.ai_enabled) }} disabled={u.user_id === currentUserId}>{u.settings?.ai_enabled ? 'På' : 'Av'}</button></td>
-                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm btn-ghost" onClick={e => { e.stopPropagation(); startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }} style={{ whiteSpace: 'nowrap' }}>👁 Visa som</button>}</td>
-                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm" onClick={e => { e.stopPropagation(); deleteUser(u.user_id, u.email) }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ width: 300, flexShrink: 0 }}>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Användare ({filtered.length})</div>
+            <button className="btn btn-ghost btn-sm" onClick={loadUsers}>↻</button>
+          </div>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <input className="form-control" placeholder="Sök e-post…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 12 }} />
+          </div>
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {loading ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
+              : filtered.length === 0 ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Inga träffar.</div>
+              : filtered.map(u => (
+                <div key={u.user_id} onClick={() => setSelectedUserId(u.user_id)} style={{
+                  padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                  background: u.user_id === selectedUserId ? 'var(--accent-dim)' : 'none',
+                  borderLeft: `3px solid ${u.user_id === selectedUserId ? 'var(--accent)' : 'transparent'}`,
+                }}
+                  onMouseEnter={e => { if (u.user_id !== selectedUserId) e.currentTarget.style.background = 'var(--bg3)' }}
+                  onMouseLeave={e => { if (u.user_id !== selectedUserId) e.currentTarget.style.background = 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.email}
+                    {u.user_id === currentUserId && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>DU</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: 11, color: 'var(--text4)' }}>
+                    <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{u.trade_count} trades</span>
+                    {u.is_admin && <span style={{ color: 'var(--accent)' }}>Admin</span>}
+                    {!u.confirmed_at && <span>Ej bekräftad</span>}
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
-      {selectedUser && <UserProfileModal user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUser(null)} onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }} onRefresh={loadUsers} />}
-    </>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {selectedUser
+          ? <UserDetailPanel user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUserId(null)} onDelete={deleteUser} onRefresh={loadUsers} onToggleAI={toggleAI} />
+          : <div className="card"><div className="card-body" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text4)', fontSize: 13 }}>Välj en användare i listan till vänster.</div></div>}
+      </div>
+    </div>
   )
 }
 
@@ -680,7 +703,7 @@ export default function Admin() {
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
-      <div className="page-content" style={{ maxWidth: 1100 }}>
+      <div className="page-content" style={{ maxWidth: 1400 }}>
         <div className="admin-tabs" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? 'var(--text)' : 'var(--text3)', padding: '10px 16px', borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
