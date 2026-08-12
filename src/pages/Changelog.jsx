@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.6',
+    date: '2026-08-12',
+    entries: [
+      { type: 'fix', text: 'Journal: bulk-edit-panelen (Konto/Strategi/Grade/Känsla) visar nu alla fält som egna rader direkt istället för att kräva att man först väljer fält i en dropdown – snabbare när man ska sätta samma sak upprepade gånger, och tydligare vilka fält som faktiskt går att sätta.' },
+    ]
+  },
+  {
     version: 'v2.4.5',
     date: '2026-08-12',
     entries: [
