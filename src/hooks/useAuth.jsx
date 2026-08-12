@@ -13,6 +13,10 @@ export function AuthProvider({ children }) {
   // Öppna ärenden (inbox_threads med status=open tillhörande inloggad user)
   const [openThreads, setOpenThreads] = useState(0)
 
+  // ── Konton (v2.4.0) ──────────────────────────────────────────────
+  const [accounts, setAccounts] = useState([])
+  const [planInfo, setPlanInfo] = useState(null)
+
   const [impersonating, setImpersonating] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || null }
     catch { return null }
@@ -42,6 +46,8 @@ export function AuthProvider({ children }) {
 
   const viewAsUser = impersonating ? { id: impersonating.id, email: impersonating.email } : null
   const viewAsSettings = impersonating ? impersonatedSettings : null
+  const effectiveUserId = impersonating?.id ?? user?.id
+  const effectiveSettings = impersonating ? impersonatedSettings : userSettings
 
   useEffect(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
@@ -62,6 +68,64 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Laddar konton + plan/gränsinfo för den som faktiskt visas just nu
+  // (dig själv, eller den du "Visar som" via impersonation).
+  useEffect(() => {
+    if (!effectiveUserId) { setAccounts([]); setPlanInfo(null); return }
+    loadAccounts(effectiveUserId)
+    loadPlanInfo(effectiveUserId)
+  }, [effectiveUserId])
+
+  async function loadAccounts(uid) {
+    const { data } = await sb.from('accounts').select('*').eq('user_id', uid).order('sort_order').order('created_at')
+    setAccounts(data || [])
+  }
+
+  async function loadPlanInfo(uid) {
+    try {
+      const [{ data: up }, tradesCountRes, accountsCountRes] = await Promise.all([
+        sb.from('user_plans').select('plan_id, override_max_trades, override_max_accounts, plans(id, name, max_trades, max_accounts)').eq('user_id', uid).maybeSingle(),
+        sb.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        sb.from('accounts').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+      ])
+      const plan = up?.plans || { id: 'free', name: 'Free', max_trades: 50, max_accounts: 1 }
+      const effectiveMaxTrades = up?.override_max_trades ?? plan.max_trades
+      const effectiveMaxAccounts = up?.override_max_accounts ?? plan.max_accounts
+      setPlanInfo({
+        planId: up?.plan_id || plan.id,
+        planName: plan.name,
+        maxTrades: effectiveMaxTrades,
+        maxAccounts: effectiveMaxAccounts,
+        planDefaultMaxTrades: plan.max_trades,
+        planDefaultMaxAccounts: plan.max_accounts,
+        overrideMaxTrades: up?.override_max_trades ?? null,
+        overrideMaxAccounts: up?.override_max_accounts ?? null,
+        tradeCount: tradesCountRes.count || 0,
+        accountCount: accountsCountRes.count || 0,
+      })
+    } catch (e) { console.warn('loadPlanInfo:', e) }
+  }
+
+  function refreshAccounts() { if (effectiveUserId) { loadAccounts(effectiveUserId); loadPlanInfo(effectiveUserId) } }
+
+  // activeAccountId: sparas i user_settings.settings.activeAccountId. Faller
+  // tillbaka på default-kontot, eller första kontot i listan, om inget valt.
+  const activeAccountId = effectiveSettings?.activeAccountId
+    && accounts.some(a => a.id === effectiveSettings.activeAccountId)
+    ? effectiveSettings.activeAccountId
+    : (accounts.find(a => a.is_default)?.id || accounts[0]?.id || null)
+
+  async function switchAccount(accountId) {
+    if (!effectiveUserId) return
+    if (impersonating) {
+      const merged = { ...impersonatedSettings, activeAccountId: accountId }
+      setImpersonatedSettings(merged)
+      await sb.from('user_settings').upsert({ user_id: effectiveUserId, settings: merged, updated_at: new Date().toISOString() })
+    } else {
+      await saveSettings({ activeAccountId: accountId })
+    }
+  }
 
   async function fetchUnread(userId) {
     if (!userId) return
@@ -129,6 +193,9 @@ export function AuthProvider({ children }) {
       unreadCount, unreadBroadcast, unreadInbox, openThreads, refreshUnread,
       impersonating, viewAsUser, viewAsSettings,
       startImpersonation, stopImpersonation,
+      effectiveUserId, effectiveSettings,
+      accounts, activeAccountId, switchAccount, refreshAccounts,
+      planInfo,
     }}>
       {children}
     </AuthContext.Provider>
