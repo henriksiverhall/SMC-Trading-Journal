@@ -26,6 +26,15 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const [actionErr, setActionErr] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
+  // ── Plan & gränser (v2.4.0) ──────────────────────────────────────────────
+  const [plans, setPlans] = useState([])
+  const [planForm, setPlanForm] = useState({ planId: 'free', overrideMaxTrades: '', overrideMaxAccounts: '' })
+  const [planAccountCount, setPlanAccountCount] = useState(0)
+  const [planTradeCount, setPlanTradeCount] = useState(0)
+  const [planLoading, setPlanLoading] = useState(true)
+  const [planSaving, setPlanSaving] = useState(false)
+  const [planMsg, setPlanMsg] = useState('')
+
   useEffect(() => {
     async function load() {
       const { data: trades } = await sb.from('trades').select('outcome, result').eq('user_id', u.user_id)
@@ -41,6 +50,28 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
       setLoading(false)
     }
     load()
+  }, [u.user_id])
+
+  useEffect(() => {
+    async function loadPlan() {
+      setPlanLoading(true)
+      const [{ data: up }, { data: plansList }, accCountRes, tradeCountRes] = await Promise.all([
+        sb.from('user_plans').select('*').eq('user_id', u.user_id).maybeSingle(),
+        sb.from('plans').select('id, name, max_trades, max_accounts').order('sort_order'),
+        sb.from('accounts').select('id', { count: 'exact', head: true }).eq('user_id', u.user_id),
+        sb.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', u.user_id),
+      ])
+      setPlans(plansList || [])
+      setPlanForm({
+        planId: up?.plan_id || 'free',
+        overrideMaxTrades: up?.override_max_trades ?? '',
+        overrideMaxAccounts: up?.override_max_accounts ?? '',
+      })
+      setPlanAccountCount(accCountRes.count || 0)
+      setPlanTradeCount(tradeCountRes.count || 0)
+      setPlanLoading(false)
+    }
+    loadPlan()
   }, [u.user_id])
 
   function clearAction() { setActionMsg(''); setActionErr('') }
@@ -77,6 +108,20 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     setActionLoading(false)
   }
 
+  async function savePlan() {
+    setPlanSaving(true); setPlanMsg('')
+    const { error } = await sb.from('user_plans').upsert({
+      user_id: u.user_id,
+      plan_id: planForm.planId,
+      override_max_trades: planForm.overrideMaxTrades === '' ? null : Number(planForm.overrideMaxTrades),
+      override_max_accounts: planForm.overrideMaxAccounts === '' ? null : Number(planForm.overrideMaxAccounts),
+      updated_at: new Date().toISOString(),
+    })
+    setPlanSaving(false)
+    if (error) { setPlanMsg('Fel: ' + error.message); return }
+    setPlanMsg('Sparat!'); setTimeout(() => setPlanMsg(''), 2000)
+  }
+
   const row = (label, value, color) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
       <span style={{ color: 'var(--text3)' }}>{label}</span>
@@ -85,7 +130,11 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   )
 
   const inp = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '7px 10px', fontSize: 13, fontFamily: 'var(--font)', boxSizing: 'border-box' }
-  const SECTIONS = [{ id: 'info', label: 'Info' }, { id: 'email', label: '✏️ E-post' }, { id: 'resetpw', label: '📧 Återställning' }]
+  const SECTIONS = [{ id: 'info', label: 'Info' }, { id: 'plan', label: '💳 Plan & gränser' }, { id: 'email', label: '✏️ E-post' }, { id: 'resetpw', label: '📧 Återställning' }]
+
+  const selectedPlan = plans.find(p => p.id === planForm.planId)
+  const effectiveMaxTrades = planForm.overrideMaxTrades !== '' ? Number(planForm.overrideMaxTrades) : selectedPlan?.max_trades
+  const effectiveMaxAccounts = planForm.overrideMaxAccounts !== '' ? Number(planForm.overrideMaxAccounts) : selectedPlan?.max_accounts
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
@@ -139,6 +188,44 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
               {u.user_id !== adminId && <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
             </div>
           </>
+        )}
+        {section === 'plan' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {planLoading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Trades använda</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{planTradeCount} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {effectiveMaxTrades ?? '∞'}</span></div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Konton använda</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{planAccountCount} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {effectiveMaxAccounts ?? '∞'}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Plan</label>
+                  <select style={inp} value={planForm.planId} onChange={e => setPlanForm(f => ({ ...f, planId: e.target.value }))}>
+                    {plans.map(p => <option key={p.id} value={p.id}>{p.name} (default: {p.max_trades ?? '∞'} trades, {p.max_accounts ?? '∞'} konton)</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Override max trades <span style={{ color: 'var(--text4)' }}>(tomt = planens standard)</span></label>
+                    <input style={inp} type="number" placeholder={String(selectedPlan?.max_trades ?? '')} value={planForm.overrideMaxTrades} onChange={e => setPlanForm(f => ({ ...f, overrideMaxTrades: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Override max konton <span style={{ color: 'var(--text4)' }}>(tomt = planens standard)</span></label>
+                    <input style={inp} type="number" placeholder={String(selectedPlan?.max_accounts ?? '')} value={planForm.overrideMaxAccounts} onChange={e => setPlanForm(f => ({ ...f, overrideMaxAccounts: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>
+                  Effektiv gräns just nu: <strong style={{ color: 'var(--accent)' }}>{effectiveMaxTrades ?? 'obegränsat'} trades</strong>, <strong style={{ color: 'var(--accent)' }}>{effectiveMaxAccounts ?? 'obegränsat'} konton</strong>. Gränserna gäller hårt (databas-nivå), inte bara i UI.
+                </div>
+                <button className="btn btn-primary" onClick={savePlan} disabled={planSaving} style={{ width: 'fit-content' }}>{planSaving ? 'Sparar…' : planMsg || '💾 Spara plan'}</button>
+              </>
+            )}
+          </div>
         )}
         {section === 'email' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
