@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v2.3.9'
+export const APP_VERSION = 'v2.4.0'
 export const WORKER_URL = 'https://tradelog-claude-api-dev.henrik-siverhall.workers.dev'
 export const FUNDEDNEXT_WORKER_URL = 'https://tradelog-fundednext-dev.henrik-siverhall.workers.dev'
 
@@ -36,6 +36,18 @@ export const EMOTIONS = [
 ]
 
 export const GRADES = ['A+', 'A', 'B', 'C']
+
+// Konton (v2.4.0) – broker/prop firm-typer vid skapande av trading-konto
+export const BROKER_TYPES = [
+  { id: 'personal',   label: 'Eget konto' },
+  { id: 'topstep',    label: 'TopStep' },
+  { id: 'fundednext', label: 'FundedNext' },
+  { id: 'apex',       label: 'Apex' },
+  { id: 'tradeify',   label: 'Tradeify' },
+  { id: 'bulenox',    label: 'Bulenox' },
+  { id: 'alpha',      label: 'Alpha Futures' },
+  { id: 'other',      label: 'Annan' },
+]
 
 export function getFuturesSpec(symbol) {
   if (!symbol) return null
