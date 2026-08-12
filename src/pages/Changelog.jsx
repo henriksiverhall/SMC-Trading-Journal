@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.5',
+    date: '2026-08-12',
+    entries: [
+      { type: 'feature', text: 'Journal: den tidigare "flytta till konto"-funktionen på markerade trades generaliserades till en riktig multi-edit – välj Konto, Strategi, Grade eller Känsla i en dropdown, sätt värde och tillämpa på alla markerade trades samtidigt. Kryssrutan för markering är nu alltid synlig i tabellen, inte bara vid flera konton.' },
+    ]
+  },
+  {
     version: 'v2.4.4',
     date: '2026-08-12',
     entries: [
