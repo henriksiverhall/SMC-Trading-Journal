@@ -873,7 +873,7 @@ export default function Journal() {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card journal-trades-card">
             <div className="card-header">
               <div className="card-title">Trade Journal ({trades.length})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
@@ -954,7 +954,7 @@ export default function Journal() {
                 </div>
               )
             })()}
-            <div style={{ overflowX: 'auto' }}>
+            <div className="journal-table-scroll" style={{ overflowX: 'auto' }}>
               {loading ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
               : trades.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
               : (() => {
