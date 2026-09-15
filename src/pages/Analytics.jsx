@@ -394,6 +394,8 @@ function PsychWidget({ trades }) {
   )
 }
 
+// ── CustomFieldsWidget ──────────────────────────────────────────────────
+// Visar max 10 rader per fält. Fält med fler rader får en "Visa alla / Dra ihop"-knapp.
 function CustomFieldsWidget({ trades }) {
   const [expandedFields, setExpandedFields] = useState({})
 
@@ -606,7 +608,19 @@ function AIAnalysis({ trades, aiEnabled }) {
   const [expandedHistory, setExpandedHistory] = useState(new Set())
   const [promptTemplate, setPromptTemplate] = useState(DEFAULT_AI_PROMPT_TEMPLATE)
   const loadedRef = useRef(false)
+  // Prompten är admin-redigerbar (Admin → 🤖 AI-analys) men gäller globalt för
+  // alla användare – sparas på admin-kontots egna userSettings, precis som
+  // branding-inställningarna (se App.jsx). Vanliga användare har ingen egen
+  // rätt att skriva dit, bara läsa. Faller tillbaka på standardmallen om
+  // admin aldrig sparat en egen, eller om hämtningen misslyckas.
   useEffect(() => {
+    // Samma admin-konto (henrik.siverhall@gmail.com) har olika user_id i PROD
+    // (qmmpxupsxdouvoqgvgri) och staging/DEV (zmtpgnnqtkkdsrswhrzk) – separata
+    // Supabase-projekt, separata auth.users-tabeller. Ett hårdkodat enda ID
+    // (som branding-uppslaget i App.jsx historiskt använt) matchar bara ETT
+    // av projekten och faller tyst tillbaka på standardmallen i det andra.
+    // Väljer rätt ID utifrån vilken databas appen faktiskt är byggd mot,
+    // samma mönster som IS_STAGING-kollen i App.jsx.
     const PROD_SUPABASE_HOST = 'qmmpxupsxdouvoqgvgri'
     const ADMIN_ID = SUPABASE_URL.includes(PROD_SUPABASE_HOST)
       ? 'a55874aa-d36a-4d07-a40f-778b3a66d671'
@@ -621,6 +635,10 @@ function AIAnalysis({ trades, aiEnabled }) {
   const wr = withR.length ? (wins.length / withR.length * 100).toFixed(1) : 0
   const totalR = withR.reduce((a, t) => a + (t.result || 0), 0).toFixed(2)
   const pf = (() => { const winR = wins.reduce((a, t) => a + t.result, 0); const lossR = Math.abs(withR.filter(t => t.outcome === 'L').reduce((a, t) => a + t.result, 0)); return lossR > 0 ? (winR / lossR).toFixed(2) : '∞' })()
+  // v2.0.63: fingerprint byggs nu på ALLA trades (id+result+outcome), inte bara
+  // de med result!=null. Importerade trades saknar result (se Kanban
+  // dev_import_r_value1) men får ändå outcome satt – innan detta fix var de
+  // osynliga för fingerprinten så "✓ Aktuell" visades trots ny data.
   const fingerprint = trades.map(t => `${t.id}:${t.result}:${t.outcome}`).sort().join('|')
   useEffect(() => {
     if (loadedRef.current) return
@@ -899,7 +917,7 @@ export default function Analytics() {
           </div>
         </div>
         <DragGrid pageKey="analytics" widgets={widgets} />
-        {withR.length === 0 && <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontSize: 14 }}>Inga trades att analysera ännu.</div>}
+        {withR.length === 0 && <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)', fontSize: 13 }}>Inga trades att analysera ännu.</div>}
       </div>
     </div>
   )
