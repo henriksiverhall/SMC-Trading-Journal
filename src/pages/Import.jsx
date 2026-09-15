@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import { getFuturesSpec, FUNDEDNEXT_WORKER_URL } from '../lib/constants'
 import Topbar from '../components/Topbar'
 
+// ── Parsers ───────────────────────────────────────────────────────────────────────────────────────
+
 function stripBOM(text) { return text.replace(/^\uFEFF/, '') }
 
 function guessSymbolFromFilename(filename) {
@@ -13,6 +15,10 @@ function guessSymbolFromFilename(filename) {
   return cand || ''
 }
 
+// Futures-kontraktskoder (t.ex. "MNQU6", "MYMM6") har en månadsbokstav (F,G,H,J,K,M,N,Q,U,V,X,Z)
+// + 1-2 årssiffror på slutet, vilket FUTURES_SPECS i constants.js inte känner igen direkt
+// (den har bara basnamnet, t.ex. "MNQ"). Denna hjälpfunktion strippar kontraktskoden så att
+// point value-uppslaget fungerar även på råa broker/prop firm-exporter.
 function getFuturesSpecFlexible(symbol) {
   if (!symbol) return null
   const direct = getFuturesSpec(symbol)
@@ -38,6 +44,8 @@ function parseTVBacktest(text, filename = '') {
   }
   const symbol = guessSymbolFromFilename(filename)
 
+  // TradingViews export har EN rad per exekvering (Entry + Exit separat), grupperade
+  // på samma "Trade number" – inte en rad per trade som tidigare antogs.
   const byTrade = {}
   for (const row of rows) {
     const num = row['trade number'] || row['trade #'] || ''
@@ -126,7 +134,7 @@ function parseTradovate(text) {
     const row = {}
     headers.forEach((h, j) => { row[h] = (cols[j] || '').replace(/^"|"$/g, '').trim() })
     const status = (row['status'] || '').toLowerCase()
-    if (status && status !== 'filled') continue
+    if (status && status !== 'filled') continue // hoppa Canceled/Working/Rejected
     const side = (row['side'] || row['b/s'] || row['buy/sell'] || '').toLowerCase()
     if (!/buy|sell/.test(side)) continue
     const price = parseFloat(row['fill price'] || row['avgprice'] || row['avg fill price'] || row['price'] || '')
@@ -154,6 +162,10 @@ function parseTradovate(text) {
       const entry = isLong ? buy.price : sell.price
       const exitP = isLong ? sell.price : buy.price
       const profitPts = isLong ? (exitP - entry) : (entry - exitP)
+      // profitPts är prisdifferensen i punkter, inte dollar – måste multipliceras med
+      // instrumentets point value (t.ex. $2/point för MNQ) och antal kontrakt för att
+      // bli ett faktiskt dollar-P&L. Utan detta sparades pnl:null och R-kolumnen
+      // kunde aldrig visa något för Tradovate-importer, oavsett displayfix i Journal.jsx.
       const spec = getFuturesSpecFlexible(symbol)
       const pnl = spec ? parseFloat((profitPts * spec.pointValue * buy.qty).toFixed(2)) : null
       const entryRaw = isLong ? buy.date : sell.date
@@ -172,6 +184,12 @@ function parseTradovate(text) {
   return { trades }
 }
 
+// TopstepX / ProjectX (samma exekveringsplattform används av flera prop firms:
+// TopStep, Bulenox, Alpha Futures m.fl.). Exportformat: order-nivå (inte fills),
+// med Status/Side/PositionDisposition/CreationDisposition som styr tolkningen.
+// Empiriskt bekräftat mot verklig export: Side "Bid" = köp (Long vid Opening),
+// Side "Ask" = sälj (Short vid Opening). CreationDisposition anger skälet
+// (Trader/StopLoss/TakeProfit/ClosePosition).
 function parseTopStepX(text) {
   const lines = stripBOM(text).trim().split('\n')
   const headers = lines[0]?.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase()) || []
@@ -204,6 +222,8 @@ function parseTopStepX(text) {
       const open = openBySymbol[symbol]
       const isLong = open.direction === 'Long'
       const profitPts = isLong ? (price - open.entryPrice) : (open.entryPrice - price)
+      // Samma som Tradovate-parsern: profitPts är punkter, inte dollar. Konvertera
+      // via instrumentets point value så pnl faktiskt kan visas i R-kolumnen.
       const spec = getFuturesSpecFlexible(symbol)
       const pnl = spec ? parseFloat((profitPts * spec.pointValue * open.size).toFixed(2)) : null
       trades.push({
@@ -278,6 +298,10 @@ function formatDateStr(raw) {
   return new Date().toISOString().split('T')[0]
 }
 
+// De flesta broker/prop firm-exporter (Tradovate, TopstepX, NinjaTrader, MT4/5, TV Backtest)
+// har fullständiga timestamps (datum + klockslag) i sina råa tidsfält, men fram tills nu
+// plockade ingen parser ut klockslaget – bara datumet (via formatDateStr). Det gjorde att
+// varken entry-tid eller Exit tid någonsin sparades för IMPORTERADE trades, oavsett plattform.
 function formatTimeStr(raw) {
   if (!raw) return null
   const d = new Date(raw)
@@ -297,7 +321,7 @@ const PLATFORMS = [
 ]
 
 export default function Import() {
-  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const { user, userSettings, saveSettings, impersonating, activeAccountId, planInfo, accounts } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [platform, setPlatform] = useState(null)
   const [parsed, setParsed] = useState(null)
@@ -309,6 +333,7 @@ export default function Import() {
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
 
+  // ── Farlig zon: radera alla trades (admin-impersonation-medveten) ───────
   const [dangerOpen, setDangerOpen] = useState(false)
   const [dangerCount, setDangerCount] = useState(null)
   const [dangerConfirmText, setDangerConfirmText] = useState('')
@@ -331,6 +356,7 @@ export default function Import() {
     setDangerCount(0)
   }
 
+  // ── FundedNext (API-import) ──────────────────────────────
   const [fnToken, setFnToken] = useState('')
   const [fnLoading, setFnLoading] = useState(false)
   const [fnError, setFnError] = useState('')
@@ -392,11 +418,13 @@ export default function Import() {
   async function handleImport() {
     if (!parsed || !selected.length || !effectiveUserId) return
     setImporting(true); setImportResult(null)
-    let ok=0,skip=0,fail=0
+    let ok=0,skip=0,fail=0,limitReached=false
     for (const t of selected.map(i=>parsed[i])) {
-      if (t._duplicate) { skip++; continue }
+      if (t._duplicate) { skip++; continue } // extra säkerhetsnät, borde redan vara avmarkerat
+      if (limitReached) { skip++; continue }
       const trade = {
         user_id: effectiveUserId,
+        account_id: activeAccountId || null,
         date: t.date || new Date().toISOString().split('T')[0],
         time: t.time || null,
         symbol: t.symbol||null, direction: t.direction||null,
@@ -420,9 +448,13 @@ export default function Import() {
         },
       }
       const { error } = await sb.from('trades').insert(trade)
-      if (error) { if (error.code==='23505') skip++; else fail++ } else ok++
+      if (error) {
+        if (error.code==='23505') skip++
+        else if (error.message?.includes('trade_limit_reached')) { limitReached = true; fail++ }
+        else fail++
+      } else ok++
     }
-    setImporting(false); setImportResult({ok,skip,fail})
+    setImporting(false); setImportResult({ok,skip,fail,limitReached})
   }
 
   function reset() {
@@ -436,6 +468,12 @@ export default function Import() {
     <div style={{ flex:1 }}>
       <Topbar title="Import" subtitle="Importera trades från externa plattformar" />
       <div className="page-content" style={{ maxWidth:900 }}>
+
+        {accounts.length > 1 && (
+          <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text3)' }}>
+            Importeras till: <strong style={{ color: 'var(--accent)' }}>{accounts.find(a => a.id === activeAccountId)?.name || '—'}</strong> <span style={{ color: 'var(--text4)' }}>(byt konto uppe till höger)</span>
+          </div>
+        )}
 
         <div className="card" style={{ marginBottom:20, border:'1px solid rgba(239,68,68,0.35)' }}>
           <div className="card-header" onClick={()=>dangerOpen?setDangerOpen(false):openDangerZone()} style={{ cursor:'pointer' }}>
@@ -592,13 +630,18 @@ export default function Import() {
                       </div>
                       {importResult.skip>0 && <div style={{ padding:'10px 16px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:'var(--r)', textAlign:'center' }}>
                         <div style={{ fontSize:22, fontWeight:800, color:'var(--text3)' }}>{importResult.skip}</div>
-                        <div style={{ fontSize:11, color:'var(--text4)' }}>Dubbletter</div>
+                        <div style={{ fontSize:11, color:'var(--text4)' }}>Dubbletter{importResult.limitReached ? ' / hoppade' : ''}</div>
                       </div>}
                       {importResult.fail>0 && <div style={{ padding:'10px 16px', background:'rgba(239,68,68,0.08)', border:'1px solid var(--red)', borderRadius:'var(--r)', textAlign:'center' }}>
                         <div style={{ fontSize:22, fontWeight:800, color:'var(--red)' }}>{importResult.fail}</div>
                         <div style={{ fontSize:11, color:'var(--red)' }}>Fel</div>
                       </div>}
                     </div>
+                    {importResult.limitReached && (
+                      <div style={{ fontSize:12, color:'var(--red)', padding:'8px 12px', background:'rgba(239,68,68,0.08)', borderRadius:'var(--r)' }}>
+                        ⚠ Din trade-gräns ({planInfo?.maxTrades ?? '?'} st) nåddes under importen – resten hoppades över. Uppgradera för fler.
+                      </div>
+                    )}
                     <div style={{ display:'flex', gap:10, marginTop:4 }}>
                       <button className="btn btn-ghost" onClick={reset}>Importera fler</button>
                       <button className="btn btn-primary" onClick={()=>window.__tlNavigate?.('journal')}>Gå till Journal →</button>
