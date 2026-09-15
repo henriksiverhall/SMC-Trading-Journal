@@ -105,6 +105,36 @@ function computeRValues(f, scales, targets) {
   return { r, usd }
 }
 
+// Planerad R:R – oberoende av Utfall. Räknas fram så fort Entry/SL/TP (eller
+// targets) är ifyllda, så man ser den tilltänkta risk/reward-kvoten direkt
+// när man sätter upp en trade, innan man vet om den blev vinst/förlust.
+// Samma prisdiff-logik som "W"-grenen i computeRValues ovan, men körs alltid
+// oavsett vad (eller om) Utfall är valt.
+function computePlannedRR(f, scales, targets) {
+  const entry = getWeightedEntry(f, scales)
+  const sl = parseFloat(f.sl)
+  if (!entry || !sl || isNaN(entry) || isNaN(sl)) return null
+  const risk = Math.abs(entry - sl)
+  if (risk === 0) return null
+  if (targets.length > 0) {
+    const valid = targets.filter(t => t.price && t.contracts)
+    if (valid.length > 0) {
+      let totalR = 0, totalQty = 0
+      for (const t of valid) {
+        const qty = parseFloat(t.contracts) || 0
+        const price = parseFloat(t.price)
+        if (!price || !qty) continue
+        totalR += (Math.abs(price - entry) / risk) * qty
+        totalQty += qty
+      }
+      return totalQty > 0 ? parseFloat((totalR / totalQty).toFixed(2)) : null
+    }
+  }
+  const tp = parseFloat(f.tp)
+  if (tp && !isNaN(tp)) return parseFloat((Math.abs(tp - entry) / risk).toFixed(2))
+  return null
+}
+
 function getWeightedEntry(f, scales) {
   const base = parseFloat(f.entry)
   if (!base || isNaN(base)) return null
@@ -134,12 +164,57 @@ function formatRorPnL(trade) {
 }
 
 export default function Journal() {
-  const { user, userSettings, saveSettings, impersonating } = useAuth()
+  const { user, userSettings, saveSettings, impersonating, accounts, activeAccountId, planInfo } = useAuth()
   const effectiveUserId = impersonating?.id ?? user?.id
   const [trades, setTrades] = useState([])
-  const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })
+  const [filter, setFilter] = useState({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '', account: '' })
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
+
+  // Journal auto-filtrerar på aktivt konto (v2.4.7) – man kan själv byta till
+  // "Alla konton" i filtret, men vid nästa kontobyte återgår filtret till
+  // att visa bara det nya aktiva kontots trades, så man inte av misstag
+  // blandar ihop konton i listan.
+  const prevAccountRef = useRef(activeAccountId)
+  useEffect(() => {
+    if (activeAccountId !== prevAccountRef.current) {
+      prevAccountRef.current = activeAccountId
+      setFilter(f => ({ ...f, account: activeAccountId || '' }))
+    }
+  }, [activeAccountId])
+
+  // Bulk-redigering av markerade trades (v2.4.6) – alla fält synliga som
+  // egna rader (ingen fält-väljare) så man slipper klicka i en dropdown för
+  // att se vad som går att sätta. Varje rad har sin egen Tillämpa-knapp.
+  const BULK_FIELDS = [
+    ...(accounts.length > 1 ? [{ id: 'account', label: 'Konto' }] : []),
+    { id: 'strategy', label: 'Strategi' },
+    { id: 'grade', label: 'Grade' },
+    { id: 'emotion', label: 'Känsla' },
+  ]
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkValues, setBulkValues] = useState({ account: '', strategy: '', grade: '', emotion: '' })
+  const [bulkApplyingField, setBulkApplyingField] = useState(null)
+  const [bulkMsg, setBulkMsg] = useState('')
+
+  function toggleSelected(id) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleSelectAll(ids) {
+    setSelectedIds(prev => prev.size === ids.length ? new Set() : new Set(ids))
+  }
+  function setBulkValue(fieldId, val) { setBulkValues(v => ({ ...v, [fieldId]: val })) }
+  async function applyBulkField(fieldId) {
+    const value = bulkValues[fieldId]
+    if (!value || selectedIds.size === 0) return
+    setBulkApplyingField(fieldId); setBulkMsg('')
+    const dbField = { account: 'account_id', strategy: 'strategy', grade: 'grade', emotion: 'emotion' }[fieldId]
+    const { error } = await sb.from('trades').update({ [dbField]: value }).in('id', [...selectedIds]).eq('user_id', effectiveUserId)
+    setBulkApplyingField(null)
+    if (error) { setBulkMsg('Fel: ' + error.message); return }
+    setBulkMsg('✓ Uppdaterat'); setTimeout(() => setBulkMsg(''), 1800)
+    loadTrades()
+  }
 
   function toggleSort(col) { setSort(s => ({ col, dir: s.col === col && s.dir === 'asc' ? 'desc' : 'asc' })) }
   function SortArrow({ col }) {
@@ -150,6 +225,8 @@ export default function Journal() {
   const [form, setForm] = useState(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [showLimitModal, setShowLimitModal] = useState(false)
   const [calcR, setCalcR] = useState(null)
   const [calcUSD, setCalcUSD] = useState(null)
   const [selectedModal, setSelectedModal] = useState(null)
@@ -293,6 +370,10 @@ export default function Journal() {
     setLoading(false)
   }
 
+  // Samma logik som CSV-exporten: plockar upp alla icke-interna (ej _-prefixade)
+  // nycklar i custom_data across samtliga trades, så journal-tabellen visar
+  // Exit tid, Faktisk exit och ALLA egna fält som förekommer i datan – inte
+  // bara de som råkar vara konfigurerade i det aktuella formuläret.
   const customColumnKeys = useMemo(() => {
     const set = new Set()
     trades.forEach(t => {
@@ -387,11 +468,12 @@ export default function Journal() {
   async function handleSave(e) {
     e.preventDefault()
     if (missingRequiredFields.length > 0) { setAttemptedSave(true); return }
-    setSaving(true)
+    setSaving(true); setSaveError('')
     const entry = weightedEntry || parseFloat(form.entry)
     const totalC = scaleIns.length > 0 ? getTotalContracts(form, scaleIns) : (parseFloat(form.contracts) || 1)
     const trade = {
       user_id: user.id,
+      ...(!editingId ? { account_id: activeAccountId || null } : {}),
       date: form.date || new Date().toISOString().split('T')[0],
       time: form.time || null, symbol: form.symbol || null, direction: form.direction || null,
       entry: entry || null, sl: parseFloat(form.sl) || null, tp: parseFloat(form.tp) || null,
@@ -422,6 +504,12 @@ export default function Journal() {
       if (riskPct || accountSize) await saveSettings({ riskPct: riskPct || userSettings?.riskPct, accountSize: accountSize || userSettings?.accountSize })
       if (form.strategy) await saveSettings({ lastJournalStrategy: form.strategy })
       resetForm(); loadTrades()
+    } else {
+      const limitReached = error.message?.includes('trade_limit_reached')
+      setSaveError(limitReached
+        ? `Du har nått din trade-gräns (${planInfo?.maxTrades ?? '?'} st) för din plan. Uppgradera för fler.`
+        : `Kunde inte spara: ${error.message}`)
+      if (limitReached) setShowLimitModal(true)
     }
     setSaving(false)
   }
@@ -451,6 +539,12 @@ export default function Journal() {
     }
     setForm(newForm)
     formRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // OBS: måste räkna R på newForm (den nyss inlästa tradens data), inte på
+    // det gamla `form`-state:t – setForm() ovan har inte hunnit appliceras
+    // än när denna rad körs (samma render-closure), så {...form} pekade
+    // tidigare på FÖREGÅENDE trades/tomma formulärets värden. Det gjorde
+    // att R kunde bli null/fel och sedan sparas över det korrekta värdet
+    // om användaren tryckte Spara utan att röra några fält.
     const { r, usd } = computeRValues(newForm, cd._scaleIns || [], cd._targets || [])
     setCalcR(r); setCalcUSD(usd)
   }
@@ -582,7 +676,9 @@ export default function Journal() {
           </select>
         </div>
       )
-      case 'r_display': return calcR !== null ? (
+      case 'r_display': {
+        const plannedRR = calcR === null ? computePlannedRR(form, scaleIns, targets) : null
+        if (calcR !== null) return (
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${calcR >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>R Auto</div>
@@ -595,7 +691,16 @@ export default function Journal() {
             </div>
           )}
         </div>
-      ) : null
+        )
+        if (plannedRR !== null) return (
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: '1px dashed var(--border2)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Planerat R:R</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 700, color: 'var(--accent)' }}>{plannedRR}R</div>
+            <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 2 }}>Baserat på {targets.length > 0 ? 'targets' : 'TP'} · uppdateras med faktiskt R när Utfall väljs</div>
+          </div>
+        )
+        return null
+      }
       case 'risk_pct': return (
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Risk % av konto{reqMark('risk_pct')}</label>
@@ -733,11 +838,16 @@ export default function Journal() {
                   </select>
                   <button type="button" className="btn btn-primary btn-sm" onClick={addCustomField}>+</button>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>Dra ⠠⠠-handtagen för att flytta fält. Stäng Anpassa när du är klar.</div>
+                <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 10 }}>Dra ⠿⠿-handtagen för att flytta fält. Stäng Anpassa när du är klar.</div>
               </div>
             )}
 
             <div className="card-body">
+              {accounts.length > 1 && (
+                <div style={{ marginBottom: 14, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text3)' }}>
+                  Loggas till: <strong style={{ color: 'var(--accent)' }}>{accounts.find(a => a.id === activeAccountId)?.name || '—'}</strong> <span style={{ color: 'var(--text4)' }}>(byt konto uppe till höger)</span>
+                </div>
+              )}
               <form onSubmit={handleSave}>
                 {fieldRows.map(row => {
                   const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
@@ -756,7 +866,7 @@ export default function Journal() {
                           >
                             {showFieldMgr && hint === 'before' && <div style={{ position: 'absolute', top: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />}
                             {showFieldMgr && hint === 'after' && <div style={{ position: 'absolute', bottom: -8, left: 0, right: 0, height: 3, background: 'var(--accent)', borderRadius: 3, zIndex: 10, boxShadow: '0 0 8px rgba(0,212,170,0.6)' }} />}
-                            {showFieldMgr && <div style={{ position: 'absolute', top: 0, right: 2, zIndex: 5, color: 'var(--text4)', fontSize: 12, cursor: 'grab', opacity: 0.5, userSelect: 'none', lineHeight: 1 }} title="Dra för att flytta">⠠⠠</div>}
+                            {showFieldMgr && <div style={{ position: 'absolute', top: 0, right: 2, zIndex: 5, color: 'var(--text4)', fontSize: 12, cursor: 'grab', opacity: 0.5, userSelect: 'none', lineHeight: 1 }} title="Dra för att flytta">⠿⠿</div>}
                             {content}
                           </div>
                         )
@@ -771,19 +881,64 @@ export default function Journal() {
                 {attemptedSave && missingRequiredFields.length > 0 && (
                   <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>Fyll i: {missingRequiredFields.map(id => FIELD_LABELS[id] || id).join(', ')}</div>
                 )}
+                {saveError && (
+                  <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--r)' }}>⚠ {saveError}</div>
+                )}
               </form>
             </div>
           </div>
 
-          <div className="card">
+          <div className="card journal-trades-card">
             <div className="card-header">
               <div className="card-title">Trade Journal ({trades.length})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => exportCSV(trades)}>⬇ CSV</button>
             </div>
+            {selectedIds.size > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--accent-dim)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{selectedIds.size} markerade</span>
+                  {bulkMsg && <span style={{ fontSize: 12, color: bulkMsg.startsWith('Fel') ? 'var(--red)' : 'var(--green)' }}>{bulkMsg}</span>}
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())} style={{ marginLeft: 'auto' }}>Avmarkera</button>
+                </div>
+                {BULK_FIELDS.map(f => (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ width: 62, flexShrink: 0, fontSize: 12, color: 'var(--text3)' }}>{f.label}</span>
+                    {f.id === 'account' && (
+                      <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={bulkValues.account} onChange={e => setBulkValue('account', e.target.value)}>
+                        <option value="">Välj konto…</option>
+                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    )}
+                    {f.id === 'strategy' && (
+                      <>
+                        <input className="form-control" list="bulk-strategy-list" style={{ width: 200, fontSize: 12 }} placeholder="Strategi…" value={bulkValues.strategy} onChange={e => setBulkValue('strategy', e.target.value)} />
+                        <datalist id="bulk-strategy-list">
+                          {[...new Set([...checklistStrategies, ...trades.map(t => t.strategy).filter(Boolean)])].map(s => <option key={s} value={s} />)}
+                        </datalist>
+                      </>
+                    )}
+                    {f.id === 'grade' && (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {GRADES.map(g => <button key={g} type="button" className={`grade-btn ${bulkValues.grade === g ? 'sel' : ''}`} onClick={() => setBulkValue('grade', g)} style={{ padding: '4px 10px', fontSize: 12 }}>{g}</button>)}
+                      </div>
+                    )}
+                    {f.id === 'emotion' && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {EMOTIONS.map(em => <button key={em.id} type="button" className={`emotion-btn ${bulkValues.emotion === em.id ? 'sel' : ''}`} onClick={() => setBulkValue('emotion', em.id)} style={{ padding: '3px 9px', fontSize: 11 }}>{em.emoji} {em.label}</button>)}
+                      </div>
+                    )}
+                    <button className="btn btn-primary btn-sm" disabled={!bulkValues[f.id] || bulkApplyingField === f.id} onClick={() => applyBulkField(f.id)}>{bulkApplyingField === f.id ? 'Tillämpar…' : 'Tillämpa'}</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {trades.length > 0 && (() => {
               const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort()
               return (
                 <div style={{ display: 'flex', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {accounts.length > 1 && <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.account} onChange={e => setFilter(f => ({ ...f, account: e.target.value }))}>
+                    <option value="">Alla konton</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>}
                   <select className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.outcome} onChange={e => setFilter(f => ({ ...f, outcome: e.target.value }))}>
                     <option value="">Alla utfall</option><option value="W">Win</option><option value="L">Loss</option><option value="BE">Break Even</option>
                   </select>
@@ -796,9 +951,10 @@ export default function Journal() {
                   <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value }))} title="Från datum" />
                   <span style={{ fontSize: 11, color: 'var(--text4)' }}>–</span>
                   <input type="date" className="form-control" style={{ width: 'auto', fontSize: 12 }} value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value }))} title="Till datum" />
-                  {(filter.outcome || filter.direction || filter.strategy || filter.dateFrom || filter.dateTo) && <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '' })}>✕ Rensa</button>}
+                  {(filter.outcome || filter.direction || filter.strategy || filter.dateFrom || filter.dateTo || filter.account) && <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ outcome: '', direction: '', strategy: '', dateFrom: '', dateTo: '', account: '' })}>✕ Rensa</button>}
                   {(() => {
                     const n = trades.filter(t => {
+                      if (filter.account && t.account_id !== filter.account) return false
                       if (filter.outcome && t.outcome !== filter.outcome) return false
                       if (filter.direction && t.direction !== filter.direction) return false
                       if (filter.strategy && t.strategy !== filter.strategy) return false
@@ -813,11 +969,12 @@ export default function Journal() {
                 </div>
               )
             })()}
-            <div style={{ overflowX: 'auto' }}>
+            <div className="journal-table-scroll" style={{ overflowX: 'auto' }}>
               {loading ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div>
               : trades.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Inga trades loggade ännu.</div>
               : (() => {
                 const filteredTrades = trades.filter(t => {
+                  if (filter.account && t.account_id !== filter.account) return false
                   if (filter.outcome && t.outcome !== filter.outcome) return false
                   if (filter.direction && t.direction !== filter.direction) return false
                   if (filter.strategy && t.strategy !== filter.strategy) return false
@@ -833,6 +990,8 @@ export default function Journal() {
                 return (
                   <table className="journal-table">
                     <thead><tr>
+                      <th style={{ width: 30 }}><input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filteredTrades.length} onChange={() => toggleSelectAll(filteredTrades.map(t => t.id))} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} onClick={e => e.stopPropagation()} /></th>
+                      {accounts.length > 1 && <th style={{ whiteSpace:'nowrap' }}>Konto</th>}
                       <th style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }} onClick={()=>toggleSort('date')}>Datum{SortArrow({col:'date'})}</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit datum</th>
                       <th style={{ whiteSpace:'nowrap' }}>Exit tid</th>
@@ -850,6 +1009,8 @@ export default function Journal() {
                     </tr></thead>
                     <tbody>{filteredTrades.map(t => (
                       <tr key={t.id} onClick={() => setSelectedModal(t)}>
+                        <td onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelected(t.id)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} /></td>
+                        {accounts.length > 1 && <td style={{ color: 'var(--text3)', fontSize: 11 }}>{accounts.find(a => a.id === t.account_id)?.name || '—'}</td>}
                         <td className="mono">{t.date}</td>
                         <td className="mono">{t.custom_data?._exit_date || '—'}</td>
                         <td className="mono">{t.custom_data?._exit_time || '—'}</td>
@@ -945,6 +1106,26 @@ export default function Journal() {
           <button onClick={() => setLightboxUrl(null)} style={{ position: 'absolute', top: 20, right: 24, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           <a href={lightboxUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 20, right: 68, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 'var(--r)', color: '#fff', fontSize: 12, cursor: 'pointer', padding: '8px 12px', textDecoration: 'none' }}>⭡ Öppna original</a>
           <img src={lightboxUrl} alt="Chart" onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 'var(--r2)', boxShadow: '0 24px 80px rgba(0,0,0,0.8)', objectFit: 'contain' }} />
+        </div>
+      )}
+
+      {showLimitModal && (
+        <div className="modal-backdrop open" onClick={e => e.target === e.currentTarget && setShowLimitModal(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div className="modal-title">⚠ Trade-gräns nådd</div>
+              <button className="modal-close" onClick={() => setShowLimitModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 18 }}>
+                Du har loggat {planInfo?.maxTrades ?? '?'} trades, vilket är gränsen för din nuvarande plan. Uppgradera för att fortsätta logga fler trades.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="button" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setShowLimitModal(false); window.__tlNavigate?.('profile') }}>Kontakta oss om uppgradering</button>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowLimitModal(false)}>Stäng</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
