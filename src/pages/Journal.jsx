@@ -171,6 +171,18 @@ export default function Journal() {
   const [sort, setSort] = useState({ col: 'date', dir: 'desc' })
   const [checklistStrategies, setChecklistStrategies] = useState([])
 
+  // Journal auto-filtrerar på aktivt konto (v2.4.7) – man kan själv byta till
+  // "Alla konton" i filtret, men vid nästa kontobyte återgår filtret till
+  // att visa bara det nya aktiva kontots trades, så man inte av misstag
+  // blandar ihop konton i listan.
+  const prevAccountRef = useRef(activeAccountId)
+  useEffect(() => {
+    if (activeAccountId !== prevAccountRef.current) {
+      prevAccountRef.current = activeAccountId
+      setFilter(f => ({ ...f, account: activeAccountId || '' }))
+    }
+  }, [activeAccountId])
+
   // Bulk-redigering av markerade trades (v2.4.6) – alla fält synliga som
   // egna rader (ingen fält-väljare) så man slipper klicka i en dropdown för
   // att se vad som går att sätta. Varje rad har sin egen Tillämpa-knapp.
@@ -898,7 +910,7 @@ export default function Journal() {
                       <>
                         <input className="form-control" list="bulk-strategy-list" style={{ width: 200, fontSize: 12 }} placeholder="Strategi…" value={bulkValues.strategy} onChange={e => setBulkValue('strategy', e.target.value)} />
                         <datalist id="bulk-strategy-list">
-                          {[...new Set(trades.map(t => t.strategy).filter(Boolean))].map(s => <option key={s} value={s} />)}
+                          {[...new Set([...checklistStrategies, ...trades.map(t => t.strategy).filter(Boolean)])].map(s => <option key={s} value={s} />)}
                         </datalist>
                       </>
                     )}
