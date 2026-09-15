@@ -2,6 +2,13 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.8',
+    date: '2026-09-15',
+    entries: [
+      { type: 'feature', text: 'Journal: när trade-gränsen nås visas nu en tydlig dialogruta mitt i bild, utöver den befintliga varningstexten under Spara-knappen. Dialogen har en knapp som tar användaren till Profil för att höra av sig om uppgradering.' },
+    ]
+  },
+  {
     version: 'v2.4.7',
     date: '2026-09-15',
     entries: [
