@@ -2,6 +2,15 @@ import Topbar from '../components/Topbar'
 
 const CHANGELOG = [
   {
+    version: 'v2.4.7',
+    date: '2026-09-15',
+    entries: [
+      { type: 'feature', text: 'Journal filtrerar nu automatiskt på aktivt konto vid kontobyte – man kan själv byta filtret till "Alla konton", men nästa gång man byter aktivt konto återgår filtret till att visa bara det nya kontots trades, så man inte råkar blanda ihop dem.' },
+      { type: 'fix', text: 'Journal bulk-edit: strategiförslagen i "Strategi"-fältet visade bara strategier som redan användes i loggade trades, inte hela den sparade strategilistan (checklist-strategierna). Slog man in flera trades i ett nytt konto syntes därför bara en bråkdel av de riktiga strategierna. Datalistan slår nu ihop båda källorna.' },
+      { type: 'fix', text: 'Admin → Användare: "Per konto"-statistik och kontoräknaren i Plan & gränser visade alltid 0 för andra användares konton, oavsett hur många konton de faktiskt hade skapat – en RLS-policy på accounts-tabellen saknade admin-undantag (till skillnad från trades, som redan hade det). Ny SELECT-policy tillagd i DEV-databasen.' },
+    ]
+  },
+  {
     version: 'v2.4.6',
     date: '2026-08-12',
     entries: [
