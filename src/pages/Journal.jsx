@@ -226,6 +226,7 @@ export default function Journal() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [showLimitModal, setShowLimitModal] = useState(false)
   const [calcR, setCalcR] = useState(null)
   const [calcUSD, setCalcUSD] = useState(null)
   const [selectedModal, setSelectedModal] = useState(null)
@@ -504,9 +505,11 @@ export default function Journal() {
       if (form.strategy) await saveSettings({ lastJournalStrategy: form.strategy })
       resetForm(); loadTrades()
     } else {
-      setSaveError(error.message?.includes('trade_limit_reached')
+      const limitReached = error.message?.includes('trade_limit_reached')
+      setSaveError(limitReached
         ? `Du har nått din trade-gräns (${planInfo?.maxTrades ?? '?'} st) för din plan. Uppgradera för fler.`
         : `Kunde inte spara: ${error.message}`)
+      if (limitReached) setShowLimitModal(true)
     }
     setSaving(false)
   }
@@ -1103,6 +1106,26 @@ export default function Journal() {
           <button onClick={() => setLightboxUrl(null)} style={{ position: 'absolute', top: 20, right: 24, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           <a href={lightboxUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 20, right: 68, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 'var(--r)', color: '#fff', fontSize: 12, cursor: 'pointer', padding: '8px 12px', textDecoration: 'none' }}>⭡ Öppna original</a>
           <img src={lightboxUrl} alt="Chart" onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 'var(--r2)', boxShadow: '0 24px 80px rgba(0,0,0,0.8)', objectFit: 'contain' }} />
+        </div>
+      )}
+
+      {showLimitModal && (
+        <div className="modal-backdrop open" onClick={e => e.target === e.currentTarget && setShowLimitModal(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div className="modal-title">⚠ Trade-gräns nådd</div>
+              <button className="modal-close" onClick={() => setShowLimitModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 18 }}>
+                Du har loggat {planInfo?.maxTrades ?? '?'} trades, vilket är gränsen för din nuvarande plan. Uppgradera för att fortsätta logga fler trades.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="button" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setShowLimitModal(false); window.__tlNavigate?.('profile') }}>Kontakta oss om uppgradering</button>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowLimitModal(false)}>Stäng</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
