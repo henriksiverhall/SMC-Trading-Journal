@@ -16,9 +16,14 @@ function formatFull(iso) {
   return new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
+// v2.4.1: UserDetailPanel – tidigare en modal (UserProfileModal). Vid fler
+// användare/flikar (särskilt Plan & gränser) blev en 560px-modal för trång.
+// Renderas nu inline i en sida-vid-sida-layout (lista till vänster, panel
+// till höger) i UsersTab nedan – ingen overlay/backdrop längre.
+function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onToggleAI }) {
   const { startImpersonation } = useAuth()
   const [stats, setStats] = useState(null)
+  const [accountBreakdown, setAccountBreakdown] = useState([])
   const [loading, setLoading] = useState(true)
   const [section, setSection] = useState('info')
   const [newEmail, setNewEmail] = useState('')
@@ -26,9 +31,23 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   const [actionErr, setActionErr] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
+  // ── Plan & gränser (v2.4.0) ───────────────────────────────────────
+  const [plans, setPlans] = useState([])
+  const [planForm, setPlanForm] = useState({ planId: 'free', overrideMaxTrades: '', overrideMaxAccounts: '' })
+  const [planAccountCount, setPlanAccountCount] = useState(0)
+  const [planTradeCount, setPlanTradeCount] = useState(0)
+  const [planLoading, setPlanLoading] = useState(true)
+  const [planSaving, setPlanSaving] = useState(false)
+  const [planMsg, setPlanMsg] = useState('')
+
   useEffect(() => {
+    setSection('info'); setNewEmail(''); clearAction()
     async function load() {
-      const { data: trades } = await sb.from('trades').select('outcome, result').eq('user_id', u.user_id)
+      setLoading(true)
+      const [{ data: trades }, { data: accounts }] = await Promise.all([
+        sb.from('trades').select('outcome, result, account_id').eq('user_id', u.user_id),
+        sb.from('accounts').select('id, name').eq('user_id', u.user_id),
+      ])
       const withR = (trades || []).filter(t => t.result != null)
       const wins = withR.filter(t => t.outcome === 'W')
       const losses = withR.filter(t => t.outcome === 'L')
@@ -38,9 +57,54 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
       const lossR = Math.abs(losses.reduce((a, t) => a + t.result, 0))
       const pf = lossR > 0 ? (winR / lossR).toFixed(2) : winR > 0 ? '∞' : '—'
       setStats({ total: (trades || []).length, withR: withR.length, wins: wins.length, losses: losses.length, totalR: totalR.toFixed(2), wr, pf })
+
+      // Per-konto-uppdelning – bara meningsfull (och bara visad i UI) om
+      // användaren faktiskt har fler än ett konto, annars är den identisk
+      // med totalen ovan och bara brus.
+      if ((accounts || []).length > 1) {
+        const byAccount = {}
+        for (const t of (trades || [])) {
+          const key = t.account_id || '_none'
+          if (!byAccount[key]) byAccount[key] = { total: 0, withR: 0, wins: 0, totalR: 0 }
+          byAccount[key].total++
+          if (t.result != null) { byAccount[key].withR++; byAccount[key].totalR += t.result; if (t.outcome === 'W') byAccount[key].wins++ }
+        }
+        const nameMap = Object.fromEntries((accounts || []).map(a => [a.id, a.name]))
+        const breakdown = Object.entries(byAccount).map(([accId, d]) => ({
+          name: accId === '_none' ? 'Inget konto' : (nameMap[accId] || 'Okänt konto'),
+          total: d.total,
+          wr: d.withR ? (d.wins / d.withR * 100).toFixed(1) : null,
+          totalR: d.totalR.toFixed(2),
+        })).sort((a, b) => b.total - a.total)
+        setAccountBreakdown(breakdown)
+      } else {
+        setAccountBreakdown([])
+      }
       setLoading(false)
     }
     load()
+  }, [u.user_id])
+
+  useEffect(() => {
+    async function loadPlan() {
+      setPlanLoading(true)
+      const [{ data: up }, { data: plansList }, accCountRes, tradeCountRes] = await Promise.all([
+        sb.from('user_plans').select('*').eq('user_id', u.user_id).maybeSingle(),
+        sb.from('plans').select('id, name, max_trades, max_accounts').order('sort_order'),
+        sb.from('accounts').select('id', { count: 'exact', head: true }).eq('user_id', u.user_id),
+        sb.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', u.user_id),
+      ])
+      setPlans(plansList || [])
+      setPlanForm({
+        planId: up?.plan_id || 'free',
+        overrideMaxTrades: up?.override_max_trades ?? '',
+        overrideMaxAccounts: up?.override_max_accounts ?? '',
+      })
+      setPlanAccountCount(accCountRes.count || 0)
+      setPlanTradeCount(tradeCountRes.count || 0)
+      setPlanLoading(false)
+    }
+    loadPlan()
   }, [u.user_id])
 
   function clearAction() { setActionMsg(''); setActionErr('') }
@@ -77,6 +141,20 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
     setActionLoading(false)
   }
 
+  async function savePlan() {
+    setPlanSaving(true); setPlanMsg('')
+    const { error } = await sb.from('user_plans').upsert({
+      user_id: u.user_id,
+      plan_id: planForm.planId,
+      override_max_trades: planForm.overrideMaxTrades === '' ? null : Number(planForm.overrideMaxTrades),
+      override_max_accounts: planForm.overrideMaxAccounts === '' ? null : Number(planForm.overrideMaxAccounts),
+      updated_at: new Date().toISOString(),
+    })
+    setPlanSaving(false)
+    if (error) { setPlanMsg('Fel: ' + error.message); return }
+    setPlanMsg('Sparat!'); setTimeout(() => setPlanMsg(''), 2000)
+  }
+
   const row = (label, value, color) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
       <span style={{ color: 'var(--text3)' }}>{label}</span>
@@ -85,11 +163,15 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
   )
 
   const inp = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', padding: '7px 10px', fontSize: 13, fontFamily: 'var(--font)', boxSizing: 'border-box' }
-  const SECTIONS = [{ id: 'info', label: 'Info' }, { id: 'email', label: '✏️ E-post' }, { id: 'resetpw', label: '📧 Återställning' }]
+  const SECTIONS = [{ id: 'info', label: 'Info' }, { id: 'plan', label: '💳 Plan & gränser' }, { id: 'email', label: '✏️ E-post' }, { id: 'resetpw', label: '📧 Återställning' }]
+
+  const selectedPlan = plans.find(p => p.id === planForm.planId)
+  const effectiveMaxTrades = planForm.overrideMaxTrades !== '' ? Number(planForm.overrideMaxTrades) : selectedPlan?.max_trades
+  const effectiveMaxAccounts = planForm.overrideMaxAccounts !== '' ? Number(planForm.overrideMaxAccounts) : selectedPlan?.max_accounts
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r2)', padding: '28px 32px', width: 560, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+    <div className="card" style={{ height: '100%' }}>
+      <div className="card-body" style={{ padding: '24px 28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{u.email}</div>
@@ -101,26 +183,32 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} title="Avmarkera" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>✕</button>
         </div>
-        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => { setSection(s.id); clearAction() }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12, fontWeight: section === s.id ? 700 : 500, color: section === s.id ? 'var(--text)' : 'var(--text4)', padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12, fontWeight: section === s.id ? 700 : 500, color: section === s.id ? 'var(--text)' : 'var(--text4)', padding: '8px 12px', borderBottom: `2px solid ${section === s.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s', whiteSpace: 'nowrap' }}>
               {s.label}
             </button>
           ))}
         </div>
         {section === 'info' && (
-          <>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
-              {row('Registrerad', formatTime(u.created_at))}
-              {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
-              {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Konto</div>
+                {row('Registrerad', formatTime(u.created_at))}
+                {row('Senaste inloggning', u.last_sign_in_at ? formatTime(u.last_sign_in_at) : '—')}
+                {row('User ID', u.user_id.slice(0, 18) + '…', 'var(--text4)')}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>AI-analys</div>
+                <button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onToggleAI(u.user_id, u.settings?.ai_enabled)} disabled={u.user_id === adminId}>{u.settings?.ai_enabled ? '✓ Aktiverad' : 'Avaktiverad'}</button>
+              </div>
             </div>
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik</div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Tradingstatistik {accountBreakdown.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text4)' }}>(totalt, alla konton)</span>}</div>
               {loading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
                 <>
                   {row('Antal trades', stats.total, 'var(--accent)')}
@@ -133,32 +221,85 @@ function UserProfileModal({ user: u, adminId, onClose, onDelete, onRefresh }) {
                   {stats.total === 0 && <div style={{ fontSize: 12, color: 'var(--text4)', padding: '8px 0' }}>Inga trades loggade ännu.</div>}
                 </>
               )}
+              {accountBreakdown.length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Per konto</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {accountBreakdown.map(a => (
+                      <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12 }}>
+                        <span style={{ flex: 1, color: 'var(--text2)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                        <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{a.total} st</span>
+                        <span style={{ color: a.wr != null && parseFloat(a.wr) >= 50 ? 'var(--green)' : a.wr != null ? 'var(--red)' : 'var(--text4)', fontFamily: 'var(--mono)', minWidth: 44, textAlign: 'right' }}>{a.wr != null ? a.wr + '%' : '—'}</span>
+                        <span style={{ color: parseFloat(a.totalR) >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--mono)', minWidth: 58, textAlign: 'right' }}>{parseFloat(a.totalR) > 0 ? '+' : ''}{a.totalR}R</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {u.user_id !== adminId && <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard'); onClose() }}>👁 Visa som</button>}
-              {u.user_id !== adminId && <button onClick={() => { onDelete(u.user_id, u.email); onClose() }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              {u.user_id !== adminId && <button className="btn btn-primary btn-sm" onClick={() => { startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }}>👁 Visa som</button>}
+              {u.user_id !== adminId && <button onClick={() => onDelete(u.user_id, u.email)} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}
             </div>
-          </>
+          </div>
+        )}
+        {section === 'plan' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 480 }}>
+            {planLoading ? <div style={{ fontSize: 13, color: 'var(--text4)', padding: '12px 0' }}>Laddar…</div> : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Trades använda</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{planTradeCount} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {effectiveMaxTrades ?? '∞'}</span></div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text4)', textTransform: 'uppercase', marginBottom: 4 }}>Konton använda</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)' }}>{planAccountCount} <span style={{ color: 'var(--text4)', fontWeight: 400 }}>/ {effectiveMaxAccounts ?? '∞'}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Plan</label>
+                  <select style={inp} value={planForm.planId} onChange={e => setPlanForm(f => ({ ...f, planId: e.target.value }))}>
+                    {plans.map(p => <option key={p.id} value={p.id}>{p.name} (default: {p.max_trades ?? '∞'} trades, {p.max_accounts ?? '∞'} konton)</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Override max trades <span style={{ color: 'var(--text4)' }}>(tomt = planens standard)</span></label>
+                    <input style={inp} type="number" placeholder={String(selectedPlan?.max_trades ?? '')} value={planForm.overrideMaxTrades} onChange={e => setPlanForm(f => ({ ...f, overrideMaxTrades: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Override max konton <span style={{ color: 'var(--text4)' }}>(tomt = planens standard)</span></label>
+                    <input style={inp} type="number" placeholder={String(selectedPlan?.max_accounts ?? '')} value={planForm.overrideMaxAccounts} onChange={e => setPlanForm(f => ({ ...f, overrideMaxAccounts: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', borderRadius: 'var(--r)', padding: '8px 12px' }}>
+                  Effektiv gräns just nu: <strong style={{ color: 'var(--accent)' }}>{effectiveMaxTrades ?? 'obegränsat'} trades</strong>, <strong style={{ color: 'var(--accent)' }}>{effectiveMaxAccounts ?? 'obegränsat'} konton</strong>. Gränserna gäller hårt (databas-nivå), inte bara i UI.
+                </div>
+                <button className="btn btn-primary" onClick={savePlan} disabled={planSaving} style={{ width: 'fit-content' }}>{planSaving ? 'Sparar…' : planMsg || '💾 Spara plan'}</button>
+              </>
+            )}
+          </div>
         )}
         {section === 'email' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)' }}>Nuvarande: <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span></div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text4)', display: 'block', marginBottom: 6 }}>Ny e-postadress</label>
               <input style={inp} type="email" placeholder="ny@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
             </div>
-            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()}>{actionLoading ? 'Sparar…' : 'Byt e-post'}</button>
+            <button className="btn btn-primary" onClick={handleChangeEmail} disabled={actionLoading || !newEmail.trim()} style={{ width: 'fit-content' }}>{actionLoading ? 'Sparar…' : 'Byt e-post'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
         )}
         {section === 'resetpw' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
             <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
               Skickar ett återställningsmail till <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{u.email}</span>.<br />
               Användaren sätter nytt lösenord via länken i mailet.
             </div>
-            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading}>{actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}</button>
+            <button className="btn btn-primary" onClick={handleResetPassword} disabled={actionLoading} style={{ width: 'fit-content' }}>{actionLoading ? 'Skickar…' : '📧 Skicka återställningsmail'}</button>
             {actionMsg && <div style={{ fontSize: 13, color: 'var(--green)', padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 'var(--r)' }}>✓ {actionMsg}</div>}
             {actionErr && <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r)' }}>✗ {actionErr}</div>}
           </div>
@@ -172,7 +313,8 @@ function UsersTab({ currentUserId }) {
   const { startImpersonation } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUserId, setSelectedUserId] = useState(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => { loadUsers() }, [])
 
@@ -203,45 +345,55 @@ function UsersTab({ currentUserId }) {
   async function deleteUser(userId, email) {
     if (!window.confirm(`Ta bort ${email}? Går inte att ångra.`)) return
     await sb.rpc('delete_user_completely', { target_user_id: userId })
+    if (selectedUserId === userId) setSelectedUserId(null)
     loadUsers()
   }
 
+  const filtered = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
+  const selectedUser = users.find(u => u.user_id === selectedUserId) || null
+
   return (
-    <>
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title">Användare ({users.length})</div>
-          <button className="btn btn-ghost btn-sm" onClick={loadUsers}>↻ Uppdatera</button>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Laddar…</div> : (
-            <table className="journal-table">
-              <thead><tr><th>Email</th><th>Registrerad</th><th>Trades</th><th>Bekräftad</th><th>Admin</th><th>AI</th><th></th><th></th></tr></thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.user_id} style={{ cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}>
-                    <td style={{ color: 'var(--text)' }} onClick={() => setSelectedUser(u)}>
-                      <span style={{ fontWeight: 500 }}>{u.email}</span>
-                      {u.user_id === currentUserId && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '1px 5px', borderRadius: 3 }}>du</span>}
-                    </td>
-                    <td className="mono" onClick={() => setSelectedUser(u)}>{formatTime(u.created_at)}</td>
-                    <td className="mono" style={{ color: 'var(--accent)', fontWeight: 600 }} onClick={() => setSelectedUser(u)}>{u.trade_count}</td>
-                    <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.confirmed_at ? 'var(--green)' : 'var(--text4)' }}>{u.confirmed_at ? '✓ Ja' : 'Nej'}</span></td>
-                    <td onClick={() => setSelectedUser(u)}><span style={{ fontSize: 11, color: u.is_admin ? 'var(--accent)' : 'var(--text4)' }}>{u.is_admin ? '✓ Admin' : '—'}</span></td>
-                    <td><button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={e => { e.stopPropagation(); toggleAI(u.user_id, u.settings?.ai_enabled) }} disabled={u.user_id === currentUserId}>{u.settings?.ai_enabled ? 'På' : 'Av'}</button></td>
-                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm btn-ghost" onClick={e => { e.stopPropagation(); startImpersonation({ id: u.user_id, email: u.email }); window.__tlNavigate?.('dashboard') }} style={{ whiteSpace: 'nowrap' }}>👁 Visa som</button>}</td>
-                    <td>{u.user_id !== currentUserId && <button className="btn btn-sm" onClick={e => { e.stopPropagation(); deleteUser(u.user_id, u.email) }} style={{ background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r)', padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font)' }}>Ta bort</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ width: 300, flexShrink: 0 }}>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Användare ({filtered.length})</div>
+            <button className="btn btn-ghost btn-sm" onClick={loadUsers}>↻</button>
+          </div>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <input className="form-control" placeholder="Sök e-post…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 12 }} />
+          </div>
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {loading ? <div style={{ padding: 24, textAlign: 'center', color: /*text3*/'var(--text3)', fontSize: 13 }}>Laddar…</div>
+              : filtered.length === 0 ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text4)', fontSize: 12 }}>Inga träffar.</div>
+              : filtered.map(u => (
+                <div key={u.user_id} onClick={() => setSelectedUserId(u.user_id)} style={{
+                  padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                  background: u.user_id === selectedUserId ? 'var(--accent-dim)' : 'none',
+                  borderLeft: `3px solid ${u.user_id === selectedUserId ? 'var(--accent)' : 'transparent'}`,
+                }}
+                  onMouseEnter={e => { if (u.user_id !== selectedUserId) e.currentTarget.style.background = 'var(--bg3)' }}
+                  onMouseLeave={e => { if (u.user_id !== selectedUserId) e.currentTarget.style.background = 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.email}
+                    {u.user_id === currentUserId && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>DU</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: 11, color: 'var(--text4)' }}>
+                    <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{u.trade_count} trades</span>
+                    {u.is_admin && <span style={{ color: 'var(--accent)' }}>Admin</span>}
+                    {!u.confirmed_at && <span>Ej bekräftad</span>}
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
-      {selectedUser && <UserProfileModal user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUser(null)} onDelete={(id, email) => { deleteUser(id, email); setSelectedUser(null) }} onRefresh={loadUsers} />}
-    </>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {selectedUser
+          ? <UserDetailPanel user={selectedUser} adminId={currentUserId} onClose={() => setSelectedUserId(null)} onDelete={deleteUser} onRefresh={loadUsers} onToggleAI={toggleAI} />
+          : <div className="card"><div className="card-body" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text4)', fontSize: 13 }}>Välj en användare i listan till vänster.</div></div>}
+      </div>
+    </div>
   )
 }
 
@@ -445,7 +597,7 @@ function SupportTab({ adminId }) {
   )
 }
 
-// ── System-flik ────────────────────────────────────────────────────────────────
+// ── System-flik ─────────────────────────────────────────────────
 // Workern returnerar: { primary: { ok, source, events, from, to, error }, fallback: {...} | null }
 function SystemTab() {
   const [calStatus, setCalStatus] = useState(null)
@@ -500,6 +652,7 @@ function SystemTab() {
             Klicka "Uppdatera nu" för att trigga en manuell refresh.
           </p>
 
+          {/* Cache-status – en ruta för 14-dagarsperioden */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ padding: '14px 16px', background: 'var(--bg3)', borderRadius: 'var(--r)', border: `1px solid ${info ? 'var(--border2)' : 'var(--border)'}` }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
@@ -520,6 +673,7 @@ function SystemTab() {
             </div>
           </div>
 
+          {/* Resultat efter refresh */}
           {refreshResult && (
             <div style={{
               padding: '12px 16px', borderRadius: 'var(--r)', fontSize: 13,
@@ -591,7 +745,7 @@ export default function Admin() {
   return (
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
-      <div className="page-content" style={{ maxWidth: 1100 }}>
+      <div className="page-content" style={{ maxWidth: 1400 }}>
         <div className="admin-tabs" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, fontWeight: tab === t.id ? 700 : 500, color: tab === t.id ? 'var(--text)' : 'var(--text3)', padding: '10px 16px', borderBottom: `2px solid ${tab === t.id ? 'var(--accent)' : 'transparent'}`, marginBottom: -1, transition: 'color 0.15s' }}>
@@ -708,6 +862,12 @@ function BrandingTab({ adminId }) {
   )
 }
 
+// ── AiPromptTab ─────────────────────────────────────────────────
+// Gör AI-analysens prompt (tidigare hårdkodad i Analytics.jsx) redigerbar
+// av admin. Sparas globalt på admin-kontots egna userSettings (samma mönster
+// som BrandingTab ovan) – alla användares Analytics-sida läser samma mall,
+// eftersom AI-coachningen ska vara konsekvent oavsett vem som klickar
+// "Analysera", inte en per-användare-inställning.
 const AI_PROMPT_PLACEHOLDERS = [
   ['{trades}', 'Antal trades med resultat'],
   ['{wins}', 'Antal vinster'],
