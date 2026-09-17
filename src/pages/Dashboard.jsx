@@ -192,7 +192,7 @@ function HudStrip({ displayName }) {
         {loading && <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>Laddar…</div>}
         {!loading && displayed.length === 0 && (
           <div style={{ padding: '24px 18px', textAlign: 'center', color: 'var(--text4)', fontSize: 13 }}>
-            {showToday ? 'Inga high/medium-impact nyheter idag.' : 'Inga kommande nyheter i cachen — refresha via Admin → System.'}
+            {showToday ? 'Inga high/medium-impact nyheter idag.' : 'Inga kommande nyheter i cachen — uppdatera via Admin → System.'}
           </div>
         )}
         {!loading && displayed.map((ev, i) => {
@@ -299,10 +299,10 @@ export default function Dashboard({ onNavigate }) {
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('analytics')}>📊 Analytics</button>
               <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('journal')}>📓 Journal</button>
               {unreadBroadcast > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>✉️ {unreadBroadcast} nytt meddelande{unreadBroadcast > 1 ? 'n' : ''}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(0,212,170,0.4)', color: 'var(--accent)' }}>✉️ {unreadBroadcast} {unreadBroadcast > 1 ? 'nya' : 'nytt'} meddelande{unreadBroadcast > 1 ? 'n' : ''}</button>
               )}
               {openThreads > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(124,92,255,0.4)', color: 'var(--violet)' }}>🎫 {openThreads} öppet ärende{openThreads > 1 ? 'n' : ''}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('profile')} style={{ borderColor: 'rgba(124,92,255,0.4)', color: 'var(--violet)' }}>🎫 {openThreads} {openThreads > 1 ? 'öppna' : 'öppet'} ärende{openThreads > 1 ? 'n' : ''}</button>
               )}
             </div>
           </div>
