@@ -280,7 +280,7 @@ export default function Journal() {
       const data = await res.json()
       if (data.tvBlocked && data.s3url) {
         setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.s3url, tag: resolveChartTag(), type: 'link' }])
-        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klänk. Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
+        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som länk. Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
         setChartUrlInput(''); setChartCustomTag(''); return
       }
       if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
@@ -774,7 +774,7 @@ export default function Journal() {
       case 'notes': return (
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Noteringar{reqMark('notes')}</label>
-          <textarea className="form-control" rows={3} placeholder="Vad gick bra? Vad kunde gjorts bättre?" value={form.notes} onChange={e => updateForm('notes', e.target.value)} style={{ resize: 'vertical', marginTop: 6 }} />
+          <textarea className="form-control" rows={3} placeholder="Vad gick bra? Vad kunde ha gjorts bättre?" value={form.notes} onChange={e => updateForm('notes', e.target.value)} style={{ resize: 'vertical', marginTop: 6 }} />
         </div>
       )
       case 'custom': return customFields.length > 0 ? (
@@ -809,7 +809,7 @@ export default function Journal() {
 
           <div className="card journal-form-card" ref={formRef}>
             <div className="card-header">
-              <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Log Trade'}</div>
+              <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Logga trade'}</div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowFieldMgr(m => !m)} style={showFieldMgr ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>⚙ Anpassa</button>
             </div>
 
