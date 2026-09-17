@@ -1132,9 +1132,17 @@ export default function Journal() {
   )
 }
 
+// v2.4.9: Svensk Excel använder semikolon som listavgränsare och komma som
+// decimaltecken. Gamla exporten skrev komma-separerad CSV med punkt-decimaler
+// – Excel läste då hela filen som text (kolumnerna splittrades fel på grund
+// av punkt-decimaler som såg ut som extra fält, och tal som INTE gick att
+// summera). Skriver nu ; som avgränsare, byter . mot , i numeriska fält, och
+// citerar textfält som innehåller ; " eller radbrytning. UTF-8 BOM tillagd
+// så å/ä/ö renderas rätt i Excel.
 function exportCSV(trades) {
   const baseHeaders = ['date','time','symbol','direction','entry','sl','tp','outcome','result','grade','emotion','strategy','notes','risk_amount']
   const exitHeaders = ['exit_date','exit_time','actual_exit']
+  const numericHeaders = new Set(['entry','sl','tp','result','risk_amount','actual_exit'])
   const customKeys = new Set()
   trades.forEach(t => {
     const cd = t.custom_data || {}
@@ -1149,14 +1157,20 @@ function exportCSV(trades) {
     if (h === 'actual_exit') return cd._actual_exit
     return cd[h]
   }
-  const rows = trades.map(t => headers.map(h => {
-    const v = getValue(t, h)
+  function formatCell(v, h) {
     if (v == null) return ''
-    if (typeof v === 'string' && v.includes(',')) return `"${v}"`
-    return v
-  }).join(','))
-  const csv = [headers.join(','), ...rows].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
+    if ((numericHeaders.has(h) || typeof v === 'number') && !isNaN(v) && v !== '') {
+      return String(v).replace('.', ',')
+    }
+    let s = String(v)
+    if (s.includes(';') || s.includes('"') || s.includes('\n')) {
+      s = `"${s.replace(/"/g, '""')}"`
+    }
+    return s
+  }
+  const rows = trades.map(t => headers.map(h => formatCell(getValue(t, h), h)).join(';'))
+  const csv = [headers.join(';'), ...rows].join('\r\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = `tradelog_${new Date().toISOString().split('T')[0]}.csv`
