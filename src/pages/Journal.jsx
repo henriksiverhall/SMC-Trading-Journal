@@ -6,6 +6,7 @@ import { normalizeTrades } from '../lib/tradeUtils'
 import Topbar from '../components/Topbar'
 
 const DEFAULT_FIELD_ROWS = [
+  ['account'],
   ['strategy'],
   ['date', 'time'],
   ['symbol', 'direction'],
@@ -23,11 +24,11 @@ const DEFAULT_FIELD_ROWS = [
   ['custom'],
 ]
 const ALL_FIELD_IDS = DEFAULT_FIELD_ROWS.flat()
-const REQUIRABLE_FIELD_IDS = ALL_FIELD_IDS.filter(id => id !== 'r_display' && id !== 'custom')
+const REQUIRABLE_FIELD_IDS = ALL_FIELD_IDS.filter(id => id !== 'r_display' && id !== 'custom' && id !== 'account')
 const DEFAULT_REQUIRED_FIELDS = ['outcome']
-const FIELD_FORM_KEY = { chart: 'chart_link' }
+const FIELD_FORM_KEY = { chart: 'chart_link', account: 'account_id' }
 const FIELD_LABELS = {
-  strategy: 'Strategi', date: 'Datum', time: 'Tid', symbol: 'Instrument', direction: 'Riktning',
+  account: 'Konto', strategy: 'Strategi', date: 'Datum', time: 'Tid', symbol: 'Instrument', direction: 'Riktning',
   entry: 'Entry', contracts: 'Kontrakt', sl: 'Stop Loss', tp: 'Take Profit', actual_exit: 'Faktisk exit',
   exit_date: 'Exit datum', exit_time: 'Exit tid (ET)',
   outcome: 'Utfall', risk_pct: 'Risk %', account_size: 'Kontostorlek', grade: 'Grade',
@@ -56,6 +57,7 @@ function getCustomFields() {
 function setCustomFields(fields) { localStorage.setItem('tl_custom_fields', JSON.stringify(fields)) }
 
 const DEFAULT_FORM = {
+  account_id: '',
   date: new Date().toISOString().split('T')[0],
   time: '', symbol: '', direction: '', entry: '', sl: '', tp: '',
   actual_exit: '', exit_date: '', exit_time: '', outcome: '', grade: '',
@@ -183,6 +185,17 @@ export default function Journal() {
     }
   }, [activeAccountId])
 
+  // v2.4.10: nya trades (ej redigering av befintlig) förvalde tidigare bara
+  // aktivt konto vid submit – man kunde inte SE eller ändra vilket konto en
+  // trade skulle loggas till i själva formuläret, och redigering av en
+  // befintlig trade rörde aldrig account_id alls. Håller nu formulärets
+  // account_id i synk med aktivt konto SÅ LÄNGE man inte redigerar en
+  // befintlig trade (då vill vi inte skriva över det sparade kontot bara
+  // för att man råkar byta aktivt konto i sidhuvudet medan modalen är öppen).
+  useEffect(() => {
+    if (!editingId) setForm(f => ({ ...f, account_id: activeAccountId || '' }))
+  }, [activeAccountId])
+
   // Bulk-redigering av markerade trades (v2.4.6) – alla fält synliga som
   // egna rader (ingen fält-väljare) så man slipper klicka i en dropdown för
   // att se vad som går att sätta. Varje rad har sin egen Tillämpa-knapp.
@@ -280,7 +293,7 @@ export default function Journal() {
       const data = await res.json()
       if (data.tvBlocked && data.s3url) {
         setChartLinks(l => [...l, { id: crypto.randomUUID(), url: data.s3url, tag: resolveChartTag(), type: 'link' }])
-        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som klänk. Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
+        setChartError('TradingView S3 blockerar server-side-hämtning – bilden sparades som länk. Vill du se miniatyr direkt, använd "Ladda upp skärmbild".')
         setChartUrlInput(''); setChartCustomTag(''); return
       }
       if (!res.ok || !data.success) throw new Error(data.error || 'Kunde inte spara bilden')
@@ -473,7 +486,7 @@ export default function Journal() {
     const totalC = scaleIns.length > 0 ? getTotalContracts(form, scaleIns) : (parseFloat(form.contracts) || 1)
     const trade = {
       user_id: user.id,
-      ...(!editingId ? { account_id: activeAccountId || null } : {}),
+      account_id: form.account_id || activeAccountId || null,
       date: form.date || new Date().toISOString().split('T')[0],
       time: form.time || null, symbol: form.symbol || null, direction: form.direction || null,
       entry: entry || null, sl: parseFloat(form.sl) || null, tp: parseFloat(form.tp) || null,
@@ -515,7 +528,7 @@ export default function Journal() {
   }
 
   function resetForm() {
-    setForm(f => ({ ...DEFAULT_FORM, strategy: f.strategy, date: f.date, risk_pct: f.risk_pct, account_size: f.account_size }))
+    setForm(f => ({ ...DEFAULT_FORM, account_id: activeAccountId || '', strategy: f.strategy, date: f.date, risk_pct: f.risk_pct, account_size: f.account_size }))
     setCalcR(null); setCalcUSD(null); setScaleIns([]); setTargets([]); setCustomValues({})
     setChartLinks([]); setChartUrlInput(''); setChartCustomTag(''); setChartError('')
     setTvMeta(null); setTvAutoFilled(false); setAttemptedSave(false); setEditingId(null)
@@ -529,6 +542,7 @@ export default function Journal() {
     setChartError(''); setTvMeta(cd._tv_meta || null)
     setCustomValues(Object.fromEntries(customFields.map(f => [f.id, cd[f.name] || ''])))
     const newForm = {
+      account_id: trade.account_id || '',
       date: trade.date || '', time: trade.time || '', symbol: trade.symbol || '', direction: trade.direction || '',
       entry: trade.entry ?? '', sl: trade.sl ?? '', tp: trade.tp ?? '', actual_exit: cd._actual_exit ?? '',
       exit_date: cd._exit_date ?? '', exit_time: cd._exit_time ?? '', outcome: trade.outcome || '',
@@ -560,6 +574,14 @@ export default function Journal() {
 
   function renderField(id) {
     switch (id) {
+      case 'account': return accounts.length > 1 ? (
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label className="form-label">Konto{reqMark('account')}</label>
+          <select className="form-control" value={form.account_id || ''} onChange={e => updateForm('account_id', e.target.value)}>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div>
+      ) : null
       case 'strategy': return (
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Strategi{reqMark('strategy')} <span style={{ color: 'var(--text4)', textTransform: 'none', letterSpacing: 0 }}>sparas automatiskt</span></label>
@@ -774,7 +796,7 @@ export default function Journal() {
       case 'notes': return (
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Noteringar{reqMark('notes')}</label>
-          <textarea className="form-control" rows={3} placeholder="Vad gick bra? Vad kunde gjorts bättre?" value={form.notes} onChange={e => updateForm('notes', e.target.value)} style={{ resize: 'vertical', marginTop: 6 }} />
+          <textarea className="form-control" rows={3} placeholder="Vad gick bra? Vad kunde ha gjorts bättre?" value={form.notes} onChange={e => updateForm('notes', e.target.value)} style={{ resize: 'vertical', marginTop: 6 }} />
         </div>
       )
       case 'custom': return customFields.length > 0 ? (
@@ -809,7 +831,7 @@ export default function Journal() {
 
           <div className="card journal-form-card" ref={formRef}>
             <div className="card-header">
-              <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Log Trade'}</div>
+              <div className="card-title">{editingId ? '✏️ Redigera trade' : 'Logga trade'}</div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowFieldMgr(m => !m)} style={showFieldMgr ? { background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.4)', color: 'var(--accent)' } : undefined}>⚙ Anpassa</button>
             </div>
 
@@ -843,11 +865,6 @@ export default function Journal() {
             )}
 
             <div className="card-body">
-              {accounts.length > 1 && (
-                <div style={{ marginBottom: 14, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text3)' }}>
-                  Loggas till: <strong style={{ color: 'var(--accent)' }}>{accounts.find(a => a.id === activeAccountId)?.name || '—'}</strong> <span style={{ color: 'var(--text4)' }}>(byt konto uppe till höger)</span>
-                </div>
-              )}
               <form onSubmit={handleSave}>
                 {fieldRows.map(row => {
                   const cells = row.map(id => ({ id, content: renderField(id) })).filter(c => c.content)
@@ -1044,7 +1061,7 @@ export default function Journal() {
             </div>
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                {[['Strategi',selectedModal.strategy],['Riktning',selectedModal.direction],['Entry',selectedModal.entry],['Stop Loss',selectedModal.sl],['Take Profit',selectedModal.tp],
+                {[['Konto', accounts.find(a => a.id === selectedModal.account_id)?.name],['Strategi',selectedModal.strategy],['Riktning',selectedModal.direction],['Entry',selectedModal.entry],['Stop Loss',selectedModal.sl],['Take Profit',selectedModal.tp],
                   ['Faktisk exit',selectedModal.custom_data?._actual_exit],['Exit datum',selectedModal.custom_data?._exit_date],['Exit tid',selectedModal.custom_data?._exit_time],
                   ['Utfall',selectedModal.outcome],['R',formatRorPnL(selectedModal).text],['Grade',selectedModal.grade],['Emotion',selectedModal.emotion],
                   ['Risk $',selectedModal.risk_amount ? '$'+Number(selectedModal.risk_amount).toFixed(2) : null],
@@ -1132,9 +1149,17 @@ export default function Journal() {
   )
 }
 
+// v2.4.9: Svensk Excel använder semikolon som listavgränsare och komma som
+// decimaltecken. Gamla exporten skrev komma-separerad CSV med punkt-decimaler
+// – Excel läste då hela filen som text (kolumnerna splittrades fel på grund
+// av punkt-decimaler som såg ut som extra fält, och tal som INTE gick att
+// summera). Skriver nu ; som avgränsare, byter . mot , i numeriska fält, och
+// citerar textfält som innehåller ; " eller radbrytning. UTF-8 BOM tillagd
+// så å/ä/ö renderas rätt i Excel.
 function exportCSV(trades) {
   const baseHeaders = ['date','time','symbol','direction','entry','sl','tp','outcome','result','grade','emotion','strategy','notes','risk_amount']
   const exitHeaders = ['exit_date','exit_time','actual_exit']
+  const numericHeaders = new Set(['entry','sl','tp','result','risk_amount','actual_exit'])
   const customKeys = new Set()
   trades.forEach(t => {
     const cd = t.custom_data || {}
@@ -1149,14 +1174,20 @@ function exportCSV(trades) {
     if (h === 'actual_exit') return cd._actual_exit
     return cd[h]
   }
-  const rows = trades.map(t => headers.map(h => {
-    const v = getValue(t, h)
+  function formatCell(v, h) {
     if (v == null) return ''
-    if (typeof v === 'string' && v.includes(',')) return `"${v}"`
-    return v
-  }).join(','))
-  const csv = [headers.join(','), ...rows].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
+    if ((numericHeaders.has(h) || typeof v === 'number') && !isNaN(v) && v !== '') {
+      return String(v).replace('.', ',')
+    }
+    let s = String(v)
+    if (s.includes(';') || s.includes('"') || s.includes('\n')) {
+      s = `"${s.replace(/"/g, '""')}"`
+    }
+    return s
+  }
+  const rows = trades.map(t => headers.map(h => formatCell(getValue(t, h), h)).join(';'))
+  const csv = [headers.join(';'), ...rows].join('\r\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = `tradelog_${new Date().toISOString().split('T')[0]}.csv`
