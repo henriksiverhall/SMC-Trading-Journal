@@ -36,6 +36,12 @@ const FIELD_LABELS = {
 }
 const CHART_TAGS = ['4h', '1h', '15m', '5m', '1m', 'Entry', 'SL', 'TP', 'Exit', 'Övrigt']
 
+// v2.4.11: Fält som läggs till i DEFAULT_FIELD_ROWS efter att en användare
+// redan sparat en egen fältordning (t.ex. "account" i v2.4.10) hamnade
+// tidigare sist i formuläret – nere vid Spara-knappen – eftersom saknade
+// fält bara pushades längst bak i listan. Sätter nu in saknade fält på
+// den plats DEFAULT_FIELD_ROWS anger relativt de fält som redan finns i
+// den sparade ordningen, så nya fält dyker upp där de "hör hemma".
 function normalizeRows(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return DEFAULT_FIELD_ROWS
   const seen = new Set()
@@ -46,7 +52,15 @@ function normalizeRows(rows) {
     if (r.length) cleaned.push(r)
   }
   const missing = ALL_FIELD_IDS.filter(id => !seen.has(id))
-  missing.forEach(id => cleaned.push([id]))
+  missing.forEach(id => {
+    const defaultIdx = ALL_FIELD_IDS.indexOf(id)
+    let insertAt = cleaned.length
+    for (let i = 0; i < cleaned.length; i++) {
+      const rowMinIdx = Math.min(...cleaned[i].map(fid => ALL_FIELD_IDS.indexOf(fid)))
+      if (rowMinIdx > defaultIdx) { insertAt = i; break }
+    }
+    cleaned.splice(insertAt, 0, [id])
+  })
   return cleaned
 }
 
