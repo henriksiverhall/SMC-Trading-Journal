@@ -66,7 +66,9 @@ function ForgotPasswordModal({ onClose }) {
 export default function AuthPage() {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
+  const [confirmEmail, setConfirmEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -102,10 +104,20 @@ export default function AuthPage() {
     setLoading(false)
   }
 
+  // v2.4.9: Bekräfta e-post + bekräfta lösenord vid registrering – minskar
+  // risken för felstavade adresser (kontot blir då oåtkomligt tills
+  // supporten hjälper till att byta e-post) och felstavade lösenord (man
+  // blockeras direkt ute ur sitt eget nyskapade konto).
   async function handleSignup(e) {
     e.preventDefault()
     setLoading(true); setError('')
+    if (email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
+      setError('E-postadresserna matchar inte.'); setLoading(false); return
+    }
     if (password.length < 6) { setError('Lösenordet måste vara minst 6 tecken.'); setLoading(false); return }
+    if (password !== confirmPassword) {
+      setError('Lösenorden matchar inte.'); setLoading(false); return
+    }
     const { error } = await sb.auth.signUp({
       email, password,
       options: { data: { display_name: displayName || email.split('@')[0] }, emailRedirectTo: SITE_URL }
@@ -194,6 +206,18 @@ export default function AuthPage() {
                 <input className="form-control" type="email" placeholder="du@exempel.com"
                   value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
               </div>
+              {mode === 'signup' && (
+                <div className="form-group">
+                  <label className="form-label">Bekräfta e-post</label>
+                  <input className="form-control" type="email" placeholder="du@exempel.com"
+                    value={confirmEmail} onChange={e => setConfirmEmail(e.target.value)}
+                    required autoComplete="email"
+                    style={confirmEmail && confirmEmail.trim().toLowerCase() !== email.trim().toLowerCase() ? { borderColor: 'var(--red)' } : undefined} />
+                  {confirmEmail && confirmEmail.trim().toLowerCase() !== email.trim().toLowerCase() && (
+                    <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>E-postadresserna matchar inte</div>
+                  )}
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Lösenord</label>
                 <input className="form-control" type="password"
@@ -201,6 +225,18 @@ export default function AuthPage() {
                   value={password} onChange={e => setPassword(e.target.value)}
                   required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               </div>
+              {mode === 'signup' && (
+                <div className="form-group">
+                  <label className="form-label">Bekräfta lösenord</label>
+                  <input className="form-control" type="password" placeholder="Upprepa lösenordet"
+                    value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                    required autoComplete="new-password"
+                    style={confirmPassword && confirmPassword !== password ? { borderColor: 'var(--red)' } : undefined} />
+                  {confirmPassword && confirmPassword !== password && (
+                    <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>Lösenorden matchar inte</div>
+                  )}
+                </div>
+              )}
               {mode === 'login' && (
                 <div style={{ textAlign: 'right', marginTop: -6, marginBottom: 4 }}>
                   <button type="button" onClick={() => setShowForgot(true)}
@@ -216,7 +252,8 @@ export default function AuthPage() {
                 </p>
               )}
               <button type="submit" className="btn btn-primary w-full"
-                style={{ justifyContent: 'center', marginTop: 4 }} disabled={loading}>
+                style={{ justifyContent: 'center', marginTop: 4 }}
+                disabled={loading || (mode === 'signup' && (!email || !confirmEmail || !password || !confirmPassword))}>
                 {loading ? 'Vänta…' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
               </button>
             </form>
