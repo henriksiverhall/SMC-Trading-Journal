@@ -3,96 +3,31 @@ import { sb } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Topbar from '../components/Topbar'
 
+// v2.4.9: DEFAULT_STRATEGIES seedar bara nya användares FÖRSTA checklista –
+// befintliga användare som redan har ICT Unicorn/Venom/Turtle Soup eller
+// Bernd's Globex i databasen berörs inte alls (load() fyller bara på
+// strategy_keys som SAKNAS för användaren). Bytte tidigare ICT/Bernd-
+// specifika defaults mot en enda neutral "Demo Template" utan externa
+// modellreferenser, så nya konton inte skyltar med tredjepartsstrategier.
 const DEFAULT_STRATEGIES = [
-  { key: 'unicorn', name: 'ICT Unicorn Model', phases: [
+  { key: 'demo_template', name: 'Demo Template', phases: [
     { id: 'prep', title: 'Förberedelse', color: '#6366f1', items: [
-      { id: 'p1', label: 'Economic calendar kollad', sub: 'Ingen red folder news inom 2h?', blocker: true, stop: 'Red folder news → NO TRADE', journal: false },
-      { id: 'p2', label: 'Dag i veckan', sub: 'Fredag? → Halvrisken eller skippa', blocker: false, stop: '', journal: false },
-      { id: 'p3', label: 'Klockan 9:30–13:00 ET', sub: 'Handelsfönstret är öppet', blocker: true, stop: 'Utanför window → NO TRADE', journal: false },
+      { id: 'p1', label: 'Economic calendar kollad', sub: 'Ingen red folder news inom riskzonen?', blocker: true, stop: 'Red folder news → NO TRADE', journal: false },
+      { id: 'p2', label: 'Rätt handelsfönster', sub: 'Är din strategis tidsfönster öppet just nu?', blocker: true, stop: 'Utanför window → vänta', journal: false },
     ]},
     { id: 'setup', title: 'Identifiera Setup', color: '#0891b2', items: [
-      { id: 's1', label: 'Draw on Liquidity (DOL) identifierad', sub: 'Tydliga relativa equal highs (EQH) eller equal lows (EQL)?', blocker: true, stop: 'Inga EQH/EQL → hoppa', journal: true },
-      { id: 's2', label: 'Handelsriktning bestämd', sub: 'DOL ovan pris = Long. DOL under pris = Short.', blocker: false, stop: '', journal: false },
-      { id: 's3', label: 'Manipulation Leg sedd', sub: 'Impulsiv rörelse bort från DOL (1–3 candles)', blocker: true, stop: 'Utdragen/choppy = lägre sannolikhet', journal: false },
-      { id: 's4', label: 'Breaker identifierad', sub: 'Bullish: sista gröna BEFORE lower low. Bearish: sista röda BEFORE higher high.', blocker: true, stop: 'Ej tydlig Breaker → inget setup', journal: true },
-      { id: 's5', label: 'Fair Value Gap (FVG) identifierad', sub: '3-candle, icke-överlappande wicks', blocker: true, stop: 'Ingen FVG → inget setup', journal: true },
-      { id: 's6', label: '⚑ OVERLAP: Breaker + FVG överlappar', sub: 'Det överlappande området är entry-zonen. KRITISK.', blocker: true, stop: 'INGET overlap = INGET Unicorn → STOP', journal: true },
-      { id: 's7', label: 'TP beräknad ≥ 2R', sub: 'Fib på manipulation leg. 2 STDV = primär TP.', blocker: true, stop: 'RR < 2R → NO TRADE', journal: false },
+      { id: 's1', label: 'Setup identifierat', sub: 'Fyll i vad din strategi kräver här', blocker: true, stop: 'Inget giltigt setup → hoppa', journal: true },
+      { id: 's2', label: 'Handelsriktning bestämd', sub: 'Long eller Short', blocker: false, stop: '', journal: false },
+      { id: 's3', label: 'Risk/Reward beräknad ≥ 2R', sub: '', blocker: true, stop: 'RR < 2R → NO TRADE', journal: false },
     ]},
     { id: 'entry', title: 'Entry & Execution', color: '#059669', items: [
-      { id: 'e1', label: 'TP ej redan träffad', sub: 'Om priset kört till TP utan retest → cancel', blocker: true, stop: 'TP träffad = cancel order', journal: false },
-      { id: 'e2', label: 'Limit order satt', sub: 'Entry vid topp av overlap-zon (long) / botten (short)', blocker: false, stop: '', journal: false },
-      { id: 'e3', label: 'Stop Loss satt', sub: 'Body high/low av manipulation leg', blocker: false, stop: '', journal: false },
-      { id: 'e4', label: 'Take Profit satt', sub: '2 STDV (primär) eller DOL (sekundär)', blocker: false, stop: '', journal: false },
+      { id: 'e1', label: 'Order satt', sub: 'Limit/market enligt din plan', blocker: false, stop: '', journal: false },
+      { id: 'e2', label: 'Stop Loss satt', sub: '', blocker: false, stop: '', journal: false },
+      { id: 'e3', label: 'Take Profit satt', sub: '', blocker: false, stop: '', journal: false },
     ]},
     { id: 'mgmt', title: 'Trade Management', color: '#d97706', items: [
-      { id: 'm1', label: 'Låt traden spela ut', sub: 'Inga manuella justeringar', blocker: false, stop: '', journal: false },
-      { id: 'm2', label: 'Invaliderings-check', sub: 'Stänger priset IGENOM hela zonen utan rekyl → cancel', blocker: false, stop: '', journal: false },
-      { id: 'm3', label: 'Journalföring klar', sub: 'Datum, riktning, entry/SL/TP, utfall, R, grade', blocker: false, stop: '', journal: false },
-    ]},
-  ]},
-  { key: 'globex', name: "Bernd's Globex Strategy", phases: [
-    { id: 'prep', title: 'Förberedelse', color: '#6366f1', items: [
-      { id: 'p1', label: 'Economic calendar kollad', sub: '', blocker: true, stop: 'Red folder → NO TRADE', journal: false },
-      { id: 'p2', label: 'NY session öppen (9:30+)', sub: '', blocker: true, stop: 'Ej NY session → vänta', journal: false },
-    ]},
-    { id: 'setup', title: 'Identifiera Setup', color: '#0891b2', items: [
-      { id: 's1', label: 'Globex High & Low markerade', sub: 'H/L från ETH 18:00–09:30 ET', blocker: true, stop: 'Ej markerade = ej valid', journal: false },
-      { id: 's2', label: 'Globex H eller L sweepat', sub: '', blocker: true, stop: 'Inget sweep = inget setup', journal: true },
-      { id: 's3', label: 'Fresh Supply/Demand-zon finns', sub: 'Skapad 8:00–11:00 ET, <6 candles', blocker: true, stop: 'Ingen fresh S/D → hoppa', journal: true },
-      { id: 's4', label: 'RR beräknat ≥ 2', sub: '', blocker: true, stop: 'RR < 2R → hoppa', journal: false },
-    ]},
-    { id: 'entry', title: 'Entry', color: '#059669', items: [
-      { id: 'e1', label: 'Limit order vid zon', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'e2', label: 'SL = -0.33 bortom zon', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'e3', label: 'TP satt (2R eller 4R)', sub: '', blocker: false, stop: '', journal: false },
-    ]},
-    { id: 'mgmt', title: 'Trade Management', color: '#d97706', items: [
-      { id: 'm1', label: 'B/E satt vid halvvägs', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'm2', label: 'Journalföring klar', sub: '', blocker: false, stop: '', journal: false },
-    ]},
-  ]},
-  { key: 'venom', name: 'ICT Venom Model', phases: [
-    { id: 'prep', title: 'Förberedelse', color: '#6366f1', items: [
-      { id: 'p1', label: 'Economic calendar kollad', sub: '', blocker: true, stop: 'News = NO TRADE', journal: false },
-      { id: 'p2', label: '8:00–11:00 ET-window öppet', sub: '', blocker: true, stop: 'Klockan >11:00 ET → STOP', journal: false },
-      { id: 'p3', label: '8–9:30 range markerat', sub: '', blocker: true, stop: 'Ej markerat = ej valid', journal: false },
-    ]},
-    { id: 'setup', title: 'Identifiera Setup', color: '#0891b2', items: [
-      { id: 's1', label: 'Sweep av 8–9:30 H eller L', sub: '', blocker: true, stop: 'Inget sweep = inget setup', journal: true },
-      { id: 's2', label: 'Initial FVG skapad', sub: '', blocker: true, stop: 'Ingen FVG → inget setup', journal: true },
-      { id: 's3', label: 'Trigger 1 (BPR) eller Trigger 2 (Breakout)', sub: '', blocker: false, stop: '', journal: true },
-      { id: 's4', label: '2R möjligt', sub: '', blocker: true, stop: 'RR < 2R → hoppa', journal: false },
-    ]},
-    { id: 'entry', title: 'Entry', color: '#059669', items: [
-      { id: 'e1', label: 'Order satt', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'e2', label: 'TP ej träffad pre-retest', sub: '', blocker: true, stop: 'TP träffad = cancel', journal: false },
-    ]},
-    { id: 'mgmt', title: 'Trade Management', color: '#d97706', items: [
-      { id: 'm1', label: 'Max 2 försök per dag', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'm2', label: 'Journalföring', sub: '', blocker: false, stop: '', journal: false },
-    ]},
-  ]},
-  { key: 'turtle', name: 'ICT Turtle Soup', phases: [
-    { id: 'prep', title: 'Förberedelse', color: '#6366f1', items: [
-      { id: 'p1', label: 'Economic calendar kollad', sub: '', blocker: true, stop: 'Red folder → NO TRADE', journal: false },
-      { id: 'p2', label: 'NY AM session (efter 9:30)', sub: '', blocker: true, stop: 'Utanför session → vänta', journal: false },
-      { id: 'p3', label: 'Bias identifierad', sub: '', blocker: false, stop: '', journal: false },
-    ]},
-    { id: 'setup', title: 'Identifiera Setup', color: '#0891b2', items: [
-      { id: 's1', label: 'TBL-sweep sedd', sub: '', blocker: true, stop: 'Inget TBL-sweep → vänta', journal: true },
-      { id: 's2', label: 'T1 (reversal): CISD efter sweep', sub: '', blocker: false, stop: '', journal: true },
-      { id: 's3', label: 'T2 (continuation): FVG i riktningen', sub: '', blocker: false, stop: '', journal: true },
-      { id: 's4', label: 'Inte för nära nästa TBL', sub: '', blocker: false, stop: '', journal: false },
-    ]},
-    { id: 'entry', title: 'Entry', color: '#059669', items: [
-      { id: 'e1', label: 'T1: Limit på CISD-retest', sub: 'SL = recent H/L. TP ~1.5R.', blocker: false, stop: '', journal: false },
-      { id: 'e2', label: 'T2: Limit på FVG-retest', sub: 'SL = H/L av FVG-candeln. TP 2R.', blocker: false, stop: '', journal: false },
-      { id: 'e3', label: 'Cancel om TP nås pre-fill', sub: '', blocker: true, stop: 'TP träffad = cancel', journal: false },
-    ]},
-    { id: 'mgmt', title: 'Trade Management', color: '#d97706', items: [
-      { id: 'm1', label: 'Max 2 försök / en vinst = klar', sub: '', blocker: false, stop: '', journal: false },
-      { id: 'm2', label: 'Journalföring', sub: '', blocker: false, stop: '', journal: false },
+      { id: 'm1', label: 'Trade hanterad enligt plan', sub: 'Inga manuella justeringar utan anledning', blocker: false, stop: '', journal: false },
+      { id: 'm2', label: 'Journalföring klar', sub: 'Datum, riktning, entry/SL/TP, utfall, R, grade', blocker: false, stop: '', journal: false },
     ]},
   ]},
 ]
