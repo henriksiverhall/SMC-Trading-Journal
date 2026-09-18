@@ -359,8 +359,7 @@ function PsychWidget({ trades }) {
             <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 4 }}>av 100</div>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}><div style={{ height: '100%', width: score + '%', background: scoreColor, borderRadius: 4, transition: 'width 0.8s ease' }} /></div>
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{score >= 70 ? 'Bra disciplin.' : score >= 50 ? 'Godkänd nivå men förbättringspotential.' : 'Varningsnivå – genomgå mönstren nedan.'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{score >= 70 ? 'Bra disciplin.' : score >= 50 ? 'Godkänd nivå, men med förbättringspotential.' : 'Varningsnivå – genomgå mönstren nedan.'}</div>
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
@@ -435,7 +434,7 @@ function CustomFieldsWidget({ trades }) {
   if (!fields.length) return (
     <div className="card">
       <div className="card-header"><div className="card-title">🔖 Egna fält – analysdimension</div></div>
-      <div className="card-body"><p style={{ fontSize: 13, color: 'var(--text3)' }}>Lägg till egna fält i Journal-formuläret för att se breakdown här.</p></div>
+      <div className="card-body"><p style={{ fontSize: 13, color: 'var(--text3)' }}>Lägg till egna fält i Journal-formuläret för att se en uppdelning här.</p></div>
     </div>
   )
 
