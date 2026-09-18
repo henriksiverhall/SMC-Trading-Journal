@@ -599,8 +599,14 @@ function RROptimizer({ mfeResults, trades }) {
   )
 }
 
+// v2.4.12: AI-analysen läste/skrev tidigare adminens EGNA userSettings/saveSettings
+// (från useAuth() direkt) istället för den impersonerade användarens –
+// "Visa som" visade adminens egen cachade analys, och tryck på "Analysera"
+// skrev över adminens cache istället för att spara på den impersonerade
+// användaren. Använder nu effectiveSettings (läser rätt person) och
+// saveEffectiveSettings (skriver till rätt person, se useAuth.jsx).
 function AIAnalysis({ trades, aiEnabled }) {
-  const { userSettings, saveSettings } = useAuth()
+  const { effectiveSettings, saveEffectiveSettings } = useAuth()
   const [response, setResponse] = useState('')
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
@@ -642,11 +648,11 @@ function AIAnalysis({ trades, aiEnabled }) {
   const fingerprint = trades.map(t => `${t.id}:${t.result}:${t.outcome}`).sort().join('|')
   useEffect(() => {
     if (loadedRef.current) return
-    const saved = userSettings?.aiAnalysis
+    const saved = effectiveSettings?.aiAnalysis
     if (saved?.text) { setResponse(saved.text); setHistory(saved.history || []); setGeneratedAt(saved.generatedAt || null) }
-    if (userSettings !== undefined) loadedRef.current = true
-  }, [userSettings])
-  const isCurrent = !!response && userSettings?.aiAnalysis?.fingerprint === fingerprint
+    if (effectiveSettings !== undefined) loadedRef.current = true
+  }, [effectiveSettings])
+  const isCurrent = !!response && effectiveSettings?.aiAnalysis?.fingerprint === fingerprint
   async function analyze() {
     setLoading(true)
     const prompt = fillAiPromptTemplate(promptTemplate, {
@@ -669,7 +675,7 @@ function AIAnalysis({ trades, aiEnabled }) {
       const now = new Date().toISOString()
       const newHistory = [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...history.slice(0, 4)]
       setResponse(text); setHistory(newHistory); setGeneratedAt(now)
-      saveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now } })
+      saveEffectiveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now } })
     } catch (err) { setResponse(`Kunde inte ansluta: ${err.message}`) }
     setLoading(false)
   }
