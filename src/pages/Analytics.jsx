@@ -675,7 +675,20 @@ function AIAnalysis({ trades, aiEnabled }) {
       const now = new Date().toISOString()
       const newHistory = [{ date: new Date().toLocaleDateString('sv-SE'), text }, ...history.slice(0, 4)]
       setResponse(text); setHistory(newHistory); setGeneratedAt(now)
-      saveEffectiveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now } })
+      // v2.4.13: Ackumulerar token-åtgång per användare så Admin kan se AI-
+      // förbrukning per konto (Admin → Användare → AI-analys). Claude-svaret
+      // innehåller usage.input_tokens/output_tokens per anrop – summeras här
+      // ovanpå tidigare ackumulerat värde (sparas PÅ effectiveUserId, precis
+      // som aiAnalysis, så det hamnar rätt även under impersonering).
+      const usage = data.usage || {}
+      const prevUsage = effectiveSettings?.aiTokenUsage || {}
+      const newTokenUsage = {
+        inputTokens: (prevUsage.inputTokens || 0) + (usage.input_tokens || 0),
+        outputTokens: (prevUsage.outputTokens || 0) + (usage.output_tokens || 0),
+        calls: (prevUsage.calls || 0) + 1,
+        lastUsedAt: now,
+      }
+      saveEffectiveSettings({ aiAnalysis: { text, history: newHistory, fingerprint, generatedAt: now }, aiTokenUsage: newTokenUsage })
     } catch (err) { setResponse(`Kunde inte ansluta: ${err.message}`) }
     setLoading(false)
   }
