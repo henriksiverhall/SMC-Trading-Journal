@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   // Öppna ärenden (inbox_threads med status=open tillhörande inloggad user)
   const [openThreads, setOpenThreads] = useState(0)
 
-  // ── Konton (v2.4.0) ─────────────────────────────────────────
+  // ── Konton (v2.4.0) ──────────────────────────────────────────────
   const [accounts, setAccounts] = useState([])
   const [planInfo, setPlanInfo] = useState(null)
 
@@ -172,6 +172,27 @@ export function AuthProvider({ children }) {
     await sb.from('user_settings').upsert({ user_id: user.id, settings: merged, updated_at: new Date().toISOString() })
   }
 
+  // v2.4.12: saveSettings() skriver ALLTID till den inloggade adminens eget
+  // user_id, oavsett impersonation – det är rätt beteende för adminens egna
+  // inställningar (t.ex. AI-promptmallen), men fel för sådant som ska sparas
+  // PÅ den impersonerade användaren (t.ex. AI-analysen i Analytics). Innan
+  // detta fix skrev "Analysera" under "Visa som" adminens egen cache, så
+  // impersonerade användare såg adminens senaste analys istället för sin
+  // egen. saveEffectiveSettings() speglar samma impersonating-koll som
+  // switchAccount() redan gjorde, och ska användas överallt där man vill
+  // spara något PÅ den man just nu tittar på (effectiveUserId), inte på sig
+  // själv som admin.
+  async function saveEffectiveSettings(newSettings) {
+    if (!effectiveUserId) return
+    if (impersonating) {
+      const merged = { ...impersonatedSettings, ...newSettings }
+      setImpersonatedSettings(merged)
+      await sb.from('user_settings').upsert({ user_id: impersonating.id, settings: merged, updated_at: new Date().toISOString() })
+    } else {
+      await saveSettings(newSettings)
+    }
+  }
+
   function refreshUnread(userId) { fetchUnread(userId || user?.id) }
 
   async function signOut() {
@@ -189,7 +210,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, userSettings, loading, isAdmin, aiEnabled,
-      saveSettings, signOut, loadSettings,
+      saveSettings, saveEffectiveSettings, signOut, loadSettings,
       unreadCount, unreadBroadcast, unreadInbox, openThreads, refreshUnread,
       impersonating, viewAsUser, viewAsSettings,
       startImpersonation, stopImpersonation,
