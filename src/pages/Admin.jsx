@@ -169,6 +169,12 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
   const effectiveMaxTrades = planForm.overrideMaxTrades !== '' ? Number(planForm.overrideMaxTrades) : selectedPlan?.max_trades
   const effectiveMaxAccounts = planForm.overrideMaxAccounts !== '' ? Number(planForm.overrideMaxAccounts) : selectedPlan?.max_accounts
 
+  // v2.4.13: AI-token-åtgång ackumuleras i settings.aiTokenUsage varje gång
+  // användaren kör AI-analys i Analytics (se AIAnalysis/analyze() i
+  // Analytics.jsx) – visas här så Admin kan se förbrukning per konto utan
+  // att behöva impersonera varje användare för att kolla.
+  const tokenUsage = u.settings?.aiTokenUsage
+
   return (
     <div className="card" style={{ height: '100%' }}>
       <div className="card-body" style={{ padding: '24px 28px' }}>
@@ -205,6 +211,16 @@ function UserDetailPanel({ user: u, adminId, onClose, onDelete, onRefresh, onTog
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text4)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>AI-analys</div>
                 <button className={`btn btn-sm ${u.settings?.ai_enabled ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onToggleAI(u.user_id, u.settings?.ai_enabled)} disabled={u.user_id === adminId}>{u.settings?.ai_enabled ? '✓ Aktiverad' : 'Avaktiverad'}</button>
+                {tokenUsage ? (
+                  <div style={{ marginTop: 12 }}>
+                    {row('Tokens in', tokenUsage.inputTokens?.toLocaleString('sv-SE') ?? '0', 'var(--accent)')}
+                    {row('Tokens ut', tokenUsage.outputTokens?.toLocaleString('sv-SE') ?? '0', 'var(--accent)')}
+                    {row('Antal analyser', tokenUsage.calls ?? 0)}
+                    {row('Senast använd', formatFull(tokenUsage.lastUsedAt))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text4)', marginTop: 10 }}>Har inte använt AI-analys ännu.</div>
+                )}
               </div>
             </div>
             <div>
