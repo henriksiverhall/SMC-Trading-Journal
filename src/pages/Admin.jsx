@@ -753,7 +753,7 @@ export default function Admin() {
     <div style={{ flex: 1 }}>
       <Topbar title="Administration" />
       <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Access denied</div>
+        <div style={{ color: 'var(--text3)', fontSize: 13 }}>Åtkomst nekad</div>
       </div>
     </div>
   )
