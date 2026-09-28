@@ -9,6 +9,28 @@ const DEFAULT_LIGHT = '/images/hero-light.png'
 // riktig produktionsdomän så lösenordsåterställningsmail leder rätt.
 const SITE_URL = 'https://journal.smctrading.se'
 
+// v2.4.14: Supabase kan returnera ett tomt/oläsbart felmeddelande (t.ex. "{}")
+// när mailutskicket misslyckas (SMTP-fel). Då visades bara "{}" för användaren.
+// Översätter nu vanliga fel till svenska och faller tillbaka på ett läsbart
+// standardmeddelande. Rått fel loggas alltid i konsolen för felsökning.
+function authErrorText(err, fallback) {
+  console.error('Auth-fel:', err)
+  const raw = typeof err?.message === 'string' ? err.message.trim() : ''
+  const known = {
+    'Invalid login credentials': 'Fel e-post eller lösenord.',
+    'User already registered': 'Det finns redan ett konto med den e-postadressen.',
+    'Email not confirmed': 'E-postadressen är inte bekräftad ännu. Kolla din inkorg.',
+  }
+  if (known[raw]) return known[raw]
+  if (err?.status === 429 || err?.code === 'over_email_send_rate_limit') {
+    return 'För många försök just nu. Vänta en stund och försök igen.'
+  }
+  if (!raw || raw === '{}' || raw === '[object Object]') {
+    return fallback || 'Något gick fel. Försök igen om en stund eller kontakta support.'
+  }
+  return raw
+}
+
 function ForgotPasswordModal({ onClose }) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,7 +44,7 @@ function ForgotPasswordModal({ onClose }) {
     const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: SITE_URL,
     })
-    if (error) setError(error.message)
+    if (error) setError(authErrorText(error, 'Kunde inte skicka återställningsmailet. Försök igen om en stund eller kontakta support.'))
     else setSent(true)
     setLoading(false)
   }
@@ -100,7 +122,7 @@ export default function AuthPage() {
     e.preventDefault()
     setLoading(true); setError('')
     const { error } = await sb.auth.signInWithPassword({ email, password })
-    if (error) setError(error.message)
+    if (error) setError(authErrorText(error))
     setLoading(false)
   }
 
@@ -122,7 +144,7 @@ export default function AuthPage() {
       email, password,
       options: { data: { display_name: displayName || email.split('@')[0] }, emailRedirectTo: SITE_URL }
     })
-    if (error) setError(error.message)
+    if (error) setError(authErrorText(error, 'Kontot kunde inte skapas – bekräftelsemailet kunde troligen inte skickas. Försök igen om en stund eller kontakta support.'))
     else setMode('confirm')
     setLoading(false)
   }
